@@ -75,3 +75,27 @@ export interface RoundedRectangle {
   width: number;
   height: number;
 }
+
+// --- Effects types ---
+
+export interface BorderConfig {
+  width: number;
+  color: string;
+  opacity: number;
+}
+
+export interface ShadowConfig {
+  offsetX: number;
+  offsetY: number;
+  blur: number;
+  spread: number;
+  color: string;
+  opacity: number;
+}
+
+export interface EffectsConfig {
+  innerBorder?: BorderConfig;
+  outerBorder?: BorderConfig;
+  innerShadow?: ShadowConfig;
+  shadow?: ShadowConfig;
+}

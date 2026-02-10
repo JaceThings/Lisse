@@ -2,14 +2,16 @@ import {
   defineComponent,
   h,
   ref,
+  computed,
   type PropType,
   type SlotsType,
 } from "vue";
 import { useSmoothCorners } from "./use-smooth-corners.js";
-import type { SmoothCornerOptions } from "@smooth-corners/core";
+import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@smooth-corners/core";
 
 /**
  * Render-function component that applies smooth corners to a wrapper element.
+ * When effect props are provided, auto-creates a wrapper element for the SVG overlay.
  *
  * @example
  * ```vue
@@ -53,10 +55,27 @@ export const SmoothCorners = defineComponent({
       type: [Number, Object] as PropType<number | { radius: number; smoothing?: number; preserveSmoothing?: boolean }>,
       default: undefined,
     },
+    innerBorder: {
+      type: Object as PropType<BorderConfig>,
+      default: undefined,
+    },
+    outerBorder: {
+      type: Object as PropType<BorderConfig>,
+      default: undefined,
+    },
+    innerShadow: {
+      type: Object as PropType<ShadowConfig>,
+      default: undefined,
+    },
+    shadow: {
+      type: Object as PropType<ShadowConfig>,
+      default: undefined,
+    },
   },
   slots: Object as SlotsType<{ default: () => any }>,
   setup(props, { slots }) {
     const elRef = ref<HTMLElement | null>(null);
+    const wrapperRef = ref<HTMLElement | null>(null);
 
     const options = (): SmoothCornerOptions => {
       if (props.radius !== undefined) {
@@ -74,13 +93,34 @@ export const SmoothCorners = defineComponent({
       };
     };
 
-    useSmoothCorners(elRef, options());
+    const hasEffects = computed(
+      () => !!(props.innerBorder || props.outerBorder || props.innerShadow || props.shadow),
+    );
 
-    return () =>
-      h(
-        props.as,
-        { ref: elRef },
-        slots.default?.()
-      );
+    const effectsConfig = computed(() => ({
+      innerBorder: props.innerBorder,
+      outerBorder: props.outerBorder,
+      innerShadow: props.innerShadow,
+      shadow: props.shadow,
+    }));
+
+    useSmoothCorners(
+      elRef,
+      options(),
+      hasEffects.value
+        ? { wrapper: wrapperRef, effects: effectsConfig }
+        : undefined,
+    );
+
+    return () => {
+      if (hasEffects.value) {
+        return h(
+          "div",
+          { ref: wrapperRef, style: { position: "relative" } },
+          h(props.as, { ref: elRef }, slots.default?.()),
+        );
+      }
+      return h(props.as, { ref: elRef }, slots.default?.());
+    };
   },
 });

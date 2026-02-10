@@ -8,17 +8,23 @@ import {
   type HTMLAttributes,
 } from "react";
 import { useSmoothCorners } from "./use-smooth-corners.js";
-import type { SmoothCornerOptions } from "@smooth-corners/core";
+import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@smooth-corners/core";
 
 export type SmoothCornersProps = {
   /** The HTML element to render. Default: "div" */
   as?: ElementType;
   children?: ReactNode;
+  innerBorder?: BorderConfig;
+  outerBorder?: BorderConfig;
+  innerShadow?: ShadowConfig;
+  shadow?: ShadowConfig;
 } & SmoothCornerOptions &
   Omit<HTMLAttributes<HTMLElement>, "children" | keyof SmoothCornerOptions>;
 
 /**
  * Component that renders an element with smooth corners applied via clip-path.
+ * When effect props (innerBorder, outerBorder, innerShadow, shadow) are provided,
+ * auto-creates a wrapper div for the SVG overlay and drop shadow filter.
  *
  * @example
  * ```tsx
@@ -39,6 +45,10 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
       topRight,
       bottomRight,
       bottomLeft,
+      innerBorder,
+      outerBorder,
+      innerShadow,
+      shadow,
       ...rest
     } = props as SmoothCornersProps & {
       radius?: number;
@@ -51,6 +61,7 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
     };
 
     const internalRef = useRef<HTMLElement>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
     useImperativeHandle(externalRef, () => internalRef.current!);
 
     const options: SmoothCornerOptions =
@@ -58,7 +69,24 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
         ? { radius, smoothing, preserveSmoothing }
         : { topLeft, topRight, bottomRight, bottomLeft };
 
-    useSmoothCorners(internalRef, options);
+    const hasEffects = !!(innerBorder || outerBorder || innerShadow || shadow);
+
+    const effectsOptions = hasEffects
+      ? {
+          wrapperRef: wrapperRef as React.RefObject<HTMLElement | null>,
+          effects: { innerBorder, outerBorder, innerShadow, shadow },
+        }
+      : undefined;
+
+    useSmoothCorners(internalRef, options, effectsOptions);
+
+    if (hasEffects) {
+      return createElement(
+        "div",
+        { ref: wrapperRef, style: { position: "relative" as const } },
+        createElement(Component, { ...rest, ref: internalRef }, children),
+      );
+    }
 
     return createElement(Component, { ...rest, ref: internalRef }, children);
   }

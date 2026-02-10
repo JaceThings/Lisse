@@ -3,6 +3,8 @@ export { getPathParamsForCorner } from "./corner-params.js";
 export { distributeAndNormalize } from "./distribute.js";
 export { getSVGPathFromPathParams } from "./draw.js";
 export { toRadians, rounded } from "./utils.js";
+export { createSvgEffects, type SvgEffectsHandle } from "./svg-effects.js";
+export { createDropShadow, type DropShadowHandle } from "./drop-shadow.js";
 
 export type {
   CornerConfig,
@@ -13,4 +15,7 @@ export type {
   CornerParams,
   NormalizedCorner,
   NormalizedCorners,
+  BorderConfig,
+  ShadowConfig,
+  EffectsConfig,
 } from "./types.js";

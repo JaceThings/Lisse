@@ -1,2 +1,2 @@
-export { smoothCorners } from "./smooth-corners.js";
-export type { SmoothCornerOptions, CornerConfig, PerCornerConfig, UniformCornerOptions } from "@smooth-corners/core";
+export { smoothCorners, type SmoothCornersAction, type SmoothCornersConfig } from "./smooth-corners.js";
+export type { SmoothCornerOptions, CornerConfig, PerCornerConfig, UniformCornerOptions, BorderConfig, ShadowConfig, EffectsConfig } from "@smooth-corners/core";
