@@ -1,0 +1,53 @@
+{
+  "name": "@smooth-corners/react",
+  "version": "0.1.0",
+  "description": "React hook and component for smooth-cornered (squircle) elements",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@smooth-corners/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaceThings/smooth-corners",
+    "directory": "packages/react"
+  },
+  "keywords": [
+    "squircle",
+    "smooth-corners",
+    "react",
+    "hook",
+    "component"
+  ],
+  "devDependencies": {
+    "@types/react": "^19.2.13",
+    "react": "^19.2.4"
+  }
+}

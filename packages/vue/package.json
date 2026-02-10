@@ -1,0 +1,52 @@
+{
+  "name": "@smooth-corners/vue",
+  "version": "0.1.0",
+  "description": "Vue composable and component for smooth-cornered (squircle) elements",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@smooth-corners/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": ">=3.3.0"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaceThings/smooth-corners",
+    "directory": "packages/vue"
+  },
+  "keywords": [
+    "squircle",
+    "smooth-corners",
+    "vue",
+    "composable",
+    "component"
+  ],
+  "devDependencies": {
+    "vue": "^3.5.28"
+  }
+}
