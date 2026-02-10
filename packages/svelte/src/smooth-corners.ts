@@ -1,4 +1,4 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW } from "@smooth-corners/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles } from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface SmoothCornersAction {
@@ -9,6 +9,7 @@ export interface SmoothCornersAction {
 export interface SmoothCornersConfig {
   corners: SmoothCornerOptions;
   effects?: EffectsConfig;
+  autoEffects?: boolean;
 }
 
 function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is SmoothCornersConfig {
@@ -18,6 +19,8 @@ function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is Sm
 /**
  * Svelte action that applies smooth-corners clip-path to an element.
  * Automatically updates on resize via a shared ResizeObserver.
+ * By default, CSS `border` and `box-shadow` are automatically extracted and
+ * converted to SVG effects (autoEffects).
  *
  * @example
  * ```svelte
@@ -42,10 +45,12 @@ export function smoothCorners(
 ): SmoothCornersAction {
   let currentOptions: SmoothCornerOptions;
   let currentEffects: EffectsConfig | undefined;
+  let autoEffects = true;
 
   if (isConfig(input)) {
     currentOptions = input.corners;
     currentEffects = input.effects;
+    autoEffects = input.autoEffects ?? true;
   } else {
     currentOptions = input;
   }
@@ -53,10 +58,38 @@ export function smoothCorners(
   // Effects handles
   let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
   let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
+  let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
+  let didSetPosition = false;
 
-  if (currentEffects && node.parentElement) {
-    effectsHandle = createSvgEffects(node.parentElement);
-    shadowHandle = createDropShadow(node.parentElement);
+  // Auto-extract CSS effects on init
+  if (autoEffects) {
+    extractedResult = extractAndStripEffects(node);
+  }
+
+  // Merge extracted + explicit effects
+  function getMergedEffects(): EffectsConfig {
+    return {
+      ...extractedResult?.effects,
+      ...currentEffects,
+    };
+  }
+
+  const mergedEffects = getMergedEffects();
+  const hasAnyEffects = !!(
+    mergedEffects.innerBorder ||
+    mergedEffects.outerBorder ||
+    mergedEffects.innerShadow ||
+    mergedEffects.shadow
+  );
+
+  if (hasAnyEffects && node.parentElement) {
+    const anchor = node.parentElement;
+    if (getComputedStyle(anchor).position === "static") {
+      anchor.style.position = "relative";
+      didSetPosition = true;
+    }
+    effectsHandle = createSvgEffects(anchor);
+    shadowHandle = createDropShadow(anchor);
   }
 
   function apply() {
@@ -64,13 +97,14 @@ export function smoothCorners(
     if (width > 0 && height > 0) {
       node.style.clipPath = generateClipPath(width, height, currentOptions);
 
-      if (effectsHandle && currentEffects) {
-        effectsHandle.update(currentOptions, currentEffects, width, height);
+      const merged = getMergedEffects();
+      if (effectsHandle) {
+        effectsHandle.update(currentOptions, merged, width, height);
       }
-      if (shadowHandle && currentEffects) {
+      if (shadowHandle) {
         shadowHandle.update(
           currentOptions,
-          currentEffects.shadow ?? DEFAULT_SHADOW,
+          merged.shadow ?? DEFAULT_SHADOW,
           width, height,
         );
       }
@@ -90,9 +124,18 @@ export function smoothCorners(
       }
 
       // Create handles if they didn't exist but now effects are provided
-      if (currentEffects && !effectsHandle && node.parentElement) {
-        effectsHandle = createSvgEffects(node.parentElement);
-        shadowHandle = createDropShadow(node.parentElement);
+      const merged = getMergedEffects();
+      const hasEffects = !!(
+        merged.innerBorder || merged.outerBorder || merged.innerShadow || merged.shadow
+      );
+      if (hasEffects && !effectsHandle && node.parentElement) {
+        const anchor = node.parentElement;
+        if (getComputedStyle(anchor).position === "static") {
+          anchor.style.position = "relative";
+          didSetPosition = true;
+        }
+        effectsHandle = createSvgEffects(anchor);
+        shadowHandle = createDropShadow(anchor);
       }
 
       apply();
@@ -102,6 +145,12 @@ export function smoothCorners(
       node.style.clipPath = "";
       effectsHandle?.destroy();
       shadowHandle?.destroy();
+      if (extractedResult) {
+        restoreStyles(node, extractedResult.savedStyles);
+      }
+      if (didSetPosition && node.parentElement) {
+        node.parentElement.style.position = "";
+      }
     },
   };
 }

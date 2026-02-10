@@ -18,13 +18,16 @@ export type SmoothCornersProps = {
   outerBorder?: BorderConfig;
   innerShadow?: ShadowConfig;
   shadow?: ShadowConfig;
+  /** Automatically extract CSS border and box-shadow as SVG effects. Default: true */
+  autoEffects?: boolean;
 } & SmoothCornerOptions &
   Omit<HTMLAttributes<HTMLElement>, "children" | keyof SmoothCornerOptions>;
 
 /**
  * Component that renders an element with smooth corners applied via clip-path.
  * When effect props (innerBorder, outerBorder, innerShadow, shadow) are provided,
- * auto-creates a wrapper div for the SVG overlay and drop shadow filter.
+ * or when autoEffects is enabled (default), auto-creates a wrapper div for the
+ * SVG overlay and drop shadow filter.
  *
  * @example
  * ```tsx
@@ -49,6 +52,7 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
       outerBorder,
       innerShadow,
       shadow,
+      autoEffects,
       ...rest
     } = props as SmoothCornersProps & {
       radius?: number;
@@ -69,18 +73,20 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
         ? { radius, smoothing, preserveSmoothing }
         : { topLeft, topRight, bottomRight, bottomLeft };
 
-    const hasEffects = !!(innerBorder || outerBorder || innerShadow || shadow);
+    const hasExplicitEffects = !!(innerBorder || outerBorder || innerShadow || shadow);
+    const needsWrapper = (autoEffects ?? true) || hasExplicitEffects;
 
-    const effectsOptions = hasEffects
-      ? {
-          wrapperRef: wrapperRef as React.RefObject<HTMLElement | null>,
-          effects: { innerBorder, outerBorder, innerShadow, shadow },
-        }
-      : undefined;
+    const effectsOptions = {
+      wrapperRef: wrapperRef as React.RefObject<HTMLElement | null>,
+      effects: hasExplicitEffects
+        ? { innerBorder, outerBorder, innerShadow, shadow }
+        : undefined,
+      autoEffects,
+    };
 
     useSmoothCorners(internalRef, options, effectsOptions);
 
-    if (hasEffects) {
+    if (needsWrapper) {
       return createElement(
         "div",
         { ref: wrapperRef, style: { position: "relative" as const } },

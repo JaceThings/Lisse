@@ -6,12 +6,13 @@ import {
   type Ref,
   type MaybeRef,
 } from "vue";
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW } from "@smooth-corners/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles } from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface UseEffectsOptions {
-  wrapper: Ref<HTMLElement | null>;
-  effects: MaybeRef<EffectsConfig>;
+  wrapper?: Ref<HTMLElement | null>;
+  effects?: MaybeRef<EffectsConfig>;
+  autoEffects?: MaybeRef<boolean>;
 }
 
 /**
@@ -68,35 +69,78 @@ export function useSmoothCorners(
   onBeforeUnmount(cleanup);
 
   // Effects overlay
-  if (effectsOptions) {
+  {
     let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
     let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
     let unobserveEffects: (() => void) | undefined;
+    let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
+    let didSetPosition = false;
 
     function updateEffects() {
       const el = unref(target);
-      const wrapper = unref(effectsOptions!.wrapper);
-      if (!el || !wrapper || !effectsHandle || !shadowHandle) return;
+      if (!el || !effectsHandle || !shadowHandle) return;
 
       const { width, height } = el.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
-      const eff = unref(effectsOptions!.effects);
-      effectsHandle!.update(unref(options), eff, width, height);
-      shadowHandle!.update(
+
+      // Merge extracted + explicit effects
+      const explicit = effectsOptions?.effects ? unref(effectsOptions.effects) : undefined;
+      const mergedEffects: EffectsConfig = {
+        ...extractedResult?.effects,
+        ...explicit,
+      };
+
+      effectsHandle.update(unref(options), mergedEffects, width, height);
+      shadowHandle.update(
         unref(options),
-        eff.shadow ?? DEFAULT_SHADOW,
+        mergedEffects.shadow ?? DEFAULT_SHADOW,
         width, height,
       );
     }
 
     function setupEffects() {
       cleanupEffects();
-      const wrapper = unref(effectsOptions!.wrapper);
       const el = unref(target);
-      if (!wrapper || !el) return;
+      if (!el) return;
 
-      effectsHandle = createSvgEffects(wrapper);
-      shadowHandle = createDropShadow(wrapper);
+      const autoEffects = effectsOptions?.autoEffects !== undefined
+        ? unref(effectsOptions.autoEffects)
+        : true;
+
+      // Auto-extract CSS effects
+      if (autoEffects) {
+        extractedResult = extractAndStripEffects(el);
+      }
+
+      // Merge extracted + explicit effects
+      const explicit = effectsOptions?.effects ? unref(effectsOptions.effects) : undefined;
+      const mergedEffects: EffectsConfig = {
+        ...extractedResult?.effects,
+        ...explicit,
+      };
+
+      const hasAnyEffects = !!(
+        mergedEffects.innerBorder ||
+        mergedEffects.outerBorder ||
+        mergedEffects.innerShadow ||
+        mergedEffects.shadow
+      );
+
+      if (!hasAnyEffects) return;
+
+      // Determine anchor element
+      const explicitWrapper = effectsOptions?.wrapper ? unref(effectsOptions.wrapper) : null;
+      const anchor = explicitWrapper ?? el.parentElement;
+      if (!anchor) return;
+
+      // Ensure anchor has positioning
+      if (getComputedStyle(anchor).position === "static") {
+        anchor.style.position = "relative";
+        didSetPosition = true;
+      }
+
+      effectsHandle = createSvgEffects(anchor);
+      shadowHandle = createDropShadow(anchor);
 
       unobserveEffects = observeResize(el, updateEffects);
     }
@@ -108,9 +152,24 @@ export function useSmoothCorners(
       effectsHandle = undefined;
       shadowHandle?.destroy();
       shadowHandle = undefined;
+
+      const el = unref(target);
+      if (el && extractedResult) {
+        restoreStyles(el, extractedResult.savedStyles);
+      }
+      extractedResult = undefined;
+
+      if (didSetPosition) {
+        const explicitWrapper = effectsOptions?.wrapper ? unref(effectsOptions.wrapper) : null;
+        const anchor = explicitWrapper ?? unref(target)?.parentElement;
+        if (anchor) anchor.style.position = "";
+        didSetPosition = false;
+      }
     }
 
-    watch(() => unref(effectsOptions!.effects), updateEffects, { deep: true });
+    if (effectsOptions?.effects) {
+      watch(() => unref(effectsOptions!.effects!), updateEffects, { deep: true });
+    }
     watch(() => unref(options), updateEffects, { deep: true });
 
     onMounted(setupEffects);

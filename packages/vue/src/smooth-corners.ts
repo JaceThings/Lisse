@@ -11,7 +11,8 @@ import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@smooth-co
 
 /**
  * Render-function component that applies smooth corners to a wrapper element.
- * When effect props are provided, auto-creates a wrapper element for the SVG overlay.
+ * When effect props are provided or autoEffects is enabled (default),
+ * auto-creates a wrapper element for the SVG overlay.
  *
  * @example
  * ```vue
@@ -71,6 +72,10 @@ export const SmoothCorners = defineComponent({
       type: Object as PropType<ShadowConfig>,
       default: undefined,
     },
+    autoEffects: {
+      type: Boolean as PropType<boolean>,
+      default: undefined,
+    },
   },
   slots: Object as SlotsType<{ default: () => any }>,
   setup(props, { slots }) {
@@ -93,8 +98,12 @@ export const SmoothCorners = defineComponent({
       };
     };
 
-    const hasEffects = computed(
+    const hasExplicitEffects = computed(
       () => !!(props.innerBorder || props.outerBorder || props.innerShadow || props.shadow),
+    );
+
+    const needsWrapper = computed(
+      () => (props.autoEffects ?? true) || hasExplicitEffects.value,
     );
 
     const effectsConfig = computed(() => ({
@@ -107,13 +116,15 @@ export const SmoothCorners = defineComponent({
     useSmoothCorners(
       elRef,
       options(),
-      hasEffects.value
-        ? { wrapper: wrapperRef, effects: effectsConfig }
-        : undefined,
+      {
+        wrapper: wrapperRef,
+        effects: hasExplicitEffects.value ? effectsConfig : undefined,
+        autoEffects: computed(() => props.autoEffects ?? true),
+      },
     );
 
     return () => {
-      if (hasEffects.value) {
+      if (needsWrapper.value) {
         return h(
           "div",
           { ref: wrapperRef, style: { position: "relative" } },
