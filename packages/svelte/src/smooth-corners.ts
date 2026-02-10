@@ -1,4 +1,4 @@
-import { generateClipPath, createSvgEffects, createDropShadow } from "@smooth-corners/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW } from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface SmoothCornersAction {
@@ -17,7 +17,7 @@ function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is Sm
 
 /**
  * Svelte action that applies smooth-corners clip-path to an element.
- * Automatically updates on resize via ResizeObserver.
+ * Automatically updates on resize via a shared ResizeObserver.
  *
  * @example
  * ```svelte
@@ -50,9 +50,6 @@ export function smoothCorners(
     currentOptions = input;
   }
 
-  let rafId: number | undefined;
-  let observer: ResizeObserver | undefined;
-
   // Effects handles
   let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
   let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
@@ -63,30 +60,24 @@ export function smoothCorners(
   }
 
   function apply() {
-    rafId = requestAnimationFrame(() => {
-      rafId = undefined;
-      const { width, height } = node.getBoundingClientRect();
-      if (width > 0 && height > 0) {
-        node.style.clipPath = generateClipPath(width, height, currentOptions);
+    const { width, height } = node.getBoundingClientRect();
+    if (width > 0 && height > 0) {
+      node.style.clipPath = generateClipPath(width, height, currentOptions);
 
-        if (effectsHandle && currentEffects) {
-          effectsHandle.update(currentOptions, currentEffects, width, height);
-        }
-        if (shadowHandle && currentEffects?.shadow && node.parentElement) {
-          node.parentElement.style.filter = shadowHandle.update(currentEffects.shadow);
-        } else if (shadowHandle && node.parentElement) {
-          node.parentElement.style.filter = "none";
-        }
+      if (effectsHandle && currentEffects) {
+        effectsHandle.update(currentOptions, currentEffects, width, height);
       }
-    });
+      if (shadowHandle && currentEffects) {
+        shadowHandle.update(
+          currentOptions,
+          currentEffects.shadow ?? DEFAULT_SHADOW,
+          width, height,
+        );
+      }
+    }
   }
 
-  if (typeof ResizeObserver !== "undefined") {
-    observer = new ResizeObserver(apply);
-    observer.observe(node);
-  }
-
-  apply();
+  let unobserve = observeResize(node, apply);
 
   return {
     update(newInput: SmoothCornerOptions | SmoothCornersConfig) {
@@ -107,14 +98,10 @@ export function smoothCorners(
       apply();
     },
     destroy() {
-      observer?.disconnect();
-      if (rafId !== undefined) cancelAnimationFrame(rafId);
+      unobserve();
       node.style.clipPath = "";
       effectsHandle?.destroy();
       shadowHandle?.destroy();
-      if (node.parentElement) {
-        node.parentElement.style.filter = "";
-      }
     },
   };
 }

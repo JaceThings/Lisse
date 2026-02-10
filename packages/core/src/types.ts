@@ -29,6 +29,7 @@ export type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
 
 // --- Internal types ---
 
+/** Resolved arc parameters for drawing a single corner of the smooth path. */
 export interface CornerPathParams {
   a: number;
   b: number;
@@ -39,6 +40,7 @@ export interface CornerPathParams {
   arcSectionLength: number;
 }
 
+/** Input parameters for computing a corner's path arcs. */
 export interface CornerParams {
   cornerRadius: number;
   cornerSmoothing: number;
@@ -46,11 +48,13 @@ export interface CornerParams {
   roundingAndSmoothingBudget: number;
 }
 
+/** A corner after radius distribution with its available budget. */
 export interface NormalizedCorner {
   radius: number;
   roundingAndSmoothingBudget: number;
 }
 
+/** All four corners after radius distribution. */
 export interface NormalizedCorners {
   topLeft: NormalizedCorner;
   topRight: NormalizedCorner;
@@ -58,15 +62,19 @@ export interface NormalizedCorners {
   bottomRight: NormalizedCorner;
 }
 
+/** Union of the four corner names. */
 export type Corner = keyof NormalizedCorners;
 
+/** One of the four rectangle sides. */
 export type Side = "top" | "left" | "right" | "bottom";
 
+/** A side–corner pair describing an adjacent relationship. */
 export interface Adjacent {
   side: Side;
   corner: Corner;
 }
 
+/** A rectangle with per-corner radii, used as input for radius distribution. */
 export interface RoundedRectangle {
   topLeftCornerRadius: number;
   topRightCornerRadius: number;
@@ -78,12 +86,14 @@ export interface RoundedRectangle {
 
 // --- Effects types ---
 
+/** Configuration for an inner or outer border stroke. */
 export interface BorderConfig {
   width: number;
   color: string;
   opacity: number;
 }
 
+/** Configuration for an inner or drop shadow effect. */
 export interface ShadowConfig {
   offsetX: number;
   offsetY: number;
@@ -93,6 +103,7 @@ export interface ShadowConfig {
   opacity: number;
 }
 
+/** Combined configuration for all visual effects applied to a smooth-cornered element. */
 export interface EffectsConfig {
   innerBorder?: BorderConfig;
   outerBorder?: BorderConfig;

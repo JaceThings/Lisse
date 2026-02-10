@@ -8,7 +8,7 @@ import {
   type HTMLAttributes,
 } from "react";
 import { useSmoothCorners } from "./use-smooth-corners.js";
-import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@smooth-corners/core";
+import type { SmoothCornerOptions, BorderConfig, ShadowConfig, CornerConfig } from "@smooth-corners/core";
 
 export type SmoothCornersProps = {
   /** The HTML element to render. Default: "div" */
@@ -54,10 +54,10 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
       radius?: number;
       smoothing?: number;
       preserveSmoothing?: boolean;
-      topLeft?: any;
-      topRight?: any;
-      bottomRight?: any;
-      bottomLeft?: any;
+      topLeft?: CornerConfig | number;
+      topRight?: CornerConfig | number;
+      bottomRight?: CornerConfig | number;
+      bottomLeft?: CornerConfig | number;
     };
 
     const internalRef = useRef<HTMLElement>(null);

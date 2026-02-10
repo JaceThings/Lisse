@@ -8,8 +8,8 @@ import { distributeAndNormalize } from "./distribute.js";
 import { getPathParamsForCorner } from "./corner-params.js";
 import { getSVGPathFromPathParams } from "./draw.js";
 
-const DEFAULT_SMOOTHING = 0.6;
-const DEFAULT_PRESERVE_SMOOTHING = true;
+export const DEFAULT_SMOOTHING = 0.6;
+export const DEFAULT_PRESERVE_SMOOTHING = true;
 
 function isUniform(options: SmoothCornerOptions): options is UniformCornerOptions {
   return "radius" in options;

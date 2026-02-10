@@ -1,21 +1,19 @@
 import { generatePath } from "./generate-path.js";
 import type { SmoothCornerOptions, EffectsConfig } from "./types.js";
-
-const SVG_NS = "http://www.w3.org/2000/svg";
-let uid = 0;
+import { SVG_NS, nextUid, hexToRgb } from "./svg-shared.js";
 
 export interface SvgEffectsHandle {
   update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
   destroy(): void;
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `rgb(${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)})`;
-}
-
+/**
+ * Creates an SVG overlay for inner/outer borders and inner shadow effects.
+ * The SVG is appended to `anchor` and uses clip-path, mask, and filter elements
+ * that are updated in sync with the smooth-corner path.
+ */
 export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
-  const id = ++uid;
+  const id = nextUid();
   const clipId = `sc-clip-${id}`;
   const maskId = `sc-mask-${id}`;
   const filterId = `sc-inner-shadow-${id}`;
@@ -169,6 +167,13 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         outerStrokePath.setAttribute("stroke", ob.color);
         outerStrokePath.setAttribute("stroke-width", String(ob.width * 2));
         outerStrokePath.setAttribute("stroke-opacity", String(ob.opacity));
+
+        // Extend mask rect to cover the outer stroke area beyond content bounds
+        const pad = ob.width;
+        maskRect.setAttribute("x", String(-pad));
+        maskRect.setAttribute("y", String(-pad));
+        maskRect.setAttribute("width", String(width + pad * 2));
+        maskRect.setAttribute("height", String(height + pad * 2));
       } else {
         outerStrokePath.style.display = "none";
       }
