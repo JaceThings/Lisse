@@ -168,11 +168,14 @@ Note: in simple mode (passing `SmoothCornerOptions` directly), `autoEffects` is 
 
 ### Limitations
 
-- **Uniform borders only** -- reads the top border and applies it uniformly. Mixed per-side borders use the top-edge values.
+- **Uniform borders only** -- reads the top border (`borderTopWidth`, `borderTopColor`, `borderTopStyle`) and applies it as a uniform SVG stroke. All four CSS border sides are stripped regardless -- sides that differ from the top are lost, not preserved.
 - **Solid borders only** -- `dashed`, `dotted`, `double`, etc. are not replicated. The CSS is still stripped.
-- **First shadow only** -- multiple `box-shadow` layers: only the first outer and first inset are extracted. The rest are dropped.
+- **First shadow only** -- if you have multiple `box-shadow` layers, only the first outer and first inset are extracted. All shadow layers are stripped from the element, so additional layers beyond the first outer and first inset disappear entirely.
 - **No `outline`** -- CSS `outline` is not read or stripped.
 - **One-time extraction** -- reads CSS once on init (not re-evaluated on `update()`). Dynamically changing border/shadow styles after init won't update the SVG effects. Use explicit effects in config mode for dynamic values.
+- **`!important` rules** -- if a stylesheet sets `border` or `box-shadow` with `!important`, the inline style override cannot take precedence. The CSS property remains visible, gets clipped by the squircle path, and the SVG replacement also renders, producing doubled or broken visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false` with explicit effect props.
+- **CSS transitions** -- auto effects strips `border` and `box-shadow` via inline styles on mount. CSS transitions targeting these properties (e.g. `transition: border 0.3s`) will not animate while auto effects is active. To animate effects, use `autoEffects: false` and drive explicit effect props from state or an animation system.
+- **No `border-image`** -- `border-image` is not detected or handled. If present, the border may be misread (the computed `borderTopStyle` may still report `solid`) and stripped, resulting in incorrect SVG effects.
 
 ## CSS Borders and Shadows
 

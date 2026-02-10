@@ -16,6 +16,7 @@ export {
   parseBoxShadow,
   type ExtractedEffects,
 } from "./extract-effects.js";
+export { acquirePosition, releasePosition } from "./position-ref-count.js";
 
 export type {
   CornerConfig,

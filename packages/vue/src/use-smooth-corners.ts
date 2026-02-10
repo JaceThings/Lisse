@@ -6,7 +6,7 @@ import {
   type Ref,
   type MaybeRef,
 } from "vue";
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles } from "@smooth-corners/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface UseEffectsOptions {
@@ -74,7 +74,7 @@ export function useSmoothCorners(
     let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
     let unobserveEffects: (() => void) | undefined;
     let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
-    let didSetPosition = false;
+    let didAcquire = false;
 
     function updateEffects() {
       const el = unref(target);
@@ -133,11 +133,8 @@ export function useSmoothCorners(
       const anchor = explicitWrapper ?? el.parentElement;
       if (!anchor) return;
 
-      // Ensure anchor has positioning
-      if (getComputedStyle(anchor).position === "static") {
-        anchor.style.position = "relative";
-        didSetPosition = true;
-      }
+      // Ensure anchor has positioning (ref-counted)
+      didAcquire = acquirePosition(anchor);
 
       effectsHandle = createSvgEffects(anchor);
       shadowHandle = createDropShadow(anchor);
@@ -159,11 +156,11 @@ export function useSmoothCorners(
       }
       extractedResult = undefined;
 
-      if (didSetPosition) {
+      if (didAcquire) {
         const explicitWrapper = effectsOptions?.wrapper ? unref(effectsOptions.wrapper) : null;
         const anchor = explicitWrapper ?? unref(target)?.parentElement;
-        if (anchor) anchor.style.position = "";
-        didSetPosition = false;
+        if (anchor) releasePosition(anchor);
+        didAcquire = false;
       }
     }
 

@@ -203,7 +203,14 @@ describe("restoreStyles", () => {
   });
 
   it("restores original inline values", () => {
-    const saved = { border: "2px solid red", boxShadow: "1px 1px 5px black" };
+    const saved = {
+      border: "2px solid red",
+      boxShadow: "1px 1px 5px black",
+      paddingTop: "5px",
+      paddingRight: "5px",
+      paddingBottom: "5px",
+      paddingLeft: "5px",
+    };
     el.style.border = "0";
     el.style.boxShadow = "none";
 
@@ -211,15 +218,119 @@ describe("restoreStyles", () => {
 
     expect(el.style.border).toBe("2px solid red");
     expect(el.style.boxShadow).toBe("1px 1px 5px black");
+    expect(el.style.paddingTop).toBe("5px");
+    expect(el.style.paddingRight).toBe("5px");
+    expect(el.style.paddingBottom).toBe("5px");
+    expect(el.style.paddingLeft).toBe("5px");
   });
 
   it("removes inline override when saved value was empty", () => {
     el.style.border = "0";
     el.style.boxShadow = "none";
 
-    restoreStyles(el, { border: "", boxShadow: "" });
+    restoreStyles(el, {
+      border: "",
+      boxShadow: "",
+      paddingTop: "",
+      paddingRight: "",
+      paddingBottom: "",
+      paddingLeft: "",
+    });
 
     expect(el.style.border).toBe("");
     expect(el.style.boxShadow).toBe("");
+    expect(el.style.paddingTop).toBe("");
+    expect(el.style.paddingRight).toBe("");
+  });
+});
+
+describe("extractAndStripEffects -- content-box compensation", () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    el = document.createElement("div");
+    document.body.appendChild(el);
+  });
+
+  it("increases padding by border width for content-box elements", () => {
+    el.style.boxSizing = "content-box";
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.padding = "0px";
+
+    extractAndStripEffects(el);
+
+    expect(el.style.paddingTop).toBe("2px");
+    expect(el.style.paddingRight).toBe("2px");
+    expect(el.style.paddingBottom).toBe("2px");
+    expect(el.style.paddingLeft).toBe("2px");
+  });
+
+  it("does NOT adjust padding for border-box elements", () => {
+    el.style.boxSizing = "border-box";
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.padding = "0px";
+
+    extractAndStripEffects(el);
+
+    expect(el.style.paddingTop).toBe("0px");
+    expect(el.style.paddingRight).toBe("0px");
+    expect(el.style.paddingBottom).toBe("0px");
+    expect(el.style.paddingLeft).toBe("0px");
+  });
+
+  it("adds border width to existing padding for content-box", () => {
+    el.style.boxSizing = "content-box";
+    el.style.border = "3px solid rgb(255, 0, 0)";
+    el.style.padding = "10px";
+
+    extractAndStripEffects(el);
+
+    expect(el.style.paddingTop).toBe("13px");
+    expect(el.style.paddingRight).toBe("13px");
+    expect(el.style.paddingBottom).toBe("13px");
+    expect(el.style.paddingLeft).toBe("13px");
+  });
+
+  it("restores original padding values via restoreStyles", () => {
+    el.style.boxSizing = "content-box";
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.padding = "5px";
+
+    const result = extractAndStripEffects(el);
+    expect(el.style.paddingTop).toBe("7px");
+
+    restoreStyles(el, result.savedStyles);
+    expect(el.style.paddingTop).toBe("5px");
+    expect(el.style.paddingRight).toBe("5px");
+    expect(el.style.paddingBottom).toBe("5px");
+    expect(el.style.paddingLeft).toBe("5px");
+  });
+
+  it("does not adjust padding when there is no border", () => {
+    el.style.boxSizing = "content-box";
+    el.style.padding = "10px";
+
+    extractAndStripEffects(el);
+
+    expect(el.style.paddingTop).toBe("10px");
+    expect(el.style.paddingRight).toBe("10px");
+    expect(el.style.paddingBottom).toBe("10px");
+    expect(el.style.paddingLeft).toBe("10px");
+  });
+
+  it("saves original padding inline styles for restoration", () => {
+    el.style.boxSizing = "content-box";
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.paddingTop = "4px";
+    el.style.paddingRight = "8px";
+    el.style.paddingBottom = "12px";
+    el.style.paddingLeft = "16px";
+
+    const result = extractAndStripEffects(el);
+
+    expect(result.savedStyles.paddingTop).toBe("4px");
+    expect(result.savedStyles.paddingRight).toBe("8px");
+    expect(result.savedStyles.paddingBottom).toBe("12px");
+    expect(result.savedStyles.paddingLeft).toBe("16px");
   });
 });

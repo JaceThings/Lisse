@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles } from "@smooth-corners/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface UseEffectsOptions {
@@ -29,6 +29,13 @@ export function useSmoothCorners(
 
   const effectsRef = useRef(effectsOptions);
   effectsRef.current = effectsOptions;
+
+  const handlesRef = useRef<{
+    effectsHandle: ReturnType<typeof createSvgEffects>;
+    shadowHandle: ReturnType<typeof createDropShadow>;
+    extracted: ReturnType<typeof extractAndStripEffects> | undefined;
+    el: HTMLElement;
+  } | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -89,23 +96,26 @@ export function useSmoothCorners(
       return;
     }
 
-    // Ensure anchor has positioning
-    let didSetPosition = false;
-    if (getComputedStyle(anchor).position === "static") {
-      anchor.style.position = "relative";
-      didSetPosition = true;
-    }
+    // Ensure anchor has positioning (ref-counted)
+    const didAcquire = acquirePosition(anchor);
 
     const effectsHandle = createSvgEffects(anchor);
     const shadowHandle = createDropShadow(anchor);
 
+    handlesRef.current = { effectsHandle, shadowHandle, extracted, el };
+
     const unobserve = observeResize(el, () => {
       const { width, height } = el.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
-      effectsHandle.update(optionsRef.current, mergedEffects, width, height);
+      const currentExplicit = effectsRef.current?.effects;
+      const currentMerged: EffectsConfig = {
+        ...extracted?.effects,
+        ...currentExplicit,
+      };
+      effectsHandle.update(optionsRef.current, currentMerged, width, height);
       shadowHandle.update(
         optionsRef.current,
-        mergedEffects.shadow ?? DEFAULT_SHADOW,
+        currentMerged.shadow ?? DEFAULT_SHADOW,
         width, height,
       );
     });
@@ -114,8 +124,29 @@ export function useSmoothCorners(
       unobserve();
       effectsHandle.destroy();
       shadowHandle.destroy();
+      handlesRef.current = null;
       if (extracted) restoreStyles(el, extracted.savedStyles);
-      if (didSetPosition) anchor.style.position = "";
+      if (didAcquire) releasePosition(anchor);
     };
   }, [ref, effectsOptions?.wrapperRef]);
+
+  // Sync SVG effects on every render to pick up explicit effect prop changes
+  useEffect(() => {
+    const handles = handlesRef.current;
+    if (!handles) return;
+    const { effectsHandle, shadowHandle, extracted, el } = handles;
+    const currentExplicit = effectsRef.current?.effects;
+    const currentMerged: EffectsConfig = {
+      ...extracted?.effects,
+      ...currentExplicit,
+    };
+    const { width, height } = el.getBoundingClientRect();
+    if (width <= 0 || height <= 0) return;
+    effectsHandle.update(optionsRef.current, currentMerged, width, height);
+    shadowHandle.update(
+      optionsRef.current,
+      currentMerged.shadow ?? DEFAULT_SHADOW,
+      width, height,
+    );
+  });
 }

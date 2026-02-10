@@ -1,4 +1,4 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles } from "@smooth-corners/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface SmoothCornersAction {
@@ -59,7 +59,7 @@ export function smoothCorners(
   let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
   let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
   let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
-  let didSetPosition = false;
+  let didAcquire = false;
 
   // Auto-extract CSS effects on init
   if (autoEffects) {
@@ -84,10 +84,7 @@ export function smoothCorners(
 
   if (hasAnyEffects && node.parentElement) {
     const anchor = node.parentElement;
-    if (getComputedStyle(anchor).position === "static") {
-      anchor.style.position = "relative";
-      didSetPosition = true;
-    }
+    didAcquire = acquirePosition(anchor);
     effectsHandle = createSvgEffects(anchor);
     shadowHandle = createDropShadow(anchor);
   }
@@ -130,10 +127,7 @@ export function smoothCorners(
       );
       if (hasEffects && !effectsHandle && node.parentElement) {
         const anchor = node.parentElement;
-        if (getComputedStyle(anchor).position === "static") {
-          anchor.style.position = "relative";
-          didSetPosition = true;
-        }
+        didAcquire = acquirePosition(anchor);
         effectsHandle = createSvgEffects(anchor);
         shadowHandle = createDropShadow(anchor);
       }
@@ -148,8 +142,8 @@ export function smoothCorners(
       if (extractedResult) {
         restoreStyles(node, extractedResult.savedStyles);
       }
-      if (didSetPosition && node.parentElement) {
-        node.parentElement.style.position = "";
+      if (didAcquire && node.parentElement) {
+        releasePosition(node.parentElement);
       }
     },
   };

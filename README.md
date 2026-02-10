@@ -220,11 +220,15 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 
 #### Limitations
 
-- **Uniform borders only** -- the library reads the top border and applies it uniformly. Mixed per-side borders (e.g. different top vs bottom widths) use the top-edge values.
+- **Uniform borders only** -- reads the top border (`borderTopWidth`, `borderTopColor`, `borderTopStyle`) and applies it as a uniform SVG stroke. All four CSS border sides are stripped regardless -- sides that differ from the top are lost, not preserved.
 - **Solid borders only** -- `dashed`, `dotted`, `double`, `groove`, `ridge` etc. are not replicated as SVG effects. The CSS is still stripped, so the element won't have a visible border.
-- **First shadow only** -- if you have multiple `box-shadow` layers, only the first outer and first inset shadow are extracted. Additional shadows are silently dropped.
+- **First shadow only** -- if you have multiple `box-shadow` layers, only the first outer and first inset are extracted. All shadow layers are stripped from the element, so additional layers beyond the first outer and first inset disappear entirely.
 - **No `outline` support** -- CSS `outline` is not read or stripped.
 - **One-time extraction** -- auto effects reads CSS once on mount. If border or shadow styles change dynamically after mount, the SVG effects won't update to match. Use explicit effect props for dynamic values.
+- **`!important` rules** -- if a stylesheet sets `border` or `box-shadow` with `!important`, the inline style override cannot take precedence. The CSS property remains visible, gets clipped by the squircle path, and the SVG replacement also renders, producing doubled or broken visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false` with explicit effect props.
+- **CSS transitions** -- auto effects strips `border` and `box-shadow` via inline styles on mount. CSS transitions targeting these properties (e.g. `transition: border 0.3s`) will not animate while auto effects is active. To animate effects, use `autoEffects: false` and drive explicit effect props from state or an animation system.
+- **No `border-image`** -- `border-image` is not detected or handled. If present, the border may be misread (the computed `borderTopStyle` may still report `solid`) and stripped, resulting in incorrect SVG effects.
+- **Wrapper div (React/Vue component only)** -- the `<SmoothCorners>` component injects a wrapper `<div>` for SVG overlay positioning. This can affect CSS child selectors and flex/grid layouts. Use the hook or composable API to avoid the wrapper.
 
 ### CSS properties and clip-path
 

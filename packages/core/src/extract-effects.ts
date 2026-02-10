@@ -2,7 +2,14 @@ import type { BorderConfig, ShadowConfig, EffectsConfig } from "./types.js";
 
 export interface ExtractedEffects {
   effects: EffectsConfig;
-  savedStyles: { border: string; boxShadow: string };
+  savedStyles: {
+    border: string;
+    boxShadow: string;
+    paddingTop: string;
+    paddingRight: string;
+    paddingBottom: string;
+    paddingLeft: string;
+  };
 }
 
 /**
@@ -114,14 +121,40 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   const savedStyles = {
     border: el.style.border,
     boxShadow: el.style.boxShadow,
+    paddingTop: el.style.paddingTop,
+    paddingRight: el.style.paddingRight,
+    paddingBottom: el.style.paddingBottom,
+    paddingLeft: el.style.paddingLeft,
   };
 
   const innerBorder = parseBorder(el);
   const cs = getComputedStyle(el);
   const { shadow, innerShadow } = parseBoxShadow(cs.boxShadow);
 
+  // Read all computed values BEFORE stripping (getComputedStyle returns a live object)
+  const boxSizing = cs.boxSizing;
+  const borderTopW = parseFloat(cs.borderTopWidth) || 0;
+  const borderRightW = parseFloat(cs.borderRightWidth) || 0;
+  const borderBottomW = parseFloat(cs.borderBottomWidth) || 0;
+  const borderLeftW = parseFloat(cs.borderLeftWidth) || 0;
+  const paddingTop = parseFloat(cs.paddingTop) || 0;
+  const paddingRight = parseFloat(cs.paddingRight) || 0;
+  const paddingBottom = parseFloat(cs.paddingBottom) || 0;
+  const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+
   el.style.border = "0";
   el.style.boxShadow = "none";
+
+  // Compensate padding for content-box elements to prevent layout shift
+  if (
+    boxSizing === "content-box" &&
+    (borderTopW > 0 || borderRightW > 0 || borderBottomW > 0 || borderLeftW > 0)
+  ) {
+    el.style.paddingTop = (paddingTop + borderTopW) + "px";
+    el.style.paddingRight = (paddingRight + borderRightW) + "px";
+    el.style.paddingBottom = (paddingBottom + borderBottomW) + "px";
+    el.style.paddingLeft = (paddingLeft + borderLeftW) + "px";
+  }
 
   const effects: EffectsConfig = {};
   if (innerBorder) effects.innerBorder = innerBorder;
@@ -138,8 +171,12 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
  */
 export function restoreStyles(
   el: HTMLElement,
-  saved: { border: string; boxShadow: string },
+  saved: ExtractedEffects["savedStyles"],
 ): void {
   el.style.border = saved.border;
   el.style.boxShadow = saved.boxShadow;
+  el.style.paddingTop = saved.paddingTop;
+  el.style.paddingRight = saved.paddingRight;
+  el.style.paddingBottom = saved.paddingBottom;
+  el.style.paddingLeft = saved.paddingLeft;
 }
