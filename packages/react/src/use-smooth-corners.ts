@@ -1,5 +1,15 @@
 import { useEffect, useRef } from "react";
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@smooth-corners/core";
+import {
+  generateClipPath,
+  createSvgEffects,
+  createDropShadow,
+  observeResize,
+  DEFAULT_SHADOW,
+  extractAndStripEffects,
+  restoreStyles,
+  acquirePosition,
+  releasePosition,
+} from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface UseEffectsOptions {
@@ -53,6 +63,16 @@ export function useSmoothCorners(
       el.style.clipPath = "";
     };
   }, [ref]);
+
+  // Re-apply clip-path on every render to pick up option changes
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    if (width > 0 && height > 0) {
+      el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+    }
+  });
 
   // Effects overlay (SVG effects + drop shadow)
   useEffect(() => {
@@ -116,7 +136,8 @@ export function useSmoothCorners(
       shadowHandle.update(
         optionsRef.current,
         currentMerged.shadow ?? DEFAULT_SHADOW,
-        width, height,
+        width,
+        height,
       );
     });
 
@@ -146,7 +167,8 @@ export function useSmoothCorners(
     shadowHandle.update(
       optionsRef.current,
       currentMerged.shadow ?? DEFAULT_SHADOW,
-      width, height,
+      width,
+      height,
     );
   });
 }

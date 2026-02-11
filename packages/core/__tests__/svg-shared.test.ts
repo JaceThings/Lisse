@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SVG_NS, nextUid, hexToRgb, DEFAULT_SHADOW } from "../src/svg-shared.js";
+import { SVG_NS, nextUid, hexToRgb, DEFAULT_SHADOW, darkenHex } from "../src/svg-shared.js";
 
 describe("SVG_NS", () => {
   it("equals the SVG namespace URI", () => {
@@ -53,5 +53,21 @@ describe("DEFAULT_SHADOW", () => {
       color: "#000",
       opacity: 0,
     });
+  });
+});
+
+describe("darkenHex", () => {
+  it("darkens a color by multiplying RGB by 2/3", () => {
+    expect(darkenHex("#ffffff")).toBe("#aaaaaa");
+    expect(darkenHex("#ff0000")).toBe("#aa0000");
+    expect(darkenHex("#336699")).toBe("#224466");
+  });
+
+  it("returns #4c4c4c for pure black", () => {
+    expect(darkenHex("#000000")).toBe("#4c4c4c");
+  });
+
+  it("preserves zeros in other channels", () => {
+    expect(darkenHex("#00ff00")).toBe("#00aa00");
   });
 });

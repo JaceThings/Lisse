@@ -1,4 +1,4 @@
-import type { BorderConfig, ShadowConfig, EffectsConfig } from "./types.js";
+import type { BorderConfig, BorderStyle, ShadowConfig, EffectsConfig } from "./types.js";
 
 export interface ExtractedEffects {
   effects: EffectsConfig;
@@ -46,7 +46,22 @@ export function parseBorder(el: HTMLElement): BorderConfig | undefined {
   const color = parseColor(cs.borderTopColor);
   if (!color || color.opacity <= 0) return undefined;
 
-  return { width, color: color.hex, opacity: color.opacity };
+  const supportedStyles: Record<string, BorderStyle> = {
+    solid: "solid",
+    dashed: "dashed",
+    dotted: "dotted",
+    double: "double",
+    groove: "groove",
+    ridge: "ridge",
+  };
+  const borderStyle = supportedStyles[style];
+
+  return {
+    width,
+    color: color.hex,
+    opacity: color.opacity,
+    ...(borderStyle && borderStyle !== "solid" ? { style: borderStyle } : {}),
+  };
 }
 
 /**

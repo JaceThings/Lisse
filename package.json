@@ -10,6 +10,9 @@
     "version": "changeset version",
     "release": "pnpm build && changeset publish"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "devDependencies": {
     "@changesets/cli": "^2.27.0",
     "happy-dom": "^20.6.0",

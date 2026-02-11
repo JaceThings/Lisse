@@ -1,6 +1,6 @@
 import { generatePath } from "./generate-path.js";
 import type { SmoothCornerOptions, EffectsConfig } from "./types.js";
-import { SVG_NS, nextUid, hexToRgb } from "./svg-shared.js";
+import { SVG_NS, nextUid, hexToRgb, darkenHex } from "./svg-shared.js";
 
 export interface SvgEffectsHandle {
   update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
@@ -115,19 +115,64 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   innerShadowPath.style.display = "none";
   svg.appendChild(innerShadowPath);
 
-  // Inner border stroke path
+  // Inner border stroke path (wrapped in <g> for double border masking)
+  const innerStrokeGroup = document.createElementNS(SVG_NS, "g");
   const innerStrokePath = document.createElementNS(SVG_NS, "path");
   innerStrokePath.setAttribute("fill", "none");
   innerStrokePath.setAttribute("clip-path", `url(#${clipId})`);
   innerStrokePath.style.display = "none";
-  svg.appendChild(innerStrokePath);
+  innerStrokeGroup.appendChild(innerStrokePath);
 
-  // Outer border stroke path
+  // Inner groove/ridge overlay
+  const innerGrooveOverlay = document.createElementNS(SVG_NS, "path");
+  innerGrooveOverlay.setAttribute("fill", "none");
+  innerGrooveOverlay.setAttribute("clip-path", `url(#${clipId})`);
+  innerGrooveOverlay.style.display = "none";
+  innerStrokeGroup.appendChild(innerGrooveOverlay);
+
+  svg.appendChild(innerStrokeGroup);
+
+  // Outer border stroke path (wrapped in <g> for double border masking)
+  const outerStrokeGroup = document.createElementNS(SVG_NS, "g");
   const outerStrokePath = document.createElementNS(SVG_NS, "path");
   outerStrokePath.setAttribute("fill", "none");
   outerStrokePath.setAttribute("mask", `url(#${maskId})`);
   outerStrokePath.style.display = "none";
-  svg.appendChild(outerStrokePath);
+  outerStrokeGroup.appendChild(outerStrokePath);
+
+  // Outer groove/ridge overlay
+  const outerGrooveOverlay = document.createElementNS(SVG_NS, "path");
+  outerGrooveOverlay.setAttribute("fill", "none");
+  outerGrooveOverlay.setAttribute("mask", `url(#${maskId})`);
+  outerGrooveOverlay.style.display = "none";
+  outerStrokeGroup.appendChild(outerGrooveOverlay);
+
+  svg.appendChild(outerStrokeGroup);
+
+  // Double-knockout masks (punch out middle third for double borders)
+  const innerDblMaskId = `sc-dbl-inner-${id}`;
+  const innerDblMask = document.createElementNS(SVG_NS, "mask");
+  innerDblMask.setAttribute("id", innerDblMaskId);
+  const innerDblRect = document.createElementNS(SVG_NS, "rect");
+  innerDblRect.setAttribute("fill", "white");
+  const innerDblKnockout = document.createElementNS(SVG_NS, "path");
+  innerDblKnockout.setAttribute("fill", "none");
+  innerDblKnockout.setAttribute("stroke", "black");
+  innerDblMask.appendChild(innerDblRect);
+  innerDblMask.appendChild(innerDblKnockout);
+  defs.appendChild(innerDblMask);
+
+  const outerDblMaskId = `sc-dbl-outer-${id}`;
+  const outerDblMask = document.createElementNS(SVG_NS, "mask");
+  outerDblMask.setAttribute("id", outerDblMaskId);
+  const outerDblRect = document.createElementNS(SVG_NS, "rect");
+  outerDblRect.setAttribute("fill", "white");
+  const outerDblKnockout = document.createElementNS(SVG_NS, "path");
+  outerDblKnockout.setAttribute("fill", "none");
+  outerDblKnockout.setAttribute("stroke", "black");
+  outerDblMask.appendChild(outerDblRect);
+  outerDblMask.appendChild(outerDblKnockout);
+  defs.appendChild(outerDblMask);
 
   anchor.appendChild(svg);
 
@@ -155,8 +200,52 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         innerStrokePath.setAttribute("stroke", ib.color);
         innerStrokePath.setAttribute("stroke-width", String(ib.width * 2));
         innerStrokePath.setAttribute("stroke-opacity", String(ib.opacity));
+
+        // Border style handling
+        const ibStyle = ib.style ?? "solid";
+        innerStrokeGroup.removeAttribute("mask");
+        innerGrooveOverlay.style.display = "none";
+        innerStrokePath.removeAttribute("stroke-dasharray");
+        innerStrokePath.setAttribute("stroke-linecap", "butt");
+
+        switch (ibStyle) {
+          case "dashed":
+            innerStrokePath.setAttribute("stroke-dasharray", `${ib.width * 3} ${ib.width * 2}`);
+            break;
+          case "dotted":
+            innerStrokePath.setAttribute("stroke-dasharray", `0 ${ib.width * 2}`);
+            innerStrokePath.setAttribute("stroke-linecap", "round");
+            break;
+          case "double":
+            if (ib.width >= 3) {
+              const third = Math.round(ib.width / 3);
+              innerDblKnockout.setAttribute("d", d);
+              innerDblKnockout.setAttribute("stroke-width", String(third * 2));
+              innerDblRect.setAttribute("width", String(width));
+              innerDblRect.setAttribute("height", String(height));
+              innerStrokeGroup.setAttribute("mask", `url(#${innerDblMaskId})`);
+            }
+            break;
+          case "groove":
+            innerStrokePath.setAttribute("stroke", darkenHex(ib.color));
+            innerGrooveOverlay.style.display = "";
+            innerGrooveOverlay.setAttribute("d", d);
+            innerGrooveOverlay.setAttribute("stroke", ib.color);
+            innerGrooveOverlay.setAttribute("stroke-width", String(ib.width));
+            innerGrooveOverlay.setAttribute("stroke-opacity", String(ib.opacity));
+            break;
+          case "ridge":
+            innerGrooveOverlay.style.display = "";
+            innerGrooveOverlay.setAttribute("d", d);
+            innerGrooveOverlay.setAttribute("stroke", darkenHex(ib.color));
+            innerGrooveOverlay.setAttribute("stroke-width", String(ib.width));
+            innerGrooveOverlay.setAttribute("stroke-opacity", String(ib.opacity));
+            break;
+        }
       } else {
         innerStrokePath.style.display = "none";
+        innerStrokeGroup.removeAttribute("mask");
+        innerGrooveOverlay.style.display = "none";
       }
 
       // Outer border
@@ -174,8 +263,54 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         maskRect.setAttribute("y", String(-pad));
         maskRect.setAttribute("width", String(width + pad * 2));
         maskRect.setAttribute("height", String(height + pad * 2));
+
+        // Border style handling
+        const obStyle = ob.style ?? "solid";
+        outerStrokeGroup.removeAttribute("mask");
+        outerGrooveOverlay.style.display = "none";
+        outerStrokePath.removeAttribute("stroke-dasharray");
+        outerStrokePath.setAttribute("stroke-linecap", "butt");
+
+        switch (obStyle) {
+          case "dashed":
+            outerStrokePath.setAttribute("stroke-dasharray", `${ob.width * 3} ${ob.width * 2}`);
+            break;
+          case "dotted":
+            outerStrokePath.setAttribute("stroke-dasharray", `0 ${ob.width * 2}`);
+            outerStrokePath.setAttribute("stroke-linecap", "round");
+            break;
+          case "double":
+            if (ob.width >= 3) {
+              const third = Math.round(ob.width / 3);
+              outerDblKnockout.setAttribute("d", d);
+              outerDblKnockout.setAttribute("stroke-width", String(third * 2));
+              outerDblRect.setAttribute("x", String(-pad));
+              outerDblRect.setAttribute("y", String(-pad));
+              outerDblRect.setAttribute("width", String(width + pad * 2));
+              outerDblRect.setAttribute("height", String(height + pad * 2));
+              outerStrokeGroup.setAttribute("mask", `url(#${outerDblMaskId})`);
+            }
+            break;
+          case "groove":
+            outerStrokePath.setAttribute("stroke", darkenHex(ob.color));
+            outerGrooveOverlay.style.display = "";
+            outerGrooveOverlay.setAttribute("d", d);
+            outerGrooveOverlay.setAttribute("stroke", ob.color);
+            outerGrooveOverlay.setAttribute("stroke-width", String(ob.width));
+            outerGrooveOverlay.setAttribute("stroke-opacity", String(ob.opacity));
+            break;
+          case "ridge":
+            outerGrooveOverlay.style.display = "";
+            outerGrooveOverlay.setAttribute("d", d);
+            outerGrooveOverlay.setAttribute("stroke", darkenHex(ob.color));
+            outerGrooveOverlay.setAttribute("stroke-width", String(ob.width));
+            outerGrooveOverlay.setAttribute("stroke-opacity", String(ob.opacity));
+            break;
+        }
       } else {
         outerStrokePath.style.display = "none";
+        outerStrokeGroup.removeAttribute("mask");
+        outerGrooveOverlay.style.display = "none";
       }
 
       // Inner shadow

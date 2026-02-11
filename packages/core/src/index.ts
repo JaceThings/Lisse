@@ -28,6 +28,7 @@ export type {
   NormalizedCorner,
   NormalizedCorners,
   BorderConfig,
+  BorderStyle,
   ShadowConfig,
   EffectsConfig,
 } from "./types.js";

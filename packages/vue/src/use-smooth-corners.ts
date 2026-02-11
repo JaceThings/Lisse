@@ -6,7 +6,17 @@ import {
   type Ref,
   type MaybeRef,
 } from "vue";
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@smooth-corners/core";
+import {
+  generateClipPath,
+  createSvgEffects,
+  createDropShadow,
+  observeResize,
+  DEFAULT_SHADOW,
+  extractAndStripEffects,
+  restoreStyles,
+  acquirePosition,
+  releasePosition,
+} from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
 export interface UseEffectsOptions {
@@ -78,23 +88,50 @@ export function useSmoothCorners(
 
     function updateEffects() {
       const el = unref(target);
-      if (!el || !effectsHandle || !shadowHandle) return;
+      if (!el) return;
 
       const { width, height } = el.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
 
       // Merge extracted + explicit effects
-      const explicit = effectsOptions?.effects ? unref(effectsOptions.effects) : undefined;
+      const explicit = effectsOptions?.effects
+        ? unref(effectsOptions.effects)
+        : undefined;
       const mergedEffects: EffectsConfig = {
         ...extractedResult?.effects,
         ...explicit,
       };
 
+      const hasAny = !!(
+        mergedEffects.innerBorder ||
+        mergedEffects.outerBorder ||
+        mergedEffects.innerShadow ||
+        mergedEffects.shadow
+      );
+
+      // Lazy handle creation (matches Svelte pattern)
+      if (hasAny && !effectsHandle) {
+        const explicitWrapper = effectsOptions?.wrapper
+          ? unref(effectsOptions.wrapper)
+          : null;
+        const anchor = explicitWrapper ?? el.parentElement;
+        if (!anchor) return;
+        didAcquire = acquirePosition(anchor);
+        effectsHandle = createSvgEffects(anchor);
+        shadowHandle = createDropShadow(anchor);
+        if (!unobserveEffects) {
+          unobserveEffects = observeResize(el, updateEffects);
+        }
+      }
+
+      if (!effectsHandle || !shadowHandle) return;
+
       effectsHandle.update(unref(options), mergedEffects, width, height);
       shadowHandle.update(
         unref(options),
         mergedEffects.shadow ?? DEFAULT_SHADOW,
-        width, height,
+        width,
+        height,
       );
     }
 
@@ -103,9 +140,10 @@ export function useSmoothCorners(
       const el = unref(target);
       if (!el) return;
 
-      const autoEffects = effectsOptions?.autoEffects !== undefined
-        ? unref(effectsOptions.autoEffects)
-        : true;
+      const autoEffects =
+        effectsOptions?.autoEffects !== undefined
+          ? unref(effectsOptions.autoEffects)
+          : true;
 
       // Auto-extract CSS effects
       if (autoEffects) {
@@ -113,7 +151,9 @@ export function useSmoothCorners(
       }
 
       // Merge extracted + explicit effects
-      const explicit = effectsOptions?.effects ? unref(effectsOptions.effects) : undefined;
+      const explicit = effectsOptions?.effects
+        ? unref(effectsOptions.effects)
+        : undefined;
       const mergedEffects: EffectsConfig = {
         ...extractedResult?.effects,
         ...explicit,
@@ -129,7 +169,9 @@ export function useSmoothCorners(
       if (!hasAnyEffects) return;
 
       // Determine anchor element
-      const explicitWrapper = effectsOptions?.wrapper ? unref(effectsOptions.wrapper) : null;
+      const explicitWrapper = effectsOptions?.wrapper
+        ? unref(effectsOptions.wrapper)
+        : null;
       const anchor = explicitWrapper ?? el.parentElement;
       if (!anchor) return;
 
@@ -157,7 +199,9 @@ export function useSmoothCorners(
       extractedResult = undefined;
 
       if (didAcquire) {
-        const explicitWrapper = effectsOptions?.wrapper ? unref(effectsOptions.wrapper) : null;
+        const explicitWrapper = effectsOptions?.wrapper
+          ? unref(effectsOptions.wrapper)
+          : null;
         const anchor = explicitWrapper ?? unref(target)?.parentElement;
         if (anchor) releasePosition(anchor);
         didAcquire = false;
@@ -165,9 +209,16 @@ export function useSmoothCorners(
     }
 
     if (effectsOptions?.effects) {
-      watch(() => unref(effectsOptions!.effects!), updateEffects, { deep: true });
+      watch(() => unref(effectsOptions!.effects!), updateEffects, {
+        deep: true,
+      });
     }
     watch(() => unref(options), updateEffects, { deep: true });
+
+    watch(() => unref(target), setupEffects);
+    if (effectsOptions?.autoEffects !== undefined) {
+      watch(() => unref(effectsOptions!.autoEffects!), setupEffects);
+    }
 
     onMounted(setupEffects);
     onBeforeUnmount(cleanupEffects);

@@ -199,3 +199,159 @@ describe("createSvgEffects", () => {
     }
   });
 });
+
+describe("border styles", () => {
+  it("dashed inner border sets stroke-dasharray", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerBorder: { width: 4, color: "#ff0000", opacity: 1, style: "dashed" },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("12 8");
+  });
+
+  it("dotted inner border sets stroke-linecap round and dasharray", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerBorder: { width: 4, color: "#ff0000", opacity: 1, style: "dotted" },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("0 8");
+    expect(innerStroke!.getAttribute("stroke-linecap")).toBe("round");
+  });
+
+  it("double inner border (width=6) applies knockout mask to stroke group", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerBorder: { width: 6, color: "#0000ff", opacity: 1, style: "double" },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    // The parent <g> should have a mask attribute for the knockout
+    const group = innerStroke!.parentElement!;
+    expect(group.tagName.toLowerCase()).toBe("g");
+    expect(group.getAttribute("mask")).toMatch(/url\(#sc-dbl-inner-/);
+  });
+
+  it("double inner border (width=2) does NOT apply knockout mask (falls back to solid)", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerBorder: { width: 2, color: "#0000ff", opacity: 1, style: "double" },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    const group = innerStroke!.parentElement!;
+    expect(group.getAttribute("mask")).toBeNull();
+  });
+
+  it("groove inner border shows overlay with original color and darkens base", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerBorder: { width: 4, color: "#ffffff", opacity: 1, style: "groove" },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    // Base stroke should be darkened
+    expect(innerStroke!.getAttribute("stroke")).toBe("#aaaaaa");
+
+    // Overlay should be visible with original color
+    const group = innerStroke!.parentElement!;
+    const overlay = group.querySelectorAll("path")[1]; // second path in group
+    expect(overlay).not.toBeUndefined();
+    expect(overlay.style.display).not.toBe("none");
+    expect(overlay.getAttribute("stroke")).toBe("#ffffff");
+  });
+
+  it("ridge inner border has overlay with darkened color and base with original", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerBorder: { width: 4, color: "#ffffff", opacity: 1, style: "ridge" },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    // Base stroke keeps original color
+    expect(innerStroke!.getAttribute("stroke")).toBe("#ffffff");
+
+    // Overlay should have darkened color
+    const group = innerStroke!.parentElement!;
+    const overlay = group.querySelectorAll("path")[1];
+    expect(overlay).not.toBeUndefined();
+    expect(overlay.style.display).not.toBe("none");
+    expect(overlay.getAttribute("stroke")).toBe("#aaaaaa");
+  });
+
+  it("switching from dashed to solid removes stroke-dasharray", () => {
+    const handle = createSvgEffects(anchor);
+    handle.update(opts, {
+      innerBorder: { width: 4, color: "#ff0000", opacity: 1, style: "dashed" },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("12 8");
+
+    // Switch to solid
+    handle.update(opts, {
+      innerBorder: { width: 4, color: "#ff0000", opacity: 1 },
+    }, 200, 100);
+
+    expect(innerStroke!.getAttribute("stroke-dasharray")).toBeNull();
+  });
+
+  it("outer border with dashed style sets stroke-dasharray", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      outerBorder: { width: 3, color: "#00ff00", opacity: 0.8, style: "dashed" },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const outerStroke = [...paths].find(
+      (p) => p.getAttribute("mask") !== null && p.style.display !== "none"
+    );
+    expect(outerStroke).not.toBeUndefined();
+    expect(outerStroke!.getAttribute("stroke-dasharray")).toBe("9 6");
+  });
+});

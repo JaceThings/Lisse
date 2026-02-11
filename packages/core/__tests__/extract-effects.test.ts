@@ -73,6 +73,50 @@ describe("parseBorder", () => {
     el.style.border = "2px solid rgba(0, 0, 0, 0)";
     expect(parseBorder(el)).toBeUndefined();
   });
+
+  it("extracts dashed border style", () => {
+    el.style.border = "2px dashed rgb(255, 0, 0)";
+    const result = parseBorder(el);
+    expect(result).toBeDefined();
+    expect(result!.style).toBe("dashed");
+  });
+
+  it("extracts dotted border style", () => {
+    el.style.border = "2px dotted rgb(0, 128, 0)";
+    const result = parseBorder(el);
+    expect(result!.style).toBe("dotted");
+  });
+
+  it("extracts double border style", () => {
+    el.style.border = "3px double rgb(0, 0, 255)";
+    const result = parseBorder(el);
+    expect(result!.style).toBe("double");
+  });
+
+  it("extracts groove border style", () => {
+    el.style.border = "4px groove rgb(128, 128, 128)";
+    const result = parseBorder(el);
+    expect(result!.style).toBe("groove");
+  });
+
+  it("extracts ridge border style", () => {
+    el.style.border = "4px ridge rgb(128, 128, 128)";
+    const result = parseBorder(el);
+    expect(result!.style).toBe("ridge");
+  });
+
+  it("does not include style for solid borders", () => {
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    const result = parseBorder(el);
+    expect(result!.style).toBeUndefined();
+  });
+
+  it("treats unsupported styles (inset, outset) as solid", () => {
+    el.style.border = "2px inset rgb(255, 0, 0)";
+    const result = parseBorder(el);
+    expect(result).toBeDefined();
+    expect(result!.style).toBeUndefined();
+  });
 });
 
 describe("parseBoxShadow", () => {

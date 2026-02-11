@@ -86,11 +86,15 @@ export interface RoundedRectangle {
 
 // --- Effects types ---
 
+/** Supported border style values for SVG rendering. */
+export type BorderStyle = "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge";
+
 /** Configuration for an inner or outer border stroke. */
 export interface BorderConfig {
   width: number;
   color: string;
   opacity: number;
+  style?: BorderStyle;
 }
 
 /** Configuration for an inner or drop shadow effect. */

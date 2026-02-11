@@ -295,21 +295,31 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 
 | CSS property | SVG effect | Notes |
 |---|---|---|
-| `border` | `innerBorder` | Width, color, and opacity extracted from the top edge. Only `solid` borders. |
+| `border` | `innerBorder` | Width, color, opacity, and style extracted from the top edge. |
 | `box-shadow` (outer) | `shadow` | First outer shadow only. |
 | `box-shadow` (inset) | `innerShadow` | First inset shadow only. |
 
 ### Limitations
 
-- **Uniform borders only** -- reads the top border (`borderTopWidth`, `borderTopColor`, `borderTopStyle`) and applies it as a uniform SVG stroke. All four CSS border sides are stripped regardless -- sides that differ from the top are lost, not preserved.
-- **Solid borders only** -- `dashed`, `dotted`, `double`, etc. are not replicated. The CSS is still stripped.
-- **First shadow only** -- if you have multiple `box-shadow` layers, only the first outer and first inset are extracted. All shadow layers are stripped from the element, so additional layers beyond the first outer and first inset disappear entirely.
-- **No `outline`** -- CSS `outline` is not read or stripped.
-- **One-time extraction** -- reads CSS once on mount. Dynamically changing border/shadow styles after mount won't update the SVG effects. Use explicit effect props for dynamic values.
-- **`!important` rules** -- if a stylesheet sets `border` or `box-shadow` with `!important`, the inline style override cannot take precedence. The CSS property remains visible, gets clipped by the squircle path, and the SVG replacement also renders, producing doubled or broken visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false` with explicit effect props.
-- **CSS transitions** -- auto effects strips `border` and `box-shadow` via inline styles on mount. CSS transitions targeting these properties (e.g. `transition: border 0.3s`) will not animate while auto effects is active. To animate effects, use `autoEffects: false` and drive explicit effect props from state or an animation system.
-- **No `border-image`** -- `border-image` is not detected or handled. If present, the border may be misread (the computed `borderTopStyle` may still report `solid`) and stripped, resulting in incorrect SVG effects.
-- **Wrapper div** -- the `<SmoothCorners>` component injects a wrapper `<div style="position:relative">` around the element when auto effects is enabled (the default) or when explicit effect props are provided. This extra DOM node can break CSS child selectors (`>`), flex/grid item sizing, and pseudo-selectors like `:first-child`. To avoid the wrapper, use the `useSmoothCorners` composable directly and manage the parent positioning yourself, or pass `autoEffects={false}` when no effects are needed.
+**Partial CSS conversion:**
+
+| CSS feature | What happens |
+|---|---|
+| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
+| `inset`, `outset` border styles | Not replicated. Rendered as solid. |
+| Multiple `box-shadow` layers | Only the first outer and first inset shadow are kept. All layers are stripped. |
+| `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. |
+| `outline` | Not read or stripped. |
+
+**Behavioral notes:**
+
+- **One-time extraction** -- CSS is read once on mount. Use explicit effect props for dynamic values.
+- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
+- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **Wrapper div** -- `<SmoothCorners>` injects a wrapper `<div style="position:relative">` when effects are active. This can break CSS child selectors (`>`), flex/grid item sizing, and `:first-child`. To avoid it, use the `useSmoothCorners` composable directly, or pass `autoEffects={false}` when no effects are needed.
 
 ## CSS Borders and Shadows
 

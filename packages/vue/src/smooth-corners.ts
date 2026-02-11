@@ -7,7 +7,11 @@ import {
   type SlotsType,
 } from "vue";
 import { useSmoothCorners } from "./use-smooth-corners.js";
-import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@smooth-corners/core";
+import type {
+  SmoothCornerOptions,
+  BorderConfig,
+  ShadowConfig,
+} from "@smooth-corners/core";
 
 /**
  * Render-function component that applies smooth corners to a wrapper element.
@@ -41,19 +45,31 @@ export const SmoothCorners = defineComponent({
       default: undefined,
     },
     topLeft: {
-      type: [Number, Object] as PropType<number | { radius: number; smoothing?: number; preserveSmoothing?: boolean }>,
+      type: [Number, Object] as PropType<
+        | number
+        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
+      >,
       default: undefined,
     },
     topRight: {
-      type: [Number, Object] as PropType<number | { radius: number; smoothing?: number; preserveSmoothing?: boolean }>,
+      type: [Number, Object] as PropType<
+        | number
+        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
+      >,
       default: undefined,
     },
     bottomRight: {
-      type: [Number, Object] as PropType<number | { radius: number; smoothing?: number; preserveSmoothing?: boolean }>,
+      type: [Number, Object] as PropType<
+        | number
+        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
+      >,
       default: undefined,
     },
     bottomLeft: {
-      type: [Number, Object] as PropType<number | { radius: number; smoothing?: number; preserveSmoothing?: boolean }>,
+      type: [Number, Object] as PropType<
+        | number
+        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
+      >,
       default: undefined,
     },
     innerBorder: {
@@ -82,7 +98,7 @@ export const SmoothCorners = defineComponent({
     const elRef = ref<HTMLElement | null>(null);
     const wrapperRef = ref<HTMLElement | null>(null);
 
-    const options = (): SmoothCornerOptions => {
+    const options = computed((): SmoothCornerOptions => {
       if (props.radius !== undefined) {
         return {
           radius: props.radius,
@@ -96,10 +112,16 @@ export const SmoothCorners = defineComponent({
         bottomRight: props.bottomRight,
         bottomLeft: props.bottomLeft,
       };
-    };
+    });
 
     const hasExplicitEffects = computed(
-      () => !!(props.innerBorder || props.outerBorder || props.innerShadow || props.shadow),
+      () =>
+        !!(
+          props.innerBorder ||
+          props.outerBorder ||
+          props.innerShadow ||
+          props.shadow
+        ),
     );
 
     const needsWrapper = computed(
@@ -113,15 +135,11 @@ export const SmoothCorners = defineComponent({
       shadow: props.shadow,
     }));
 
-    useSmoothCorners(
-      elRef,
-      options(),
-      {
-        wrapper: wrapperRef,
-        effects: hasExplicitEffects.value ? effectsConfig : undefined,
-        autoEffects: computed(() => props.autoEffects ?? true),
-      },
-    );
+    useSmoothCorners(elRef, options, {
+      wrapper: wrapperRef,
+      effects: effectsConfig,
+      autoEffects: computed(() => props.autoEffects ?? true),
+    });
 
     return () => {
       if (needsWrapper.value) {
