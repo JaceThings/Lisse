@@ -106,7 +106,7 @@ describe("createSvgEffects", () => {
     expect(maskRect.getAttribute("height")).toBe("106");
   });
 
-  it("update() with visible inner shadow — filter attributes set correctly", () => {
+  it("update() with visible inner shadow — mask and blur set correctly", () => {
     const handle = createSvgEffects(anchor);
     const effects: EffectsConfig = {
       innerShadow: {
@@ -121,29 +121,36 @@ describe("createSvgEffects", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const filter = svg.querySelector("filter")!;
-    const feFlood = filter.querySelector("feFlood")!;
-    expect(feFlood.getAttribute("flood-color")).toBe("rgb(255,0,0)");
-    expect(feFlood.getAttribute("flood-opacity")).toBe("0.5");
 
-    const feBlur = filter.querySelector("feGaussianBlur")!;
+    // Blur filter
+    const feBlur = svg.querySelector("feGaussianBlur")!;
     expect(feBlur.getAttribute("stdDeviation")).toBe("8");
 
-    const feOffset = filter.querySelector("feOffset")!;
-    expect(feOffset.getAttribute("dx")).toBe("2");
-    expect(feOffset.getAttribute("dy")).toBe("4");
+    // Shadow rect is displayed with correct fill
+    const rects = svg.querySelectorAll("rect");
+    const shadowRect = [...rects].find(
+      (r) => r.getAttribute("mask") !== null && r.style.display !== "none"
+    );
+    expect(shadowRect).not.toBeUndefined();
+    expect(shadowRect!.getAttribute("fill")).toBe("rgb(255,0,0)");
+    expect(shadowRect!.getAttribute("fill-opacity")).toBe("0.5");
 
-    const feMorph = filter.querySelector("feMorphology")!;
-    expect(feMorph.getAttribute("operator")).toBe("dilate");
-    expect(feMorph.getAttribute("radius")).toBe("3");
+    // Mask has a cutout path with fill="black"
+    const masks = svg.querySelectorAll("mask");
+    const isMask = [...masks].find(
+      (m) => m.getAttribute("id")?.includes("ishadow-mask")
+    );
+    expect(isMask).not.toBeUndefined();
+    const cutout = isMask!.querySelector('path[fill="black"]');
+    expect(cutout).not.toBeNull();
   });
 
-  it("update() with negative spread uses erode operator", () => {
+  it("update() with spread adjusts cutout dimensions", () => {
     const handle = createSvgEffects(anchor);
     const effects: EffectsConfig = {
       innerShadow: {
-        offsetX: 0,
-        offsetY: 0,
+        offsetX: 5,
+        offsetY: 10,
         blur: 4,
         spread: -2,
         color: "#000000",
@@ -153,9 +160,15 @@ describe("createSvgEffects", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const feMorph = svg.querySelector("feMorphology")!;
-    expect(feMorph.getAttribute("operator")).toBe("erode");
-    expect(feMorph.getAttribute("radius")).toBe("2");
+    const masks = svg.querySelectorAll("mask");
+    const isMask = [...masks].find(
+      (m) => m.getAttribute("id")?.includes("ishadow-mask")
+    );
+    expect(isMask).not.toBeUndefined();
+    const cutout = isMask!.querySelector('path[fill="black"]');
+    expect(cutout).not.toBeNull();
+    expect(cutout!.getAttribute("d")).toBeTruthy();
+    expect(cutout!.getAttribute("transform")).toContain("translate(");
   });
 
   it("update() with zero dimensions — no crash, nothing rendered", () => {

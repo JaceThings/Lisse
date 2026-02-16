@@ -12,6 +12,24 @@ import {
 } from "@smooth-corners/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
 
+function mergeEffects(
+  extracted: ReturnType<typeof extractAndStripEffects> | undefined,
+  explicit: EffectsConfig | undefined,
+): EffectsConfig {
+  return { ...extracted?.effects, ...explicit };
+}
+
+function syncEffects(
+  options: SmoothCornerOptions,
+  merged: EffectsConfig,
+  effectsHandle: ReturnType<typeof createSvgEffects>,
+  shadowHandle: ReturnType<typeof createDropShadow>,
+  width: number, height: number,
+): void {
+  effectsHandle.update(options, merged, width, height);
+  shadowHandle.update(options, merged.shadow ?? DEFAULT_SHADOW, width, height);
+}
+
 export interface UseEffectsOptions {
   wrapperRef?: React.RefObject<HTMLElement | null>;
   effects?: EffectsConfig;
@@ -100,10 +118,7 @@ export function useSmoothCorners(
     }
 
     // Merge: explicit effects override auto-extracted
-    const mergedEffects: EffectsConfig = {
-      ...extracted?.effects,
-      ...explicitEffects,
-    };
+    const mergedEffects = mergeEffects(extracted, explicitEffects);
 
     // Determine if there are any effects to render
     const hasAnyEffects = !!(
@@ -138,18 +153,8 @@ export function useSmoothCorners(
     const unobserve = observeResize(el, () => {
       const { width, height } = el.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
-      const currentExplicit = effectsRef.current?.effects;
-      const currentMerged: EffectsConfig = {
-        ...extracted?.effects,
-        ...currentExplicit,
-      };
-      effectsHandle.update(optionsRef.current, currentMerged, width, height);
-      shadowHandle.update(
-        optionsRef.current,
-        currentMerged.shadow ?? DEFAULT_SHADOW,
-        width,
-        height,
-      );
+      const currentMerged = mergeEffects(extracted, effectsRef.current?.effects);
+      syncEffects(optionsRef.current, currentMerged, effectsHandle, shadowHandle, width, height);
     });
 
     return () => {
@@ -167,19 +172,9 @@ export function useSmoothCorners(
     const handles = handlesRef.current;
     if (!handles) return;
     const { effectsHandle, shadowHandle, extracted, el } = handles;
-    const currentExplicit = effectsRef.current?.effects;
-    const currentMerged: EffectsConfig = {
-      ...extracted?.effects,
-      ...currentExplicit,
-    };
+    const currentMerged = mergeEffects(extracted, effectsRef.current?.effects);
     const { width, height } = el.getBoundingClientRect();
     if (width <= 0 || height <= 0) return;
-    effectsHandle.update(optionsRef.current, currentMerged, width, height);
-    shadowHandle.update(
-      optionsRef.current,
-      currentMerged.shadow ?? DEFAULT_SHADOW,
-      width,
-      height,
-    );
+    syncEffects(optionsRef.current, currentMerged, effectsHandle, shadowHandle, width, height);
   });
 }

@@ -70,8 +70,8 @@ importers:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
       system-1:
-        specifier: link:../../taxes
-        version: link:../../taxes
+        specifier: github:JaceThings/taxes
+        version: git+https://github.com/JaceThings/taxes.git#0d4d9415593bee789d7d35b1c8aac603c492a963(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
     devDependencies:
       '@types/react':
         specifier: ^19.0.0
@@ -1396,6 +1396,17 @@ packages:
     resolution: {integrity: sha512-DhuTmvZWux4H1UOnWMB3sk0sbaCVOoQZjv8u1rDoTV0HTdGem9hkAZtl4JZy8P2z4Bg0nT+YMeOFyVr4zcG5Tw==}
     engines: {node: '>=16 || 14 >=14.17'}
     hasBin: true
+
+  system-1@git+https://github.com/JaceThings/taxes.git#0d4d9415593bee789d7d35b1c8aac603c492a963:
+    resolution: {commit: 0d4d9415593bee789d7d35b1c8aac603c492a963, repo: https://github.com/JaceThings/taxes.git, type: git}
+    version: 0.1.0
+    peerDependencies:
+      '@central-icons-react/all': ^1.1.123
+      react: ^19.2.0
+      react-dom: ^19.2.0
+    peerDependenciesMeta:
+      '@central-icons-react/all':
+        optional: true
 
   term-size@2.2.1:
     resolution: {integrity: sha512-wK0Ri4fOGjv/XPy8SBHZChl8CM7uMc5VML7SqiQ0zG7+J5Vr+RMQDoHa2CNT6KHUnTGIXH34UDMkPzAUyapBZg==}
@@ -2823,6 +2834,11 @@ snapshots:
       pirates: 4.0.7
       tinyglobby: 0.2.15
       ts-interface-checker: 0.1.13
+
+  system-1@git+https://github.com/JaceThings/taxes.git#0d4d9415593bee789d7d35b1c8aac603c492a963(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
 
   term-size@2.2.1: {}
 

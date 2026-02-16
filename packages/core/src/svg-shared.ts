@@ -1,4 +1,4 @@
-import type { ShadowConfig } from "./types.js";
+import type { ShadowConfig, SmoothCornerOptions, CornerConfig } from "./types.js";
 
 /** SVG namespace URI for document.createElementNS. */
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -17,6 +17,25 @@ export function hexToRgb(hex: string): string {
 export const DEFAULT_SHADOW: ShadowConfig = {
   offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 0,
 };
+
+/** Adjust corner options by a spread offset (used by inner shadow and drop shadow). */
+export function adjustOptions(options: SmoothCornerOptions, spread: number): SmoothCornerOptions {
+  if (spread === 0) return options;
+  if ("radius" in options) {
+    return { ...options, radius: Math.max(0, options.radius + spread) };
+  }
+  const adjust = (v: CornerConfig | number | undefined): CornerConfig | number | undefined => {
+    if (v === undefined) return undefined;
+    if (typeof v === "number") return Math.max(0, v + spread);
+    return { ...v, radius: Math.max(0, v.radius + spread) };
+  };
+  return {
+    topLeft: adjust(options.topLeft),
+    topRight: adjust(options.topRight),
+    bottomRight: adjust(options.bottomRight),
+    bottomLeft: adjust(options.bottomLeft),
+  };
+}
 
 /**
  * Darken a hex color by multiplying each RGB channel by 2/3.

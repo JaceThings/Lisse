@@ -1,31 +1,10 @@
-import type { SmoothCornerOptions, ShadowConfig, CornerConfig } from "./types.js";
+import type { SmoothCornerOptions, ShadowConfig } from "./types.js";
 import { generatePath } from "./generate-path.js";
-import { SVG_NS, nextUid, hexToRgb } from "./svg-shared.js";
+import { SVG_NS, nextUid, hexToRgb, adjustOptions } from "./svg-shared.js";
 
 export interface DropShadowHandle {
   update(options: SmoothCornerOptions, shadow: ShadowConfig, width: number, height: number): void;
   destroy(): void;
-}
-
-function adjustOptions(options: SmoothCornerOptions, spread: number): SmoothCornerOptions {
-  if (spread === 0) return options;
-  if ("radius" in options) {
-    return {
-      ...options,
-      radius: Math.max(0, options.radius + spread),
-    };
-  }
-  const adjust = (v: CornerConfig | number | undefined): CornerConfig | number | undefined => {
-    if (v === undefined) return undefined;
-    if (typeof v === "number") return Math.max(0, v + spread);
-    return { ...v, radius: Math.max(0, v.radius + spread) };
-  };
-  return {
-    topLeft: adjust(options.topLeft),
-    topRight: adjust(options.topRight),
-    bottomRight: adjust(options.bottomRight),
-    bottomLeft: adjust(options.bottomLeft),
-  };
 }
 
 /**
