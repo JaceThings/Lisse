@@ -4,7 +4,7 @@
 
 # smooth-corners
 
-Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, inner/outer borders, and shadows.
+Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
 [![npm: @smooth-corners/core](https://img.shields.io/npm/v/%40smooth-corners%2Fcore?label=%40smooth-corners%2Fcore)](https://www.npmjs.com/package/@smooth-corners/core)
 [![npm: @smooth-corners/react](https://img.shields.io/npm/v/%40smooth-corners%2Freact?label=%40smooth-corners%2Freact)](https://www.npmjs.com/package/@smooth-corners/react)
@@ -29,7 +29,9 @@ smooth-corners implements [Figma's corner smoothing algorithm](https://www.figma
 
 - Pixel-perfect reproduction of Figma's squircle algorithm
 - Per-corner radius and smoothing control
-- Built-in effects: inner border, outer border, inner shadow, drop shadow
+- Inner, outer, and middle borders with style variants (solid, dashed, dotted, double, groove, ridge)
+- Inner shadow and drop shadow effects
+- Auto-effects: CSS borders and shadows are automatically converted to SVG equivalents
 - Framework bindings for React, Vue, and Svelte
 - Lightweight core with zero dependencies
 - DOM-free `/path` subpath export for SSR and edge runtimes
@@ -47,7 +49,7 @@ Each framework binding offers two ways to apply smooth corners:
 | **When to use** | Building new UI from scratch, or when you want a drop-in replacement for a `<div>` | You already have an element and want to add smooth corners without changing your DOM structure |
 | **Effects** | Handled automatically (wrapper div is created for you) | You manage the wrapper element yourself (React/Vue) or ensure the parent has `position: relative` (Svelte) |
 
-If you are starting fresh, the component is simpler. If you are adding smooth corners to existing elements, use the hook/composable/action.
+If you're starting fresh, the component is simpler. If you're adding smooth corners to existing elements, use the hook/composable/action.
 
 ## Quick Start
 
@@ -173,18 +175,76 @@ When adjacent corners compete for space, larger radii are given priority and sma
 
 ## Effects
 
-### Auto Effects (enabled by default)
+smooth-corners clips your element with `clip-path`, which slices through CSS borders and shadows. The library provides SVG-based replacements that follow the squircle shape perfectly.
 
-smooth-corners clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as the library's SVG-based effect props -- extra work that's easy to forget.
+### Built-in Effects
 
-**Auto effects removes that step.** On mount, the library automatically:
+All framework bindings support five effects rendered as SVG overlays:
+
+| Effect | Description |
+|--------|-------------|
+| `innerBorder` | Border drawn inside the squircle path (clipped to the shape) |
+| `outerBorder` | Border drawn outside the squircle path (masked to the exterior) |
+| `middleBorder` | Border centered on the squircle path (half inside, half outside) |
+| `innerShadow` | Inset shadow inside the squircle |
+| `shadow` | Drop shadow behind the squircle |
+
+```tsx
+<SmoothCorners
+  radius={24}
+  innerBorder={{ width: 1, color: "#ffffff", opacity: 0.2 }}
+  outerBorder={{ width: 2, color: "#000000", opacity: 0.1 }}
+  middleBorder={{ width: 1, color: "#ff0000", opacity: 0.5 }}
+  innerShadow={{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.15 }}
+  shadow={{ offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 }}
+  style={{ background: "linear-gradient(135deg, #667eea, #764ba2)", padding: 32 }}
+>
+  <p style={{ color: "#fff" }}>Card with all effects</p>
+</SmoothCorners>
+```
+
+<!-- Visual: 2x2 grid showing each effect type: inner border, outer border, inner shadow, drop shadow. Each on a squircle card. Place at /assets/effects-grid.png -->
+
+### Border Styles
+
+All three border types (`innerBorder`, `outerBorder`, `middleBorder`) support style variants:
+
+| Style | Description |
+|-------|-------------|
+| `solid` | Default. Continuous stroke. |
+| `dashed` | Dashed stroke. Customize with `dash` and `gap`. |
+| `dotted` | Dotted stroke (round caps by default). Customize with `dash` and `gap`. |
+| `double` | Two lines with a gap in the middle. Requires `width >= 3`. |
+| `groove` | 3D grooved effect (darker shade on the outside). |
+| `ridge` | 3D ridged effect (darker shade on the inside). |
+
+```tsx
+<SmoothCorners
+  radius={24}
+  innerBorder={{
+    width: 4,
+    color: "#3b82f6",
+    opacity: 1,
+    style: "dashed",
+    dash: 12,     // dash length (default: width * 3)
+    gap: 6,       // gap length (default: width * 2)
+    lineCap: "round",  // "butt" | "round" | "square"
+  }}
+>
+  Dashed border
+</SmoothCorners>
+```
+
+### Auto Effects
+
+By default, smooth-corners automatically reads your CSS and converts it to SVG equivalents. On mount, the library:
 
 1. Reads the element's computed `border` and `box-shadow`
-2. Converts them to equivalent SVG effects (`innerBorder`, `shadow`, `innerShadow`)
+2. Converts them to SVG effects (`innerBorder`, `shadow`, `innerShadow`)
 3. Strips the CSS properties so they don't get clipped
 4. Restores the original CSS on unmount
 
-This is enabled by default -- elements with existing CSS borders and shadows just work.
+This means elements with existing CSS borders and shadows just work:
 
 ```tsx
 {/* CSS border is automatically converted to an SVG inner border */}
@@ -193,7 +253,7 @@ This is enabled by default -- elements with existing CSS borders and shadows jus
 </SmoothCorners>
 ```
 
-If you pass explicit effect props, they take priority over auto-extracted values:
+Explicit effect props take priority over auto-extracted values:
 
 ```tsx
 {/* Explicit innerBorder wins over the CSS border */}
@@ -208,65 +268,34 @@ If you pass explicit effect props, they take priority over auto-extracted values
 
 #### Disabling auto effects
 
-Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffects: false` (Svelte config mode). When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behavior.
+Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffects: false` (Svelte). When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs.
 
-#### How CSS properties are mapped
+#### What gets extracted
 
 | CSS property | SVG effect | Notes |
 |---|---|---|
-| `border` | `innerBorder` | Width, color, opacity, and style are extracted from the top edge. |
+| `border` | `innerBorder` | Width, color, opacity, and style (including `dashed`, `dotted`, `double`, `groove`, `ridge`) are extracted from the top edge. |
 | `box-shadow` (outer) | `shadow` | First outer shadow only. |
 | `box-shadow` (inset) | `innerShadow` | First inset shadow only. |
 
-#### Limitations
+> **Note:** `middleBorder` and `outerBorder` have no CSS equivalent and are only available as explicit props.
 
-**Partial CSS conversion:**
+#### Limitations
 
 | CSS feature | What happens |
 |---|---|
-| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. |
-| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
-| `inset`, `outset` border styles | Not replicated. Rendered as solid. |
-| Multiple `box-shadow` layers | Only the first outer and first inset shadow are kept. All layers are stripped. |
-| `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. |
+| Per-side borders | Only the top border is read. All four sides are stripped. |
+| `inset`, `outset` border styles | Rendered as solid. |
+| Multiple `box-shadow` layers | Only the first outer and first inset shadow are used. All layers are stripped. |
+| `border-image` | Not detected. May conflict with auto-extraction. |
 | `outline` | Not read or stripped. |
 
-**Behavioral notes:**
-
 - **One-time extraction** -- CSS is read once on mount. Use explicit effect props for dynamic values.
-- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
-- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
-- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
-- **Wrapper div (React/Vue only)** -- the `<SmoothCorners>` component injects a wrapper `<div>` for SVG positioning, which can affect child selectors and flex/grid layouts. Use the hook/composable API to avoid it.
-
-### CSS properties and clip-path
-
-smooth-corners works by applying a CSS `clip-path` to your element. This clips the element's entire visual box -- including any CSS `border`, `box-shadow`, or `outline` you have set. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's built-in effect props directly.
-
-All framework bindings support four built-in effects that are rendered as SVG overlays:
-
-| Effect | Description |
-|--------|-------------|
-| `innerBorder` | A border drawn inside the squircle path |
-| `outerBorder` | A border drawn outside the squircle path |
-| `innerShadow` | An inset shadow inside the squircle |
-| `shadow` | A drop shadow behind the squircle |
-
-```tsx
-<SmoothCorners
-  radius={24}
-  innerBorder={{ width: 1, color: "#ffffff", opacity: 0.2 }}
-  outerBorder={{ width: 2, color: "#000000", opacity: 0.1 }}
-  innerShadow={{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.15 }}
-  shadow={{ offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 }}
-  style={{ background: "linear-gradient(135deg, #667eea, #764ba2)", padding: 32 }}
->
-  <p style={{ color: "#fff" }}>Card with all effects</p>
-</SmoothCorners>
-```
-
-<!-- Visual: 2x2 grid showing each effect type: inner border, outer border, inner shadow, drop shadow. Each on a squircle card. Place at /assets/effects-grid.png -->
+- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible alongside the SVG replacement. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props instead.
+- **`double` minimum width** -- requires at least 3px `border-width`. Thinner double borders fall back to solid.
+- **`groove` / `ridge` shading** -- the dark shade is computed as `RGB * 2/3` (matching Firefox). Shading is uniform around the squircle, which may differ slightly from browser CSS rendering on rectangles.
+- **Wrapper div (React/Vue)** -- the `<SmoothCorners>` component injects a wrapper `<div>` for SVG positioning. This can affect child selectors and flex/grid layouts. Use the hook/composable API to avoid it.
 
 ## SSR / Path-Only Import
 
