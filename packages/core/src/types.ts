@@ -95,6 +95,12 @@ export interface BorderConfig {
   color: string;
   opacity: number;
   style?: BorderStyle;
+  /** Custom dash length for dashed/dotted styles. */
+  dash?: number;
+  /** Custom gap length for dashed/dotted styles. */
+  gap?: number;
+  /** Line cap for dashed/dotted strokes. Default: "butt" for dashed, "round" for dotted. */
+  lineCap?: "butt" | "round" | "square";
 }
 
 /** Configuration for an inner or drop shadow effect. */
@@ -111,6 +117,7 @@ export interface ShadowConfig {
 export interface EffectsConfig {
   innerBorder?: BorderConfig;
   outerBorder?: BorderConfig;
+  middleBorder?: BorderConfig;
   innerShadow?: ShadowConfig;
   shadow?: ShadowConfig;
 }

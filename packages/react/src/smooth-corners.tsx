@@ -16,6 +16,7 @@ export type SmoothCornersProps = {
   children?: ReactNode;
   innerBorder?: BorderConfig;
   outerBorder?: BorderConfig;
+  middleBorder?: BorderConfig;
   innerShadow?: ShadowConfig;
   shadow?: ShadowConfig;
   /** Automatically extract CSS border and box-shadow as SVG effects. Default: true */
@@ -50,6 +51,7 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
       bottomLeft,
       innerBorder,
       outerBorder,
+      middleBorder,
       innerShadow,
       shadow,
       autoEffects,
@@ -73,27 +75,22 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
         ? { radius, smoothing, preserveSmoothing }
         : { topLeft, topRight, bottomRight, bottomLeft };
 
-    const hasExplicitEffects = !!(innerBorder || outerBorder || innerShadow || shadow);
-    const needsWrapper = (autoEffects ?? true) || hasExplicitEffects;
+    const hasExplicitEffects = !!(innerBorder || outerBorder || middleBorder || innerShadow || shadow);
 
     const effectsOptions = {
       wrapperRef: wrapperRef as React.RefObject<HTMLElement | null>,
       effects: hasExplicitEffects
-        ? { innerBorder, outerBorder, innerShadow, shadow }
+        ? { innerBorder, outerBorder, middleBorder, innerShadow, shadow }
         : undefined,
       autoEffects,
     };
 
     useSmoothCorners(internalRef, options, effectsOptions);
 
-    if (needsWrapper) {
-      return createElement(
-        "div",
-        { ref: wrapperRef, style: { position: "relative" as const } },
-        createElement(Component, { ...rest, ref: internalRef }, children),
-      );
-    }
-
-    return createElement(Component, { ...rest, ref: internalRef }, children);
+    return createElement(
+      "div",
+      { ref: wrapperRef, style: { position: "relative" as const } },
+      createElement(Component, { ...rest, ref: internalRef }, children),
+    );
   }
 );

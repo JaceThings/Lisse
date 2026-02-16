@@ -74,6 +74,16 @@ export function useSmoothCorners(
     }
   });
 
+  // Track whether explicit effects are present so the setup/teardown effect
+  // re-runs when the wrapper div mounts or unmounts (needsWrapper toggles).
+  const hasExplicitEffects = !!(
+    effectsOptions?.effects?.innerBorder ||
+    effectsOptions?.effects?.outerBorder ||
+    effectsOptions?.effects?.middleBorder ||
+    effectsOptions?.effects?.innerShadow ||
+    effectsOptions?.effects?.shadow
+  );
+
   // Effects overlay (SVG effects + drop shadow)
   useEffect(() => {
     const el = ref.current;
@@ -99,6 +109,7 @@ export function useSmoothCorners(
     const hasAnyEffects = !!(
       mergedEffects.innerBorder ||
       mergedEffects.outerBorder ||
+      mergedEffects.middleBorder ||
       mergedEffects.innerShadow ||
       mergedEffects.shadow
     );
@@ -149,7 +160,7 @@ export function useSmoothCorners(
       if (extracted) restoreStyles(el, extracted.savedStyles);
       if (didAcquire) releasePosition(anchor);
     };
-  }, [ref, effectsOptions?.wrapperRef]);
+  }, [ref, effectsOptions?.wrapperRef, hasExplicitEffects]);
 
   // Sync SVG effects on every render to pick up explicit effect prop changes
   useEffect(() => {

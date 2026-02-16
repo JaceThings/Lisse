@@ -1,10 +1,28 @@
 import { generatePath } from "./generate-path.js";
-import type { SmoothCornerOptions, EffectsConfig } from "./types.js";
+import type { SmoothCornerOptions, EffectsConfig, CornerConfig } from "./types.js";
 import { SVG_NS, nextUid, hexToRgb, darkenHex } from "./svg-shared.js";
 
 export interface SvgEffectsHandle {
   update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
   destroy(): void;
+}
+
+function adjustOptions(options: SmoothCornerOptions, spread: number): SmoothCornerOptions {
+  if (spread === 0) return options;
+  if ("radius" in options) {
+    return { ...options, radius: Math.max(0, options.radius + spread) };
+  }
+  const adjust = (v: CornerConfig | number | undefined): CornerConfig | number | undefined => {
+    if (v === undefined) return undefined;
+    if (typeof v === "number") return Math.max(0, v + spread);
+    return { ...v, radius: Math.max(0, v.radius + spread) };
+  };
+  return {
+    topLeft: adjust(options.topLeft),
+    topRight: adjust(options.topRight),
+    bottomRight: adjust(options.bottomRight),
+    bottomLeft: adjust(options.bottomLeft),
+  };
 }
 
 /**
@@ -16,7 +34,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   const id = nextUid();
   const clipId = `sc-clip-${id}`;
   const maskId = `sc-mask-${id}`;
-  const filterId = `sc-inner-shadow-${id}`;
 
   // Root SVG
   const svg = document.createElementNS(SVG_NS, "svg");
@@ -39,6 +56,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   // Mask (for outer border) — white rect + black shape = outer region
   const maskEl = document.createElementNS(SVG_NS, "mask");
   maskEl.setAttribute("id", maskId);
+  maskEl.setAttribute("maskUnits", "userSpaceOnUse");
   const maskRect = document.createElementNS(SVG_NS, "rect");
   maskRect.setAttribute("fill", "white");
   const maskShape = document.createElementNS(SVG_NS, "path");
@@ -47,73 +65,47 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   maskEl.appendChild(maskShape);
   defs.appendChild(maskEl);
 
-  // Inner shadow filter
-  const filterEl = document.createElementNS(SVG_NS, "filter");
-  filterEl.setAttribute("id", filterId);
-  filterEl.setAttribute("x", "-100%");
-  filterEl.setAttribute("y", "-100%");
-  filterEl.setAttribute("width", "400%");
-  filterEl.setAttribute("height", "400%");
+  // Inner shadow — mask-based approach (rect with squircle cutout, blur, clip)
+  // Uses the same geometric path technique as the drop shadow for pixel-perfect
+  // shape fidelity. Avoids the alpha-inversion filter chain which causes
+  // anti-aliasing artifacts, radius tightening, and zoom-dependent rendering issues.
+  const isMaskId = `sc-ishadow-mask-${id}`;
+  const isMask = document.createElementNS(SVG_NS, "mask");
+  isMask.setAttribute("id", isMaskId);
+  isMask.setAttribute("maskUnits", "userSpaceOnUse");
+  const isMaskRect = document.createElementNS(SVG_NS, "rect");
+  isMaskRect.setAttribute("fill", "white");
+  const isMaskCutout = document.createElementNS(SVG_NS, "path");
+  isMaskCutout.setAttribute("fill", "black");
+  isMask.appendChild(isMaskRect);
+  isMask.appendChild(isMaskCutout);
+  defs.appendChild(isMask);
 
-  // feComponentTransfer: invert SourceAlpha
-  const feTransfer = document.createElementNS(SVG_NS, "feComponentTransfer");
-  feTransfer.setAttribute("in", "SourceAlpha");
-  feTransfer.setAttribute("result", "inverted");
-  const feFuncA = document.createElementNS(SVG_NS, "feFuncA");
-  feFuncA.setAttribute("type", "linear");
-  feFuncA.setAttribute("slope", "-1");
-  feFuncA.setAttribute("intercept", "1");
-  feTransfer.appendChild(feFuncA);
-  filterEl.appendChild(feTransfer);
+  const isFilterId = `sc-ishadow-blur-${id}`;
+  const isFilter = document.createElementNS(SVG_NS, "filter");
+  isFilter.setAttribute("id", isFilterId);
+  isFilter.setAttribute("x", "-200%");
+  isFilter.setAttribute("y", "-200%");
+  isFilter.setAttribute("width", "500%");
+  isFilter.setAttribute("height", "500%");
+  isFilter.setAttribute("color-interpolation-filters", "sRGB");
+  const isBlur = document.createElementNS(SVG_NS, "feGaussianBlur");
+  isBlur.setAttribute("stdDeviation", "0");
+  isFilter.appendChild(isBlur);
+  defs.appendChild(isFilter);
 
-  const feMorph = document.createElementNS(SVG_NS, "feMorphology");
-  feMorph.setAttribute("in", "inverted");
-  feMorph.setAttribute("operator", "dilate");
-  feMorph.setAttribute("radius", "0");
-  feMorph.setAttribute("result", "spread");
-  filterEl.appendChild(feMorph);
-
-  const feBlur = document.createElementNS(SVG_NS, "feGaussianBlur");
-  feBlur.setAttribute("in", "spread");
-  feBlur.setAttribute("stdDeviation", "0");
-  feBlur.setAttribute("result", "blur");
-  filterEl.appendChild(feBlur);
-
-  const feOffset = document.createElementNS(SVG_NS, "feOffset");
-  feOffset.setAttribute("in", "blur");
-  feOffset.setAttribute("dx", "0");
-  feOffset.setAttribute("dy", "0");
-  feOffset.setAttribute("result", "offset");
-  filterEl.appendChild(feOffset);
-
-  const feFlood = document.createElementNS(SVG_NS, "feFlood");
-  feFlood.setAttribute("flood-color", "#000");
-  feFlood.setAttribute("flood-opacity", "0.5");
-  feFlood.setAttribute("result", "color");
-  filterEl.appendChild(feFlood);
-
-  const feCompIn = document.createElementNS(SVG_NS, "feComposite");
-  feCompIn.setAttribute("in", "color");
-  feCompIn.setAttribute("in2", "offset");
-  feCompIn.setAttribute("operator", "in");
-  feCompIn.setAttribute("result", "shadow");
-  filterEl.appendChild(feCompIn);
-
-  const feCompClip = document.createElementNS(SVG_NS, "feComposite");
-  feCompClip.setAttribute("in", "shadow");
-  feCompClip.setAttribute("in2", "SourceAlpha");
-  feCompClip.setAttribute("operator", "in");
-  filterEl.appendChild(feCompClip);
-
-  defs.appendChild(filterEl);
   svg.appendChild(defs);
 
-  // Inner shadow path
-  const innerShadowPath = document.createElementNS(SVG_NS, "path");
-  innerShadowPath.setAttribute("fill", "black");
-  innerShadowPath.setAttribute("filter", `url(#${filterId})`);
-  innerShadowPath.style.display = "none";
-  svg.appendChild(innerShadowPath);
+  // Inner shadow rendering: <g clip-path> → <g filter> → <rect mask>
+  const isShadowClip = document.createElementNS(SVG_NS, "g");
+  isShadowClip.setAttribute("clip-path", `url(#${clipId})`);
+  const isShadowBlur = document.createElementNS(SVG_NS, "g");
+  const isShadowRect = document.createElementNS(SVG_NS, "rect");
+  isShadowRect.setAttribute("mask", `url(#${isMaskId})`);
+  isShadowRect.style.display = "none";
+  isShadowBlur.appendChild(isShadowRect);
+  isShadowClip.appendChild(isShadowBlur);
+  svg.appendChild(isShadowClip);
 
   // Inner border stroke path (wrapped in <g> for double border masking)
   const innerStrokeGroup = document.createElementNS(SVG_NS, "g");
@@ -149,6 +141,21 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
 
   svg.appendChild(outerStrokeGroup);
 
+  // Middle border stroke path (wrapped in <g> for double border masking)
+  const middleStrokeGroup = document.createElementNS(SVG_NS, "g");
+  const middleStrokePath = document.createElementNS(SVG_NS, "path");
+  middleStrokePath.setAttribute("fill", "none");
+  middleStrokePath.style.display = "none";
+  middleStrokeGroup.appendChild(middleStrokePath);
+
+  // Middle groove/ridge overlay
+  const middleGrooveOverlay = document.createElementNS(SVG_NS, "path");
+  middleGrooveOverlay.setAttribute("fill", "none");
+  middleGrooveOverlay.style.display = "none";
+  middleStrokeGroup.appendChild(middleGrooveOverlay);
+
+  svg.appendChild(middleStrokeGroup);
+
   // Double-knockout masks (punch out middle third for double borders)
   const innerDblMaskId = `sc-dbl-inner-${id}`;
   const innerDblMask = document.createElementNS(SVG_NS, "mask");
@@ -165,6 +172,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   const outerDblMaskId = `sc-dbl-outer-${id}`;
   const outerDblMask = document.createElementNS(SVG_NS, "mask");
   outerDblMask.setAttribute("id", outerDblMaskId);
+  outerDblMask.setAttribute("maskUnits", "userSpaceOnUse");
   const outerDblRect = document.createElementNS(SVG_NS, "rect");
   outerDblRect.setAttribute("fill", "white");
   const outerDblKnockout = document.createElementNS(SVG_NS, "path");
@@ -173,6 +181,19 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   outerDblMask.appendChild(outerDblRect);
   outerDblMask.appendChild(outerDblKnockout);
   defs.appendChild(outerDblMask);
+
+  const middleDblMaskId = `sc-dbl-middle-${id}`;
+  const middleDblMask = document.createElementNS(SVG_NS, "mask");
+  middleDblMask.setAttribute("id", middleDblMaskId);
+  middleDblMask.setAttribute("maskUnits", "userSpaceOnUse");
+  const middleDblRect = document.createElementNS(SVG_NS, "rect");
+  middleDblRect.setAttribute("fill", "white");
+  const middleDblKnockout = document.createElementNS(SVG_NS, "path");
+  middleDblKnockout.setAttribute("fill", "none");
+  middleDblKnockout.setAttribute("stroke", "black");
+  middleDblMask.appendChild(middleDblRect);
+  middleDblMask.appendChild(middleDblKnockout);
+  defs.appendChild(middleDblMask);
 
   anchor.appendChild(svg);
 
@@ -209,13 +230,20 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         innerStrokePath.setAttribute("stroke-linecap", "butt");
 
         switch (ibStyle) {
-          case "dashed":
-            innerStrokePath.setAttribute("stroke-dasharray", `${ib.width * 3} ${ib.width * 2}`);
+          case "dashed": {
+            const dashLen = Math.max(0, ib.dash ?? ib.width * 3);
+            const gapLen = Math.max(0, ib.gap ?? ib.width * 2);
+            innerStrokePath.setAttribute("stroke-dasharray", `${dashLen} ${gapLen}`);
+            if (ib.lineCap) innerStrokePath.setAttribute("stroke-linecap", ib.lineCap);
             break;
-          case "dotted":
-            innerStrokePath.setAttribute("stroke-dasharray", `0 ${ib.width * 2}`);
-            innerStrokePath.setAttribute("stroke-linecap", "round");
+          }
+          case "dotted": {
+            const dotDash = Math.max(0, ib.dash ?? 0);
+            const dotGap = Math.max(0, ib.gap ?? ib.width * 2);
+            innerStrokePath.setAttribute("stroke-dasharray", `${dotDash} ${dotGap}`);
+            innerStrokePath.setAttribute("stroke-linecap", ib.lineCap ?? "round");
             break;
+          }
           case "double":
             if (ib.width >= 3) {
               const third = Math.round(ib.width / 3);
@@ -257,8 +285,12 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         outerStrokePath.setAttribute("stroke-width", String(ob.width * 2));
         outerStrokePath.setAttribute("stroke-opacity", String(ob.opacity));
 
-        // Extend mask rect to cover the outer stroke area beyond content bounds
+        // Extend mask to cover the outer stroke area beyond content bounds
         const pad = ob.width;
+        maskEl.setAttribute("x", String(-pad));
+        maskEl.setAttribute("y", String(-pad));
+        maskEl.setAttribute("width", String(width + pad * 2));
+        maskEl.setAttribute("height", String(height + pad * 2));
         maskRect.setAttribute("x", String(-pad));
         maskRect.setAttribute("y", String(-pad));
         maskRect.setAttribute("width", String(width + pad * 2));
@@ -272,18 +304,29 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         outerStrokePath.setAttribute("stroke-linecap", "butt");
 
         switch (obStyle) {
-          case "dashed":
-            outerStrokePath.setAttribute("stroke-dasharray", `${ob.width * 3} ${ob.width * 2}`);
+          case "dashed": {
+            const dashLen = Math.max(0, ob.dash ?? ob.width * 3);
+            const gapLen = Math.max(0, ob.gap ?? ob.width * 2);
+            outerStrokePath.setAttribute("stroke-dasharray", `${dashLen} ${gapLen}`);
+            if (ob.lineCap) outerStrokePath.setAttribute("stroke-linecap", ob.lineCap);
             break;
-          case "dotted":
-            outerStrokePath.setAttribute("stroke-dasharray", `0 ${ob.width * 2}`);
-            outerStrokePath.setAttribute("stroke-linecap", "round");
+          }
+          case "dotted": {
+            const dotDash = Math.max(0, ob.dash ?? 0);
+            const dotGap = Math.max(0, ob.gap ?? ob.width * 2);
+            outerStrokePath.setAttribute("stroke-dasharray", `${dotDash} ${dotGap}`);
+            outerStrokePath.setAttribute("stroke-linecap", ob.lineCap ?? "round");
             break;
+          }
           case "double":
             if (ob.width >= 3) {
               const third = Math.round(ob.width / 3);
               outerDblKnockout.setAttribute("d", d);
               outerDblKnockout.setAttribute("stroke-width", String(third * 2));
+              outerDblMask.setAttribute("x", String(-pad));
+              outerDblMask.setAttribute("y", String(-pad));
+              outerDblMask.setAttribute("width", String(width + pad * 2));
+              outerDblMask.setAttribute("height", String(height + pad * 2));
               outerDblRect.setAttribute("x", String(-pad));
               outerDblRect.setAttribute("y", String(-pad));
               outerDblRect.setAttribute("width", String(width + pad * 2));
@@ -313,21 +356,119 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         outerGrooveOverlay.style.display = "none";
       }
 
+      // Middle border
+      const mb = effects.middleBorder;
+      if (mb && mb.width > 0 && mb.opacity > 0) {
+        middleStrokePath.style.display = "";
+        middleStrokePath.setAttribute("d", d);
+        middleStrokePath.setAttribute("stroke", mb.color);
+        middleStrokePath.setAttribute("stroke-width", String(mb.width));
+        middleStrokePath.setAttribute("stroke-opacity", String(mb.opacity));
+
+        // Border style handling
+        const mbStyle = mb.style ?? "solid";
+        middleStrokeGroup.removeAttribute("mask");
+        middleGrooveOverlay.style.display = "none";
+        middleStrokePath.removeAttribute("stroke-dasharray");
+        middleStrokePath.setAttribute("stroke-linecap", "butt");
+
+        switch (mbStyle) {
+          case "dashed": {
+            const dashLen = Math.max(0, mb.dash ?? mb.width * 3);
+            const gapLen = Math.max(0, mb.gap ?? mb.width * 2);
+            middleStrokePath.setAttribute("stroke-dasharray", `${dashLen} ${gapLen}`);
+            if (mb.lineCap) middleStrokePath.setAttribute("stroke-linecap", mb.lineCap);
+            break;
+          }
+          case "dotted": {
+            const dotDash = Math.max(0, mb.dash ?? 0);
+            const dotGap = Math.max(0, mb.gap ?? mb.width * 2);
+            middleStrokePath.setAttribute("stroke-dasharray", `${dotDash} ${dotGap}`);
+            middleStrokePath.setAttribute("stroke-linecap", mb.lineCap ?? "round");
+            break;
+          }
+          case "double":
+            if (mb.width >= 3) {
+              const third = Math.round(mb.width / 3);
+              middleDblKnockout.setAttribute("d", d);
+              middleDblKnockout.setAttribute("stroke-width", String(third));
+              const pad = mb.width;
+              middleDblMask.setAttribute("x", String(-pad));
+              middleDblMask.setAttribute("y", String(-pad));
+              middleDblMask.setAttribute("width", String(width + pad * 2));
+              middleDblMask.setAttribute("height", String(height + pad * 2));
+              middleDblRect.setAttribute("x", String(-pad));
+              middleDblRect.setAttribute("y", String(-pad));
+              middleDblRect.setAttribute("width", String(width + pad * 2));
+              middleDblRect.setAttribute("height", String(height + pad * 2));
+              middleStrokeGroup.setAttribute("mask", `url(#${middleDblMaskId})`);
+            }
+            break;
+          case "groove":
+            middleStrokePath.setAttribute("stroke", darkenHex(mb.color));
+            middleGrooveOverlay.style.display = "";
+            middleGrooveOverlay.setAttribute("d", d);
+            middleGrooveOverlay.setAttribute("stroke", mb.color);
+            middleGrooveOverlay.setAttribute("stroke-width", String(mb.width / 2));
+            middleGrooveOverlay.setAttribute("stroke-opacity", String(mb.opacity));
+            break;
+          case "ridge":
+            middleGrooveOverlay.style.display = "";
+            middleGrooveOverlay.setAttribute("d", d);
+            middleGrooveOverlay.setAttribute("stroke", darkenHex(mb.color));
+            middleGrooveOverlay.setAttribute("stroke-width", String(mb.width / 2));
+            middleGrooveOverlay.setAttribute("stroke-opacity", String(mb.opacity));
+            break;
+        }
+      } else {
+        middleStrokePath.style.display = "none";
+        middleStrokeGroup.removeAttribute("mask");
+        middleGrooveOverlay.style.display = "none";
+      }
+
       // Inner shadow
       const is = effects.innerShadow;
       if (is && is.opacity > 0) {
-        innerShadowPath.style.display = "";
-        innerShadowPath.setAttribute("d", d);
+        isShadowRect.style.display = "";
 
-        feMorph.setAttribute("operator", is.spread >= 0 ? "dilate" : "erode");
-        feMorph.setAttribute("radius", String(Math.abs(is.spread)));
-        feBlur.setAttribute("stdDeviation", String(is.blur));
-        feOffset.setAttribute("dx", String(is.offsetX));
-        feOffset.setAttribute("dy", String(is.offsetY));
-        feFlood.setAttribute("flood-color", hexToRgb(is.color));
-        feFlood.setAttribute("flood-opacity", String(is.opacity));
+        const spread = is.spread;
+        const pad = Math.max(is.blur * 3, 20) + Math.max(Math.abs(is.offsetX), Math.abs(is.offsetY)) + Math.abs(spread);
+
+        // Mask: white rect (visible) + black squircle cutout (hole)
+        isMask.setAttribute("x", String(-pad));
+        isMask.setAttribute("y", String(-pad));
+        isMask.setAttribute("width", String(width + pad * 2));
+        isMask.setAttribute("height", String(height + pad * 2));
+        isMaskRect.setAttribute("x", String(-pad));
+        isMaskRect.setAttribute("y", String(-pad));
+        isMaskRect.setAttribute("width", String(width + pad * 2));
+        isMaskRect.setAttribute("height", String(height + pad * 2));
+
+        // Cutout path — adjusted for spread, offset for positioning
+        const cutW = Math.max(1, width - spread * 2);
+        const cutH = Math.max(1, height - spread * 2);
+        const cutOpts = spread !== 0 ? adjustOptions(options, -spread) : options;
+        isMaskCutout.setAttribute("d", generatePath(cutW, cutH, cutOpts));
+        isMaskCutout.setAttribute("transform",
+          `translate(${is.offsetX + spread},${is.offsetY + spread})`);
+
+        // Blur
+        if (is.blur > 0) {
+          isBlur.setAttribute("stdDeviation", String(is.blur));
+          isShadowBlur.setAttribute("filter", `url(#${isFilterId})`);
+        } else {
+          isShadowBlur.removeAttribute("filter");
+        }
+
+        // Shadow rect (covers full padded area, masked to frame shape)
+        isShadowRect.setAttribute("x", String(-pad));
+        isShadowRect.setAttribute("y", String(-pad));
+        isShadowRect.setAttribute("width", String(width + pad * 2));
+        isShadowRect.setAttribute("height", String(height + pad * 2));
+        isShadowRect.setAttribute("fill", hexToRgb(is.color));
+        isShadowRect.setAttribute("fill-opacity", String(is.opacity));
       } else {
-        innerShadowPath.style.display = "none";
+        isShadowRect.style.display = "none";
       }
     },
     destroy() {
