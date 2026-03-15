@@ -78,6 +78,7 @@ export function smoothCorners(
   const hasAnyEffects = !!(
     mergedEffects.innerBorder ||
     mergedEffects.outerBorder ||
+    mergedEffects.middleBorder ||
     mergedEffects.innerShadow ||
     mergedEffects.shadow
   );
@@ -123,7 +124,7 @@ export function smoothCorners(
       // Create handles if they didn't exist but now effects are provided
       const merged = getMergedEffects();
       const hasEffects = !!(
-        merged.innerBorder || merged.outerBorder || merged.innerShadow || merged.shadow
+        merged.innerBorder || merged.outerBorder || merged.middleBorder || merged.innerShadow || merged.shadow
       );
       if (hasEffects && !effectsHandle && node.parentElement) {
         const anchor = node.parentElement;

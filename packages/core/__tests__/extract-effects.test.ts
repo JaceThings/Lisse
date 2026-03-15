@@ -34,6 +34,21 @@ describe("parseColor", () => {
     expect(result).toEqual({ hex: "#ffffff", opacity: 1 });
   });
 
+  it("parses space-separated rgb() (CSS Color Level 4)", () => {
+    const result = parseColor("rgb(255 0 0)");
+    expect(result).toEqual({ hex: "#ff0000", opacity: 1 });
+  });
+
+  it("parses space-separated rgb() with slash alpha (CSS Color Level 4)", () => {
+    const result = parseColor("rgb(255 0 0 / 0.5)");
+    expect(result).toEqual({ hex: "#ff0000", opacity: 0.5 });
+  });
+
+  it("parses space-separated rgba() with slash alpha", () => {
+    const result = parseColor("rgba(0 128 255 / 1)");
+    expect(result).toEqual({ hex: "#0080ff", opacity: 1 });
+  });
+
   it("returns undefined for invalid input", () => {
     expect(parseColor("red")).toBeUndefined();
     expect(parseColor("")).toBeUndefined();
@@ -132,27 +147,27 @@ describe("parseBoxShadow", () => {
 
   it("parses a single outer shadow", () => {
     const result = parseBoxShadow("rgb(0, 0, 0) 2px 4px 8px 0px");
-    expect(result.shadow).toEqual({
+    expect(result.shadow).toEqual([{
       offsetX: 2,
       offsetY: 4,
       blur: 8,
       spread: 0,
       color: "#000000",
       opacity: 1,
-    });
+    }]);
     expect(result.innerShadow).toBeUndefined();
   });
 
   it("parses a single inset shadow", () => {
     const result = parseBoxShadow("rgba(0, 0, 0, 0.5) 1px 2px 3px 4px inset");
-    expect(result.innerShadow).toEqual({
+    expect(result.innerShadow).toEqual([{
       offsetX: 1,
       offsetY: 2,
       blur: 3,
       spread: 4,
       color: "#000000",
       opacity: 0.5,
-    });
+    }]);
     expect(result.shadow).toBeUndefined();
   });
 
@@ -161,18 +176,43 @@ describe("parseBoxShadow", () => {
       "rgb(255, 0, 0) 1px 2px 3px 0px, rgba(0, 0, 255, 0.8) 0px 0px 5px 2px inset",
     );
     expect(result.shadow).toBeDefined();
-    expect(result.shadow!.color).toBe("#ff0000");
+    expect(result.shadow![0].color).toBe("#ff0000");
     expect(result.innerShadow).toBeDefined();
-    expect(result.innerShadow!.color).toBe("#0000ff");
-    expect(result.innerShadow!.opacity).toBe(0.8);
+    expect(result.innerShadow![0].color).toBe("#0000ff");
+    expect(result.innerShadow![0].opacity).toBe(0.8);
   });
 
-  it("takes only the first outer and first inset from multiple shadows", () => {
+  it("returns all outer and all inset shadows from multiple shadows", () => {
     const result = parseBoxShadow(
       "rgb(255, 0, 0) 1px 2px 3px 0px, rgb(0, 255, 0) 4px 5px 6px 0px, rgba(0, 0, 255, 0.5) 7px 8px 9px 0px inset, rgba(128, 128, 128, 0.3) 10px 11px 12px 0px inset",
     );
-    expect(result.shadow!.offsetX).toBe(1);
-    expect(result.innerShadow!.offsetX).toBe(7);
+    expect(result.shadow).toHaveLength(2);
+    expect(result.shadow![0].offsetX).toBe(1);
+    expect(result.shadow![1].offsetX).toBe(4);
+    expect(result.innerShadow).toHaveLength(2);
+    expect(result.innerShadow![0].offsetX).toBe(7);
+    expect(result.innerShadow![1].offsetX).toBe(10);
+  });
+
+  it("parses 3 outer shadows", () => {
+    const result = parseBoxShadow(
+      "rgb(255, 0, 0) 1px 2px 3px 0px, rgb(0, 255, 0) 4px 5px 6px 0px, rgb(0, 0, 255) 7px 8px 9px 0px",
+    );
+    expect(result.shadow).toHaveLength(3);
+    expect(result.shadow![0].color).toBe("#ff0000");
+    expect(result.shadow![1].color).toBe("#00ff00");
+    expect(result.shadow![2].color).toBe("#0000ff");
+  });
+
+  it("parses 2 inset shadows", () => {
+    const result = parseBoxShadow(
+      "rgba(255, 0, 0, 0.5) 1px 2px 3px 0px inset, rgba(0, 0, 255, 0.8) 4px 5px 6px 0px inset",
+    );
+    expect(result.innerShadow).toHaveLength(2);
+    expect(result.innerShadow![0].color).toBe("#ff0000");
+    expect(result.innerShadow![0].opacity).toBe(0.5);
+    expect(result.innerShadow![1].color).toBe("#0000ff");
+    expect(result.innerShadow![1].opacity).toBe(0.8);
   });
 
   it("skips shadows with zero opacity", () => {
@@ -182,14 +222,14 @@ describe("parseBoxShadow", () => {
 
   it("parses shadow with only offsetX and offsetY", () => {
     const result = parseBoxShadow("rgb(0, 0, 0) 5px 10px");
-    expect(result.shadow).toEqual({
+    expect(result.shadow).toEqual([{
       offsetX: 5,
       offsetY: 10,
       blur: 0,
       spread: 0,
       color: "#000000",
       opacity: 1,
-    });
+    }]);
   });
 });
 

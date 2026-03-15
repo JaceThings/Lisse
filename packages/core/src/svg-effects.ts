@@ -1,6 +1,6 @@
 import { generatePath } from "./generate-path.js";
-import type { SmoothCornerOptions, EffectsConfig, BorderConfig } from "./types.js";
-import { SVG_NS, nextUid, hexToRgb, darkenHex, adjustOptions } from "./svg-shared.js";
+import type { SmoothCornerOptions, EffectsConfig, BorderConfig, ShadowConfig, GradientConfig } from "./types.js";
+import { SVG_NS, nextUid, hexToRgb, darkenHex, adjustOptions, isGradient, createGradientDef, updateGradientDef, darkenGradient } from "./svg-shared.js";
 
 export interface SvgEffectsHandle {
   update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
@@ -52,6 +52,43 @@ interface BorderElements {
   dblRect: Element;
   strokeMultiplier: number;
   padDblMask?: (pad: number, w: number, h: number) => void;
+  /** Reference to the <defs> element for creating gradient defs. */
+  defs: Element;
+  /** Current gradient element for the main stroke (null when using a solid color). */
+  gradientEl: Element | null;
+  /** Unique ID for the main gradient def. */
+  gradientId: string;
+  /** Current gradient element for the groove/ridge overlay stroke. */
+  overlayGradientEl: Element | null;
+  /** Unique ID for the overlay gradient def. */
+  overlayGradientId: string;
+}
+
+/** Remove a gradient def from the DOM and null out the reference. */
+function removeGradient(els: BorderElements, which: "main" | "overlay"): void {
+  const key = which === "main" ? "gradientEl" : "overlayGradientEl" as const;
+  els[key]?.remove();
+  els[key] = null;
+}
+
+/** Resolve the stroke color value: either a hex string or a `url(#id)` reference. */
+function resolveStroke(
+  color: string | GradientConfig,
+  els: BorderElements,
+  which: "main" | "overlay",
+): string {
+  if (!isGradient(color)) {
+    removeGradient(els, which);
+    return color;
+  }
+  const elKey = which === "main" ? "gradientEl" : "overlayGradientEl" as const;
+  const id = which === "main" ? els.gradientId : els.overlayGradientId;
+  if (els[elKey]) {
+    updateGradientDef(els[elKey], color);
+  } else {
+    els[elKey] = createGradientDef(els.defs, color, id);
+  }
+  return `url(#${id})`;
 }
 
 function updateBorder(
@@ -63,13 +100,15 @@ function updateBorder(
     els.strokePath.style.display = "none";
     els.strokeGroup.removeAttribute("mask");
     els.grooveOverlay.style.display = "none";
+    removeGradient(els, "main");
+    removeGradient(els, "overlay");
     return;
   }
 
   const m = els.strokeMultiplier;
   els.strokePath.style.display = "";
   els.strokePath.setAttribute("d", d);
-  els.strokePath.setAttribute("stroke", config.color);
+  els.strokePath.setAttribute("stroke", resolveStroke(config.color, els, "main"));
   els.strokePath.setAttribute("stroke-width", String(config.width * m));
   els.strokePath.setAttribute("stroke-opacity", String(config.opacity));
 
@@ -78,6 +117,10 @@ function updateBorder(
   els.grooveOverlay.style.display = "none";
   els.strokePath.removeAttribute("stroke-dasharray");
   els.strokePath.setAttribute("stroke-linecap", "butt");
+  // Clean up overlay gradient for non-groove/ridge styles (will be re-created if needed)
+  if (style !== "groove" && style !== "ridge") {
+    removeGradient(els, "overlay");
+  }
 
   switch (style) {
     case "dashed": {
@@ -105,22 +148,82 @@ function updateBorder(
         els.strokeGroup.setAttribute("mask", `url(#${els.dblMaskId})`);
       }
       break;
-    case "groove":
-      els.strokePath.setAttribute("stroke", darkenHex(config.color));
+    case "groove": {
+      const grooveBase = isGradient(config.color) ? darkenGradient(config.color) : darkenHex(config.color);
+      els.strokePath.setAttribute("stroke", resolveStroke(grooveBase, els, "main"));
       els.grooveOverlay.style.display = "";
       els.grooveOverlay.setAttribute("d", d);
-      els.grooveOverlay.setAttribute("stroke", config.color);
+      els.grooveOverlay.setAttribute("stroke", resolveStroke(config.color, els, "overlay"));
       els.grooveOverlay.setAttribute("stroke-width", String(config.width * m / 2));
       els.grooveOverlay.setAttribute("stroke-opacity", String(config.opacity));
       break;
-    case "ridge":
+    }
+    case "ridge": {
+      const ridgeDark = isGradient(config.color) ? darkenGradient(config.color) : darkenHex(config.color);
       els.grooveOverlay.style.display = "";
       els.grooveOverlay.setAttribute("d", d);
-      els.grooveOverlay.setAttribute("stroke", darkenHex(config.color));
+      els.grooveOverlay.setAttribute("stroke", resolveStroke(ridgeDark, els, "overlay"));
       els.grooveOverlay.setAttribute("stroke-width", String(config.width * m / 2));
       els.grooveOverlay.setAttribute("stroke-opacity", String(config.opacity));
       break;
+    }
   }
+}
+
+/** Elements for a single inner shadow in the pool. */
+interface InnerShadowEntry {
+  maskId: string;
+  mask: Element;
+  maskRect: Element;
+  maskCutout: Element;
+  filterId: string;
+  filter: Element;
+  feBlur: Element;
+  blurGroup: Element;
+  rect: SVGRectElement;
+}
+
+function createInnerShadowEntry(defs: Element, clipGroup: Element): InnerShadowEntry {
+  const uid = nextUid();
+  const maskId = `sc-ishadow-mask-${uid}`;
+  const mask = document.createElementNS(SVG_NS, "mask");
+  mask.setAttribute("id", maskId);
+  mask.setAttribute("maskUnits", "userSpaceOnUse");
+  const maskRect = document.createElementNS(SVG_NS, "rect");
+  maskRect.setAttribute("fill", "white");
+  const maskCutout = document.createElementNS(SVG_NS, "path");
+  maskCutout.setAttribute("fill", "black");
+  mask.appendChild(maskRect);
+  mask.appendChild(maskCutout);
+  defs.appendChild(mask);
+
+  const filterId = `sc-ishadow-blur-${uid}`;
+  const filter = document.createElementNS(SVG_NS, "filter");
+  filter.setAttribute("id", filterId);
+  filter.setAttribute("x", "-200%");
+  filter.setAttribute("y", "-200%");
+  filter.setAttribute("width", "500%");
+  filter.setAttribute("height", "500%");
+  filter.setAttribute("color-interpolation-filters", "sRGB");
+  const feBlur = document.createElementNS(SVG_NS, "feGaussianBlur");
+  feBlur.setAttribute("stdDeviation", "0");
+  filter.appendChild(feBlur);
+  defs.appendChild(filter);
+
+  const blurGroup = document.createElementNS(SVG_NS, "g");
+  const rect = document.createElementNS(SVG_NS, "rect") as SVGRectElement;
+  rect.setAttribute("mask", `url(#${maskId})`);
+  rect.style.display = "none";
+  blurGroup.appendChild(rect);
+  clipGroup.appendChild(blurGroup);
+
+  return { maskId, mask, maskRect, maskCutout, filterId, filter, feBlur, blurGroup, rect };
+}
+
+function removeInnerShadowEntry(entry: InnerShadowEntry): void {
+  entry.mask.remove();
+  entry.filter.remove();
+  entry.blurGroup.remove();
 }
 
 /**
@@ -140,6 +243,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   svg.style.pointerEvents = "none";
   svg.style.overflow = "visible";
   svg.style.zIndex = "1";
+  svg.setAttribute("aria-hidden", "true");
 
   // Defs
   const defs = document.createElementNS(SVG_NS, "defs");
@@ -163,32 +267,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   maskEl.appendChild(maskShape);
   defs.appendChild(maskEl);
 
-  // Inner shadow — mask-based approach (rect with squircle cutout, blur, clip)
-  const isMaskId = `sc-ishadow-mask-${id}`;
-  const isMask = document.createElementNS(SVG_NS, "mask");
-  isMask.setAttribute("id", isMaskId);
-  isMask.setAttribute("maskUnits", "userSpaceOnUse");
-  const isMaskRect = document.createElementNS(SVG_NS, "rect");
-  isMaskRect.setAttribute("fill", "white");
-  const isMaskCutout = document.createElementNS(SVG_NS, "path");
-  isMaskCutout.setAttribute("fill", "black");
-  isMask.appendChild(isMaskRect);
-  isMask.appendChild(isMaskCutout);
-  defs.appendChild(isMask);
-
-  const isFilterId = `sc-ishadow-blur-${id}`;
-  const isFilter = document.createElementNS(SVG_NS, "filter");
-  isFilter.setAttribute("id", isFilterId);
-  isFilter.setAttribute("x", "-200%");
-  isFilter.setAttribute("y", "-200%");
-  isFilter.setAttribute("width", "500%");
-  isFilter.setAttribute("height", "500%");
-  isFilter.setAttribute("color-interpolation-filters", "sRGB");
-  const isBlur = document.createElementNS(SVG_NS, "feGaussianBlur");
-  isBlur.setAttribute("stdDeviation", "0");
-  isFilter.appendChild(isBlur);
-  defs.appendChild(isFilter);
-
   // Double-knockout masks
   const innerDblMaskId = `sc-dbl-inner-${id}`;
   const { rect: innerDblRect, knockout: innerDblKnockout } =
@@ -204,16 +282,13 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
 
   svg.appendChild(defs);
 
-  // Inner shadow rendering: <g clip-path> → <g filter> → <rect mask>
+  // Inner shadow rendering: shared <g clip-path> wrapper for all inner shadows
   const isShadowClip = document.createElementNS(SVG_NS, "g");
   isShadowClip.setAttribute("clip-path", `url(#${clipId})`);
-  const isShadowBlur = document.createElementNS(SVG_NS, "g");
-  const isShadowRect = document.createElementNS(SVG_NS, "rect");
-  isShadowRect.setAttribute("mask", `url(#${isMaskId})`);
-  isShadowRect.style.display = "none";
-  isShadowBlur.appendChild(isShadowRect);
-  isShadowClip.appendChild(isShadowBlur);
   svg.appendChild(isShadowClip);
+
+  // Pool of inner shadow entries
+  const innerShadowPool: InnerShadowEntry[] = [];
 
   // Border stroke groups
   const { group: innerStrokeGroup, strokePath: innerStrokePath, grooveOverlay: innerGrooveOverlay } =
@@ -231,17 +306,28 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   anchor.appendChild(svg);
 
   // Border element bags for the shared updateBorder function
+  const innerGradId = `sc-grad-inner-${id}`;
+  const innerOverlayGradId = `sc-grad-inner-ov-${id}`;
+  const outerGradId = `sc-grad-outer-${id}`;
+  const outerOverlayGradId = `sc-grad-outer-ov-${id}`;
+  const middleGradId = `sc-grad-middle-${id}`;
+  const middleOverlayGradId = `sc-grad-middle-ov-${id}`;
+
   const innerBorderEls: BorderElements = {
     strokePath: innerStrokePath, grooveOverlay: innerGrooveOverlay,
     strokeGroup: innerStrokeGroup, dblMaskId: innerDblMaskId,
     dblKnockout: innerDblKnockout, dblRect: innerDblRect,
     strokeMultiplier: 2,
+    defs, gradientEl: null, gradientId: innerGradId,
+    overlayGradientEl: null, overlayGradientId: innerOverlayGradId,
   };
   const outerBorderEls: BorderElements = {
     strokePath: outerStrokePath, grooveOverlay: outerGrooveOverlay,
     strokeGroup: outerStrokeGroup, dblMaskId: outerDblMaskId,
     dblKnockout: outerDblKnockout, dblRect: outerDblRect,
     strokeMultiplier: 2,
+    defs, gradientEl: null, gradientId: outerGradId,
+    overlayGradientEl: null, overlayGradientId: outerOverlayGradId,
     padDblMask(pad, w, h) {
       outerDblMask.setAttribute("x", String(-pad));
       outerDblMask.setAttribute("y", String(-pad));
@@ -258,6 +344,8 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
     strokeGroup: middleStrokeGroup, dblMaskId: middleDblMaskId,
     dblKnockout: middleDblKnockout, dblRect: middleDblRect,
     strokeMultiplier: 1,
+    defs, gradientEl: null, gradientId: middleGradId,
+    overlayGradientEl: null, overlayGradientId: middleOverlayGradId,
     padDblMask(pad, w, h) {
       middleDblMask.setAttribute("x", String(-pad));
       middleDblMask.setAttribute("y", String(-pad));
@@ -307,49 +395,65 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
       // Middle border
       updateBorder(effects.middleBorder, d, width, height, middleBorderEls);
 
-      // Inner shadow
-      const is = effects.innerShadow;
-      if (is && is.opacity > 0) {
-        isShadowRect.style.display = "";
+      // Inner shadows — normalize to array
+      const rawIs = effects.innerShadow;
+      const isArr: ShadowConfig[] = rawIs == null ? [] : Array.isArray(rawIs) ? rawIs : [rawIs];
+
+      // Reconcile pool size
+      while (innerShadowPool.length < isArr.length) {
+        innerShadowPool.push(createInnerShadowEntry(defs, isShadowClip));
+      }
+      while (innerShadowPool.length > isArr.length) {
+        removeInnerShadowEntry(innerShadowPool.pop()!);
+      }
+
+      for (let i = 0; i < isArr.length; i++) {
+        const is = isArr[i];
+        const entry = innerShadowPool[i];
+
+        if (is.opacity <= 0) {
+          entry.rect.style.display = "none";
+          continue;
+        }
+
+        entry.rect.style.display = "";
 
         const spread = is.spread;
         const pad = Math.max(is.blur * 3, 20) + Math.max(Math.abs(is.offsetX), Math.abs(is.offsetY)) + Math.abs(spread);
 
         // Mask: white rect (visible) + black squircle cutout (hole)
-        isMask.setAttribute("x", String(-pad));
-        isMask.setAttribute("y", String(-pad));
-        isMask.setAttribute("width", String(width + pad * 2));
-        isMask.setAttribute("height", String(height + pad * 2));
-        isMaskRect.setAttribute("x", String(-pad));
-        isMaskRect.setAttribute("y", String(-pad));
-        isMaskRect.setAttribute("width", String(width + pad * 2));
-        isMaskRect.setAttribute("height", String(height + pad * 2));
+        entry.mask.setAttribute("x", String(-pad));
+        entry.mask.setAttribute("y", String(-pad));
+        entry.mask.setAttribute("width", String(width + pad * 2));
+        entry.mask.setAttribute("height", String(height + pad * 2));
+        entry.maskRect.setAttribute("x", String(-pad));
+        entry.maskRect.setAttribute("y", String(-pad));
+        entry.maskRect.setAttribute("width", String(width + pad * 2));
+        entry.maskRect.setAttribute("height", String(height + pad * 2));
 
         // Cutout path — adjusted for spread, offset for positioning
         const cutW = Math.max(1, width - spread * 2);
         const cutH = Math.max(1, height - spread * 2);
         const cutOpts = spread !== 0 ? adjustOptions(options, -spread) : options;
-        isMaskCutout.setAttribute("d", generatePath(cutW, cutH, cutOpts));
-        isMaskCutout.setAttribute("transform",
+        entry.maskCutout.setAttribute("d", generatePath(cutW, cutH, cutOpts));
+        entry.maskCutout.setAttribute("transform",
           `translate(${is.offsetX + spread},${is.offsetY + spread})`);
 
         // Blur
         if (is.blur > 0) {
-          isBlur.setAttribute("stdDeviation", String(is.blur));
-          isShadowBlur.setAttribute("filter", `url(#${isFilterId})`);
+          entry.feBlur.setAttribute("stdDeviation", String(is.blur));
+          entry.blurGroup.setAttribute("filter", `url(#${entry.filterId})`);
         } else {
-          isShadowBlur.removeAttribute("filter");
+          entry.blurGroup.removeAttribute("filter");
         }
 
         // Shadow rect (covers full padded area, masked to frame shape)
-        isShadowRect.setAttribute("x", String(-pad));
-        isShadowRect.setAttribute("y", String(-pad));
-        isShadowRect.setAttribute("width", String(width + pad * 2));
-        isShadowRect.setAttribute("height", String(height + pad * 2));
-        isShadowRect.setAttribute("fill", hexToRgb(is.color));
-        isShadowRect.setAttribute("fill-opacity", String(is.opacity));
-      } else {
-        isShadowRect.style.display = "none";
+        entry.rect.setAttribute("x", String(-pad));
+        entry.rect.setAttribute("y", String(-pad));
+        entry.rect.setAttribute("width", String(width + pad * 2));
+        entry.rect.setAttribute("height", String(height + pad * 2));
+        entry.rect.setAttribute("fill", hexToRgb(is.color));
+        entry.rect.setAttribute("fill-opacity", String(is.opacity));
       }
     },
     destroy() {

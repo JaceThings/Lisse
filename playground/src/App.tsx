@@ -549,6 +549,368 @@ function BorderSection({
   );
 }
 
+// ─── Multiple Shadows ────────────────────────────────────
+
+function MultipleShadowsSection() {
+  const [preset, setPreset] = useState(1);
+
+  const presets = [
+    {
+      label: "None",
+      shadows: [] as { offsetX: number; offsetY: number; blur: number; spread: number; color: string; opacity: number }[],
+    },
+    {
+      label: "Layered",
+      shadows: [
+        { offsetX: 0, offsetY: 1, blur: 2, spread: 0, color: "#000000", opacity: 0.06 },
+        { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000000", opacity: 0.08 },
+        { offsetX: 0, offsetY: 16, blur: 32, spread: -4, color: "#000000", opacity: 0.12 },
+      ],
+    },
+    {
+      label: "Elevated",
+      shadows: [
+        { offsetX: 0, offsetY: 2, blur: 4, spread: -1, color: "#000000", opacity: 0.1 },
+        { offsetX: 0, offsetY: 12, blur: 24, spread: -4, color: "#000000", opacity: 0.2 },
+        { offsetX: 0, offsetY: 32, blur: 64, spread: -8, color: "#000000", opacity: 0.15 },
+      ],
+    },
+    {
+      label: "Colored",
+      shadows: [
+        { offsetX: 0, offsetY: 4, blur: 12, spread: 0, color: "#6366f1", opacity: 0.3 },
+        { offsetX: 0, offsetY: 16, blur: 32, spread: -4, color: "#8b5cf6", opacity: 0.2 },
+      ],
+    },
+    {
+      label: "Multi Inner",
+      shadows: [] as { offsetX: number; offsetY: number; blur: number; spread: number; color: string; opacity: number }[],
+      innerShadows: [
+        { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.15 },
+        { offsetX: 0, offsetY: -2, blur: 4, spread: 0, color: "#ffffff", opacity: 0.1 },
+        { offsetX: 0, offsetY: 0, blur: 12, spread: 4, color: "#000000", opacity: 0.08 },
+      ],
+    },
+  ];
+
+  const current = presets[preset];
+
+  return (
+    <div className="doc-section">
+      <h2>Multiple Shadows</h2>
+      <p className="doc-description">
+        Pass an array of shadows to <code>shadow</code> or <code>innerShadow</code> to
+        create layered shadow effects. Each shadow is rendered as its own SVG element.
+      </p>
+      <DemoFigure open={false}>
+        <FrameworkGrid
+          render={(fw) => (
+            <SmoothCorners
+              radius={DEMO_RADIUS}
+              smoothing={DEMO_SMOOTHING}
+              autoEffects={false}
+              shadow={current.shadows.length > 0 ? current.shadows : undefined}
+              innerShadow={"innerShadows" in current ? current.innerShadows : undefined}
+              className="sc-example"
+            >
+              <span>{fw}</span>
+            </SmoothCorners>
+          )}
+        />
+        <div className="doc-toggles">
+          {presets.map((p, i) => (
+            <Toggle key={i} active={preset === i} onClick={() => setPreset(i)}>
+              {p.label}
+            </Toggle>
+          ))}
+        </div>
+      </DemoFigure>
+    </div>
+  );
+}
+
+// ─── Gradient Border ─────────────────────────────────────
+
+type GradientPreset = "none" | "sunset" | "ocean" | "aurora" | "radial";
+
+const GRADIENT_PRESETS: Record<Exclude<GradientPreset, "none">, { type: "linear" | "radial"; angle?: number; cx?: number; cy?: number; r?: number; stops: { offset: number; color: string }[] }> = {
+  sunset: { type: "linear", angle: 135, stops: [{ offset: 0, color: "#f97316" }, { offset: 0.5, color: "#ec4899" }, { offset: 1, color: "#8b5cf6" }] },
+  ocean: { type: "linear", angle: 90, stops: [{ offset: 0, color: "#06b6d4" }, { offset: 1, color: "#3b82f6" }] },
+  aurora: { type: "linear", angle: 45, stops: [{ offset: 0, color: "#22c55e" }, { offset: 0.5, color: "#06b6d4" }, { offset: 1, color: "#8b5cf6" }] },
+  radial: { type: "radial", cx: 0.5, cy: 0, r: 0.8, stops: [{ offset: 0, color: "#fbbf24" }, { offset: 1, color: "#ef4444" }] },
+};
+
+function GradientBorderSection({
+  title,
+  description,
+  kind,
+}: {
+  title: string;
+  description: string;
+  kind: "outer" | "inner" | "middle";
+}) {
+  const [style, setStyle] = useState<BorderStyle | "none">("solid");
+  const [activeStyle, setActiveStyle] = useState<BorderStyle>("solid");
+  const [gradient, setGradient] = useState<GradientPreset>("sunset");
+  const [activeGradient, setActiveGradient] = useState<GradientPreset>("sunset");
+  const [thickness, setThickness] = useState(4.5);
+  const [savedThickness, setSavedThickness] = useState(4.5);
+  const [dashCap, setDashCap] = useState<DashCap>("round");
+  const [dash, setDash] = useState(6);
+  const [gap, setGap] = useState(6);
+  const animThickness = useSpring(style === "none" ? 0 : thickness);
+  const animDash = useSpring(dash);
+  const animGap = useSpring(gap);
+
+  const hasStyle = style !== "none";
+  const hasDash = style === "dashed" || style === "dotted";
+  const activeHasDash = activeStyle === "dashed" || activeStyle === "dotted";
+
+  const borderConfig =
+    (animThickness > 0 || hasStyle) && activeGradient !== "none"
+      ? {
+          width: animThickness,
+          color: GRADIENT_PRESETS[activeGradient],
+          opacity: 1,
+          style: activeStyle,
+          ...(activeHasDash ? { dash: animDash, gap: animGap, lineCap: dashCap } : {}),
+        }
+      : undefined;
+
+  return (
+    <div className="doc-section">
+      <h2>{title}</h2>
+      <p className="doc-description">{description}</p>
+      <DemoFigure open={hasStyle}>
+        <FrameworkGrid
+          render={(fw) => (
+            <SmoothCorners
+              radius={DEMO_RADIUS}
+              smoothing={DEMO_SMOOTHING}
+              autoEffects={false}
+              {...(borderConfig
+                ? kind === "outer"
+                  ? { outerBorder: borderConfig }
+                  : kind === "middle"
+                  ? { middleBorder: borderConfig }
+                  : { innerBorder: borderConfig }
+                : {})}
+              className="sc-example"
+            >
+              <span>{fw}</span>
+            </SmoothCorners>
+          )}
+        />
+        <div className="doc-toggles">
+          <Toggle active={style === "none"} onClick={() => {
+            setSavedThickness(thickness);
+            setStyle("none");
+          }}>
+            None
+          </Toggle>
+          {BORDER_STYLES.map((s) => (
+            <Toggle key={s} active={style === s} onClick={() => {
+              if (s === "dotted") setDash(0);
+              else if (s === "dashed" && style === "dotted") setDash(6);
+              if (style === "none") setThickness(savedThickness);
+              setActiveStyle(s);
+              setStyle(s);
+            }}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </Toggle>
+          ))}
+        </div>
+        <Reveal open={hasStyle}>
+          <div>
+            <div className="doc-toggles">
+              {(Object.keys(GRADIENT_PRESETS) as Exclude<GradientPreset, "none">[]).map((g) => (
+                <Toggle key={g} active={gradient === g} onClick={() => { setGradient(g); setActiveGradient(g); }}>
+                  {g.charAt(0).toUpperCase() + g.slice(1)}
+                </Toggle>
+              ))}
+            </div>
+            <div className="doc-controls">
+              <div className="doc-control-cell" style={{ minWidth: 420 }}>
+                <SliderField
+                  label="Thickness"
+                  value={thickness}
+                  min={0}
+                  max={12}
+                  step={0.5}
+                  onValueChange={setThickness}
+                  formatValue={(v) => `${v}`}
+                />
+              </div>
+            </div>
+          </div>
+        </Reveal>
+        <Reveal open={hasDash}>
+          <div>
+            <div className="doc-toggles">
+              <Toggle active={dashCap === "butt"} onClick={() => setDashCap("butt")}>
+                No Dash Cap
+              </Toggle>
+              <Toggle active={dashCap === "square"} onClick={() => setDashCap("square")}>
+                Square Dash Cap
+              </Toggle>
+              <Toggle active={dashCap === "round"} onClick={() => setDashCap("round")}>
+                Round Dash Cap
+              </Toggle>
+            </div>
+            <div className="doc-controls">
+              <div className="doc-control-cell">
+                <SliderField label="Dash" value={dash} min={0} max={50} step={1} onValueChange={setDash} formatValue={(v) => `${v}`} />
+              </div>
+              <div className="doc-control-cell">
+                <SliderField label="Gap" value={gap} min={0} max={50} step={1} onValueChange={setGap} formatValue={(v) => `${v}`} />
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </DemoFigure>
+    </div>
+  );
+}
+
+// ─── Content Showcase ────────────────────────────────────
+
+function ContentShowcaseSection() {
+  const [preset, setPreset] = useState(0);
+
+  return (
+    <div className="doc-section">
+      <h2>Content Types</h2>
+      <p className="doc-description">
+        Smooth corners work with any content inside: images, gradients,
+        videos, or any HTML. The <code>clip-path</code> clips everything.
+      </p>
+      <DemoFigure open={false}>
+        <FrameworkGrid
+          render={() => {
+            if (preset === 0)
+              return (
+                <SmoothCorners
+                  radius={DEMO_RADIUS}
+                  smoothing={DEMO_SMOOTHING}
+                  autoEffects={false}
+                  className="sc-example"
+                  style={{
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span style={{ color: "#fff", fontWeight: 500 }}>Gradient</span>
+                </SmoothCorners>
+              );
+            if (preset === 1)
+              return (
+                <SmoothCorners
+                  radius={DEMO_RADIUS}
+                  smoothing={DEMO_SMOOTHING}
+                  autoEffects={false}
+                  className="sc-example"
+                  style={{ padding: 0, overflow: "hidden" }}
+                >
+                  <img
+                    src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop"
+                    alt="Landscape"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                </SmoothCorners>
+              );
+            if (preset === 2)
+              return (
+                <SmoothCorners
+                  radius={DEMO_RADIUS}
+                  smoothing={DEMO_SMOOTHING}
+                  autoEffects={false}
+                  className="sc-example"
+                  style={{
+                    background: "conic-gradient(from 45deg, #f97316, #ec4899, #8b5cf6, #3b82f6, #22c55e, #f97316)",
+                  }}
+                >
+                  <span style={{ color: "#fff", fontWeight: 500 }}>Conic</span>
+                </SmoothCorners>
+              );
+            if (preset === 3)
+              return (
+                <SmoothCorners
+                  radius={DEMO_RADIUS}
+                  smoothing={DEMO_SMOOTHING}
+                  autoEffects={false}
+                  outerBorder={{ width: 2, color: { type: "linear", angle: 135, stops: [{ offset: 0, color: "#667eea" }, { offset: 1, color: "#764ba2" }] }, opacity: 1 }}
+                  shadow={[
+                    { offsetX: 0, offsetY: 2, blur: 8, spread: 0, color: "#6366f1", opacity: 0.2 },
+                    { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#8b5cf6", opacity: 0.15 },
+                  ]}
+                  innerShadow={{ offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: "#ffffff", opacity: 0.1 }}
+                  className="sc-example"
+                  style={{
+                    background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+                  }}
+                >
+                  <span style={{ color: "#fff", fontWeight: 500 }}>All Effects</span>
+                </SmoothCorners>
+              );
+            return null;
+          }}
+        />
+        <div className="doc-toggles">
+          <Toggle active={preset === 0} onClick={() => setPreset(0)}>Gradient BG</Toggle>
+          <Toggle active={preset === 1} onClick={() => setPreset(1)}>Image</Toggle>
+          <Toggle active={preset === 2} onClick={() => setPreset(2)}>Conic</Toggle>
+          <Toggle active={preset === 3} onClick={() => setPreset(3)}>Combined</Toggle>
+        </div>
+      </DemoFigure>
+    </div>
+  );
+}
+
+// ─── Auto Effects ────────────────────────────────────────
+
+function AutoEffectsSection() {
+  const [autoEffects, setAutoEffects] = useState(true);
+
+  return (
+    <div className="doc-section">
+      <h2>Auto Effects</h2>
+      <p className="doc-description">
+        When <code>autoEffects</code> is enabled (default), CSS <code>border</code> and{" "}
+        <code>box-shadow</code> are automatically extracted and converted to SVG
+        equivalents. Toggle to see the difference.
+      </p>
+      <DemoFigure open={false}>
+        <FrameworkGrid
+          render={(fw) => (
+            <SmoothCorners
+              radius={DEMO_RADIUS}
+              smoothing={DEMO_SMOOTHING}
+              autoEffects={autoEffects}
+              className="sc-example"
+              style={{
+                border: "2px solid #7dcc7b",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15), inset 0 1px 3px rgba(0,0,0,0.1)",
+              }}
+            >
+              <span>{fw}</span>
+            </SmoothCorners>
+          )}
+        />
+        <div className="doc-toggles">
+          <Toggle active={autoEffects} onClick={() => setAutoEffects(true)}>
+            Auto Effects On
+          </Toggle>
+          <Toggle active={!autoEffects} onClick={() => setAutoEffects(false)}>
+            Auto Effects Off
+          </Toggle>
+        </div>
+      </DemoFigure>
+    </div>
+  );
+}
+
 // ─── App ─────────────────────────────────────────────────
 
 const lastUpdated = new Date().toLocaleDateString("en-US", {
@@ -612,6 +974,19 @@ export function App() {
             title="Inner Border"
             description="Drawn inside the shape using an inset SVG path, giving the appearance of an inset frame. Useful for layered card styles or pressed-in UI."
           />
+          <MultipleShadowsSection />
+          <GradientBorderSection
+            kind="outer"
+            title="Gradient Border (Outer)"
+            description="Gradient colors on the outer border stroke. Pick a gradient preset, then switch between all six border styles."
+          />
+          <GradientBorderSection
+            kind="inner"
+            title="Gradient Border (Inner)"
+            description="Gradient colors on the inner border stroke, drawn inside the clip-path."
+          />
+          <ContentShowcaseSection />
+          <AutoEffectsSection />
         </div>
         <div className="doc-card-spacer" />
       </div>

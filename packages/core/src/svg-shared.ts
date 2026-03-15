@@ -1,4 +1,4 @@
-import type { ShadowConfig, SmoothCornerOptions, CornerConfig } from "./types.js";
+import type { ShadowConfig, SmoothCornerOptions, CornerConfig, GradientConfig, GradientStop } from "./types.js";
 
 /** SVG namespace URI for document.createElementNS. */
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -7,9 +7,16 @@ export const SVG_NS = "http://www.w3.org/2000/svg";
 let uid = 0;
 export function nextUid(): number { return ++uid; }
 
-/** Converts a 6-digit hex color (e.g. "#ff00aa") to an rgb() CSS string. */
-export function hexToRgb(hex: string): string {
+/** Expand a 3-char hex (e.g. "#f00") to 6-char hex ("#ff0000"). Already-6-char hex passes through. */
+function expandHex(hex: string): string {
   const h = hex.replace("#", "");
+  if (h.length === 3) return "#" + h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  return "#" + h;
+}
+
+/** Converts a hex color (3 or 6 digit) to an rgb() CSS string. */
+export function hexToRgb(hex: string): string {
+  const h = expandHex(hex).replace("#", "");
   return `rgb(${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)})`;
 }
 
@@ -42,7 +49,7 @@ export function adjustOptions(options: SmoothCornerOptions, spread: number): Smo
  * Matches Firefox's groove/ridge algorithm. Pure black maps to #4c4c4c.
  */
 export function darkenHex(hex: string): string {
-  const h = hex.replace("#", "");
+  const h = expandHex(hex).replace("#", "");
   const r = parseInt(h.substring(0, 2), 16);
   const g = parseInt(h.substring(2, 4), 16);
   const b = parseInt(h.substring(4, 6), 16);
@@ -51,4 +58,84 @@ export function darkenHex(hex: string): string {
   const dg = Math.round(g * 2 / 3);
   const db = Math.round(b * 2 / 3);
   return "#" + ((1 << 24) | (dr << 16) | (dg << 8) | db).toString(16).slice(1);
+}
+
+/**
+ * Returns true if the border color is a GradientConfig object rather than a plain string.
+ */
+export function isGradient(color: string | GradientConfig): color is GradientConfig {
+  return typeof color === "object" && color !== null && "type" in color;
+}
+
+/**
+ * Convert a CSS-convention angle (degrees) to SVG linearGradient x1/y1/x2/y2 coordinates.
+ * CSS: 0deg = bottom-to-top, 90deg = left-to-right.
+ */
+export function angleToCoords(angleDeg: number): { x1: number; y1: number; x2: number; y2: number } {
+  const mathAngle = 90 - angleDeg;
+  const rad = mathAngle * Math.PI / 180;
+  return {
+    x1: 0.5 - 0.5 * Math.cos(rad),
+    y1: 0.5 + 0.5 * Math.sin(rad),
+    x2: 0.5 + 0.5 * Math.cos(rad),
+    y2: 0.5 - 0.5 * Math.sin(rad),
+  };
+}
+
+/** Apply stops to an SVG gradient element (linear or radial), replacing existing stops. */
+function applyStops(gradientEl: Element, stops: GradientStop[]): void {
+  // Remove existing stops
+  while (gradientEl.lastChild) gradientEl.removeChild(gradientEl.lastChild);
+  for (const s of stops) {
+    const stop = document.createElementNS(SVG_NS, "stop");
+    stop.setAttribute("offset", String(s.offset));
+    stop.setAttribute("stop-color", s.color);
+    if (s.opacity !== undefined && s.opacity !== 1) {
+      stop.setAttribute("stop-opacity", String(s.opacity));
+    }
+    gradientEl.appendChild(stop);
+  }
+}
+
+/**
+ * Create an SVG gradient definition (`<linearGradient>` or `<radialGradient>`)
+ * and append it to the given `<defs>` element.
+ */
+export function createGradientDef(defs: Element, config: GradientConfig, id: string): Element {
+  const tag = config.type === "linear" ? "linearGradient" : "radialGradient";
+  const el = document.createElementNS(SVG_NS, tag);
+  el.setAttribute("id", id);
+  setGradientAttrs(el, config);
+  applyStops(el, config.stops);
+  defs.appendChild(el);
+  return el;
+}
+
+/**
+ * Update an existing SVG gradient element's attributes and stops in place.
+ */
+export function updateGradientDef(gradientEl: Element, config: GradientConfig): void {
+  setGradientAttrs(gradientEl, config);
+  applyStops(gradientEl, config.stops);
+}
+
+function setGradientAttrs(el: Element, config: GradientConfig): void {
+  if (config.type === "linear") {
+    const coords = angleToCoords(config.angle ?? 0);
+    el.setAttribute("x1", String(coords.x1));
+    el.setAttribute("y1", String(coords.y1));
+    el.setAttribute("x2", String(coords.x2));
+    el.setAttribute("y2", String(coords.y2));
+  } else {
+    el.setAttribute("cx", String(config.cx ?? 0.5));
+    el.setAttribute("cy", String(config.cy ?? 0.5));
+    el.setAttribute("r", String(config.r ?? 0.5));
+  }
+}
+
+/**
+ * Return a new GradientConfig with each stop's color darkened via `darkenHex`.
+ */
+export function darkenGradient(config: GradientConfig): GradientConfig {
+  return { ...config, stops: config.stops.map(s => ({ ...s, color: darkenHex(s.color) })) };
 }

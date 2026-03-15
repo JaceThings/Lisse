@@ -34,5 +34,10 @@
     "url": "https://github.com/JaceThings/smooth-corners",
     "directory": "packages/svelte"
   },
-  "keywords": ["squircle", "smooth-corners", "svelte", "action"]
+  "peerDependencies": {
+    "svelte": ">=3.0.0"
+  },
+  "keywords": ["squircle", "smooth-corners", "svelte", "action", "border-radius", "clip-path"],
+  "homepage": "https://github.com/JaceThings/smooth-corners#readme",
+  "bugs": "https://github.com/JaceThings/smooth-corners/issues"
 }

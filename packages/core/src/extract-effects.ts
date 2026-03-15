@@ -17,8 +17,10 @@ export interface ExtractedEffects {
  * Returns undefined for unrecognized formats.
  */
 export function parseColor(raw: string): { hex: string; opacity: number } | undefined {
+  // Support both legacy comma-separated (rgb(255, 0, 0)) and
+  // CSS Color Level 4 space-separated (rgb(255 0 0 / 0.5)) formats
   const match = raw.match(
-    /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)$/,
+    /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)\s*(?:[,/]\s*([\d.]+))?\s*\)$/,
   );
   if (!match) return undefined;
   const r = Number(match[1]);
@@ -65,12 +67,12 @@ export function parseBorder(el: HTMLElement): BorderConfig | undefined {
 }
 
 /**
- * Parse a computed box-shadow string into outer shadow and inset shadow configs.
- * Only the first outer and first inset shadow are extracted.
+ * Parse a computed box-shadow string into arrays of outer and inset shadow configs.
+ * All shadows of each type are returned, preserving CSS order.
  */
 export function parseBoxShadow(raw: string): {
-  shadow?: ShadowConfig;
-  innerShadow?: ShadowConfig;
+  shadow?: ShadowConfig[];
+  innerShadow?: ShadowConfig[];
 } {
   if (!raw || raw === "none") return {};
 
@@ -88,12 +90,10 @@ export function parseBoxShadow(raw: string): {
   }
   parts.push(raw.slice(start).trim());
 
-  let shadow: ShadowConfig | undefined;
-  let innerShadow: ShadowConfig | undefined;
+  const shadows: ShadowConfig[] = [];
+  const innerShadows: ShadowConfig[] = [];
 
   for (const part of parts) {
-    if (shadow && innerShadow) break;
-
     const isInset = part.includes("inset");
     const cleaned = part.replace("inset", "").trim();
 
@@ -118,14 +118,17 @@ export function parseBoxShadow(raw: string): {
       opacity: color.opacity,
     };
 
-    if (isInset && !innerShadow) {
-      innerShadow = config;
-    } else if (!isInset && !shadow) {
-      shadow = config;
+    if (isInset) {
+      innerShadows.push(config);
+    } else {
+      shadows.push(config);
     }
   }
 
-  return { shadow, innerShadow };
+  return {
+    shadow: shadows.length > 0 ? shadows : undefined,
+    innerShadow: innerShadows.length > 0 ? innerShadows : undefined,
+  };
 }
 
 /**

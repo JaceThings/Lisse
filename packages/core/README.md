@@ -3,7 +3,7 @@
 Framework-agnostic squircle path generation based on [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/). Generate smooth-cornered SVG paths, CSS clip-paths, and SVG effect overlays.
 
 [![npm](https://img.shields.io/npm/v/%40smooth-corners%2Fcore)](https://www.npmjs.com/package/@smooth-corners/core)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/%40smooth-corners%2Fcore)](https://bundlephobia.com/package/@smooth-corners/core)
 
 ## Installation
@@ -180,7 +180,13 @@ effects.update(
   {
     innerBorder: { width: 1, color: "#fff", opacity: 0.2 },
     outerBorder: { width: 2, color: "#000", opacity: 0.1 },
-    innerShadow: { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000", opacity: 0.15 },
+    middleBorder: { width: 1, color: "#888", opacity: 0.5 },
+    innerShadow: [
+      { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000", opacity: 0.15 },
+    ],
+    shadow: [
+      { offsetX: 0, offsetY: 4, blur: 12, spread: 0, color: "#000", opacity: 0.1 },
+    ],
   },
   300,
   200,
@@ -244,15 +250,17 @@ const border = parseBorder(element);
 
 ### `parseBoxShadow(raw)`
 
-Parse a computed `box-shadow` string into outer shadow and inset shadow configs. Only the first outer and first inset shadow are extracted.
+Parse a computed `box-shadow` string into arrays of outer and inset shadow configs. All shadow layers are extracted and rendered, preserving CSS order.
 
 ```ts
 import { parseBoxShadow } from "@smooth-corners/core";
 
 const { shadow, innerShadow } = parseBoxShadow(computedStyle.boxShadow);
+// shadow: ShadowConfig[] | undefined
+// innerShadow: ShadowConfig[] | undefined
 ```
 
-**Returns:** `{ shadow?: ShadowConfig; innerShadow?: ShadowConfig }`.
+**Returns:** `{ shadow?: ShadowConfig[]; innerShadow?: ShadowConfig[] }`.
 
 ### `createDropShadow(anchor)`
 
@@ -274,7 +282,7 @@ shadow.update(
 shadow.destroy();
 ```
 
-**Returns:** `DropShadowHandle` -- `{ update(options, shadow, width, height): void; destroy(): void }`.
+**Returns:** `DropShadowHandle` -- `{ update(options, shadow | shadows[], width, height): void; destroy(): void }`. Accepts a single `ShadowConfig` or an array.
 
 ### `nextUid()`
 
@@ -346,6 +354,44 @@ interface CornerConfig {
 }
 ```
 
+### `GradientStop`
+
+```ts
+interface GradientStop {
+  offset: number;    // 0 to 1
+  color: string;     // hex color (3 or 6 digit)
+  opacity?: number;  // 0 to 1, default 1
+}
+```
+
+### `LinearGradientConfig`
+
+```ts
+interface LinearGradientConfig {
+  type: "linear";
+  angle?: number;    // CSS degrees: 0 = bottom-to-top, 90 = left-to-right. Default: 0
+  stops: GradientStop[];
+}
+```
+
+### `RadialGradientConfig`
+
+```ts
+interface RadialGradientConfig {
+  type: "radial";
+  cx?: number;   // 0-1, default 0.5
+  cy?: number;   // 0-1, default 0.5
+  r?: number;    // 0-1, default 0.5
+  stops: GradientStop[];
+}
+```
+
+### `GradientConfig`
+
+```ts
+type GradientConfig = LinearGradientConfig | RadialGradientConfig;
+```
+
 ### `BorderStyle`
 
 ```ts
@@ -357,9 +403,12 @@ type BorderStyle = "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge"
 ```ts
 interface BorderConfig {
   width: number;
-  color: string;
+  color: string | GradientConfig;
   opacity: number;
   style?: BorderStyle;
+  dash?: number;
+  gap?: number;
+  lineCap?: "butt" | "round" | "square";
 }
 ```
 
@@ -382,8 +431,9 @@ interface ShadowConfig {
 interface EffectsConfig {
   innerBorder?: BorderConfig;
   outerBorder?: BorderConfig;
-  innerShadow?: ShadowConfig;
-  shadow?: ShadowConfig;
+  middleBorder?: BorderConfig;
+  innerShadow?: ShadowConfig | ShadowConfig[];
+  shadow?: ShadowConfig | ShadowConfig[];
 }
 ```
 
@@ -392,7 +442,14 @@ interface EffectsConfig {
 ```ts
 interface ExtractedEffects {
   effects: EffectsConfig;
-  savedStyles: { border: string; boxShadow: string };
+  savedStyles: {
+    border: string;
+    boxShadow: string;
+    paddingTop: string;
+    paddingRight: string;
+    paddingBottom: string;
+    paddingLeft: string;
+  };
 }
 ```
 
@@ -409,7 +466,7 @@ interface SvgEffectsHandle {
 
 ```ts
 interface DropShadowHandle {
-  update(options: SmoothCornerOptions, shadow: ShadowConfig, width: number, height: number): void;
+  update(options: SmoothCornerOptions, shadow: ShadowConfig | ShadowConfig[], width: number, height: number): void;
   destroy(): void;
 }
 ```
@@ -515,29 +572,30 @@ restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
 | CSS property | SVG effect | Notes |
 |---|---|---|
 | `border` | `innerBorder` | Width, color, opacity, and style extracted from the top edge. |
-| `box-shadow` (outer) | `shadow` | First outer shadow only. |
-| `box-shadow` (inset) | `innerShadow` | First inset shadow only. |
+| `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
+| `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
 
 ### Limitations
 
 **Partial CSS conversion:**
 
-| CSS feature | What happens |
-|---|---|
-| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. |
-| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
-| `inset`, `outset` border styles | Not replicated. Rendered as solid. |
-| Multiple `box-shadow` layers | Only the first outer and first inset shadow are kept. All layers are stripped. |
-| `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. |
-| `outline` | Not read or stripped. |
+| CSS feature | What happens | Why |
+|---|---|---|
+| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. | The SVG overlay renders a uniform border along a single squircle path; per-side variation is not possible. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. | -- |
+| `inset`, `outset` border styles | Not replicated. Rendered as solid. | -- |
+| `border-image` | Not detected. Use the gradient border API (`GradientConfig`) instead. | `border-image` syntax is too complex to reliably parse from `getComputedStyle`. |
+| `outline` | Not read or stripped. | `outline` does not follow `border-radius` consistently across browsers, so extraction would be unreliable. |
+| Gradient borders | Not auto-extracted from CSS. Use the `GradientConfig` API on `BorderConfig.color` instead. | CSS gradient borders are set via `border-image`, which cannot be reliably parsed (see above). |
 
 **Behavioral notes:**
 
-- **One-time extraction** -- reads CSS once when called. Subsequent dynamic changes won't be reflected. Use explicit `EffectsConfig` values for dynamic effects.
-- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
-- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
-- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **One-time extraction** -- reads CSS once when called. Subsequent dynamic changes won't be reflected. Continuous `getComputedStyle` polling would be expensive, so use explicit `EffectsConfig` values for dynamic effects.
+- **`!important` rules** -- inline style stripping can't override `!important` stylesheet rules. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- stripped properties (`border`, `box-shadow`) are replaced with SVG equivalents that are not animatable via CSS transitions. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double (needs space for two lines plus a gap). Thinner double borders fall back to solid.
+- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **Wrapper div** -- the SVG overlay is inserted into a wrapper element, which can affect `flex` and `grid` layouts. Account for the wrapper when styling parent containers.
 
 ## Examples
 
@@ -596,6 +654,103 @@ update();
 const unsubscribe = observeResize(card, update);
 ```
 
+### Multiple outer shadows
+
+```ts
+import { createDropShadow } from "@smooth-corners/core";
+
+const shadow = createDropShadow(wrapperElement);
+
+shadow.update(
+  { radius: 24, smoothing: 0.6 },
+  [
+    { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000", opacity: 0.1 },
+    { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000", opacity: 0.15 },
+    { offsetX: 0, offsetY: 20, blur: 48, spread: -8, color: "#000", opacity: 0.1 },
+  ],
+  300,
+  200,
+);
+```
+
+### Multiple inner shadows
+
+```ts
+import { createSvgEffects } from "@smooth-corners/core";
+
+const effects = createSvgEffects(wrapperElement);
+
+effects.update(
+  { radius: 24, smoothing: 0.6 },
+  {
+    innerShadow: [
+      { offsetX: 0, offsetY: 1, blur: 2, spread: 0, color: "#000", opacity: 0.1 },
+      { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.08 },
+    ],
+  },
+  300,
+  200,
+);
+```
+
+### Linear gradient border
+
+```ts
+import { createSvgEffects } from "@smooth-corners/core";
+
+const effects = createSvgEffects(wrapperElement);
+
+effects.update(
+  { radius: 24, smoothing: 0.6 },
+  {
+    outerBorder: {
+      width: 2,
+      color: {
+        type: "linear",
+        angle: 135,
+        stops: [
+          { offset: 0, color: "#ff0080" },
+          { offset: 1, color: "#7928ca" },
+        ],
+      },
+      opacity: 1,
+    },
+  },
+  300,
+  200,
+);
+```
+
+### Radial gradient border
+
+```ts
+import { createSvgEffects } from "@smooth-corners/core";
+
+const effects = createSvgEffects(wrapperElement);
+
+effects.update(
+  { radius: 24, smoothing: 0.6 },
+  {
+    innerBorder: {
+      width: 1.5,
+      color: {
+        type: "radial",
+        cx: 0.5,
+        cy: 0,
+        r: 0.7,
+        stops: [
+          { offset: 0, color: "#ffffff", opacity: 0.8 },
+          { offset: 1, color: "#ffffff", opacity: 0.1 },
+        ],
+      },
+      opacity: 1,
+    },
+  },
+  300,
+  200,
+);
+```
+
 ## License
 
-[MIT](../../LICENSE)
+[MIT](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)

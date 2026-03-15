@@ -17,8 +17,8 @@ export type SmoothCornersProps = {
   innerBorder?: BorderConfig;
   outerBorder?: BorderConfig;
   middleBorder?: BorderConfig;
-  innerShadow?: ShadowConfig;
-  shadow?: ShadowConfig;
+  innerShadow?: ShadowConfig | ShadowConfig[];
+  shadow?: ShadowConfig | ShadowConfig[];
   /** Automatically extract CSS border and box-shadow as SVG effects. Default: true */
   autoEffects?: boolean;
 } & SmoothCornerOptions &

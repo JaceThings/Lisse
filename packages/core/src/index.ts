@@ -31,4 +31,8 @@ export type {
   BorderStyle,
   ShadowConfig,
   EffectsConfig,
+  GradientStop,
+  LinearGradientConfig,
+  RadialGradientConfig,
+  GradientConfig,
 } from "./types.js";

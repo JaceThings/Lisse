@@ -17,6 +17,11 @@ export type {
   NormalizedCorner,
   NormalizedCorners,
   BorderConfig,
+  BorderStyle,
   ShadowConfig,
   EffectsConfig,
+  GradientStop,
+  LinearGradientConfig,
+  RadialGradientConfig,
+  GradientConfig,
 } from "./types.js";

@@ -80,12 +80,16 @@ export const SmoothCorners = defineComponent({
       type: Object as PropType<BorderConfig>,
       default: undefined,
     },
+    middleBorder: {
+      type: Object as PropType<BorderConfig>,
+      default: undefined,
+    },
     innerShadow: {
-      type: Object as PropType<ShadowConfig>,
+      type: [Object, Array] as PropType<ShadowConfig | ShadowConfig[]>,
       default: undefined,
     },
     shadow: {
-      type: Object as PropType<ShadowConfig>,
+      type: [Object, Array] as PropType<ShadowConfig | ShadowConfig[]>,
       default: undefined,
     },
     autoEffects: {
@@ -119,6 +123,7 @@ export const SmoothCorners = defineComponent({
         !!(
           props.innerBorder ||
           props.outerBorder ||
+          props.middleBorder ||
           props.innerShadow ||
           props.shadow
         ),
@@ -131,6 +136,7 @@ export const SmoothCorners = defineComponent({
     const effectsConfig = computed(() => ({
       innerBorder: props.innerBorder,
       outerBorder: props.outerBorder,
+      middleBorder: props.middleBorder,
       innerShadow: props.innerShadow,
       shadow: props.shadow,
     }));

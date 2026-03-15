@@ -41,5 +41,7 @@
     "url": "https://github.com/JaceThings/smooth-corners",
     "directory": "packages/core"
   },
-  "keywords": ["squircle", "smooth-corners", "border-radius", "figma", "svg-path"]
+  "keywords": ["squircle", "smooth-corners", "border-radius", "figma", "svg-path", "clip-path", "superellipse"],
+  "homepage": "https://github.com/JaceThings/smooth-corners#readme",
+  "bugs": "https://github.com/JaceThings/smooth-corners/issues"
 }

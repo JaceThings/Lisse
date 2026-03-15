@@ -84,6 +84,34 @@ export interface RoundedRectangle {
   height: number;
 }
 
+// --- Gradient types ---
+
+/** A single color stop within a gradient. */
+export interface GradientStop {
+  offset: number;    // 0 to 1
+  color: string;     // hex color
+  opacity?: number;  // 0 to 1, default 1
+}
+
+/** Linear gradient configuration. */
+export interface LinearGradientConfig {
+  type: "linear";
+  angle?: number;       // degrees (CSS convention), default 0 (bottom to top)
+  stops: GradientStop[];
+}
+
+/** Radial gradient configuration. */
+export interface RadialGradientConfig {
+  type: "radial";
+  cx?: number;  // 0-1 relative, default 0.5
+  cy?: number;  // 0-1 relative, default 0.5
+  r?: number;   // 0-1 relative, default 0.5
+  stops: GradientStop[];
+}
+
+/** A gradient configuration — either linear or radial. */
+export type GradientConfig = LinearGradientConfig | RadialGradientConfig;
+
 // --- Effects types ---
 
 /** Supported border style values for SVG rendering. */
@@ -92,7 +120,7 @@ export type BorderStyle = "solid" | "dashed" | "dotted" | "double" | "groove" | 
 /** Configuration for an inner or outer border stroke. */
 export interface BorderConfig {
   width: number;
-  color: string;
+  color: string | GradientConfig;
   opacity: number;
   style?: BorderStyle;
   /** Custom dash length for dashed/dotted styles. */
@@ -118,6 +146,6 @@ export interface EffectsConfig {
   innerBorder?: BorderConfig;
   outerBorder?: BorderConfig;
   middleBorder?: BorderConfig;
-  innerShadow?: ShadowConfig;
-  shadow?: ShadowConfig;
+  innerShadow?: ShadowConfig | ShadowConfig[];
+  shadow?: ShadowConfig | ShadowConfig[];
 }

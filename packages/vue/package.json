@@ -44,8 +44,12 @@
     "smooth-corners",
     "vue",
     "composable",
-    "component"
+    "component",
+    "border-radius",
+    "clip-path"
   ],
+  "homepage": "https://github.com/JaceThings/smooth-corners#readme",
+  "bugs": "https://github.com/JaceThings/smooth-corners/issues",
   "devDependencies": {
     "vue": "^3.5.28"
   }

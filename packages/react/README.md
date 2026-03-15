@@ -3,7 +3,7 @@
 React hook and component for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
 
 [![npm](https://img.shields.io/npm/v/%40smooth-corners%2Freact)](https://www.npmjs.com/package/@smooth-corners/react)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
 
 ## Installation
 
@@ -135,8 +135,8 @@ A ready-to-use component that handles clip-path, resize observation, ref forward
 | `bottomLeft` | `number \| CornerConfig` | -- | Bottom-left corner override |
 | `innerBorder` | `BorderConfig` | -- | Inner border effect |
 | `outerBorder` | `BorderConfig` | -- | Outer border effect |
-| `innerShadow` | `ShadowConfig` | -- | Inner shadow effect |
-| `shadow` | `ShadowConfig` | -- | Drop shadow effect |
+| `innerShadow` | `ShadowConfig \| ShadowConfig[]` | -- | Inner shadow effect (single or multiple) |
+| `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or multiple) |
 | `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
 
 All standard HTML attributes (e.g. `className`, `style`, `onClick`) are forwarded to the rendered element.
@@ -269,8 +269,8 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 | CSS property | SVG effect | Notes |
 |---|---|---|
 | `border` | `innerBorder` | Width, color, opacity, and style extracted from the top edge. |
-| `box-shadow` (outer) | `shadow` | First outer shadow only. |
-| `box-shadow` (inset) | `innerShadow` | First inset shadow only. |
+| `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
+| `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
 
 ### Limitations
 
@@ -281,9 +281,10 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 | Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. |
 | `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
 | `inset`, `outset` border styles | Not replicated. Rendered as solid. |
-| Multiple `box-shadow` layers | Only the first outer and first inset shadow are kept. All layers are stripped. |
+| Multiple `box-shadow` layers | All shadow layers are extracted and rendered. Each outer shadow becomes a `shadow` entry and each inset shadow becomes an `innerShadow` entry. |
 | `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. |
-| `outline` | Not read or stripped. |
+| Gradient borders via CSS | CSS gradient borders (e.g. `border-image`) cannot be auto-extracted because `getComputedStyle` does not expose gradient data as structured values. Use the `GradientConfig` type on `BorderConfig.color` instead. |
+| `outline` | Not read or stripped. Outlines are painted outside the border box and are not part of `clip-path`, so they remain visible but follow the rectangular bounding box rather than the squircle shape. |
 
 **Behavioral notes:**
 
@@ -305,8 +306,12 @@ smooth-corners works by applying a CSS `clip-path` to the element. This means CS
 | Property | Type | Description |
 |----------|------|-------------|
 | `width` | `number` | Border width in pixels |
-| `color` | `string` | Border color (hex) |
+| `color` | `string \| GradientConfig` | Border color -- a hex string or a gradient configuration |
 | `opacity` | `number` | Border opacity (0-1) |
+| `style` | `BorderStyle` | Border style: `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, or `"ridge"`. Default: `"solid"` |
+| `dash` | `number` | Custom dash length for dashed/dotted styles |
+| `gap` | `number` | Custom gap length for dashed/dotted styles |
+| `lineCap` | `"butt" \| "round" \| "square"` | Line cap for dashed/dotted strokes. Default: `"butt"` for dashed, `"round"` for dotted |
 
 ### `ShadowConfig`
 
@@ -318,6 +323,114 @@ smooth-corners works by applying a CSS `clip-path` to the element. This means CS
 | `spread` | `number` | Spread distance in pixels |
 | `color` | `string` | Shadow color (hex) |
 | `opacity` | `number` | Shadow opacity (0-1) |
+
+### `GradientStop`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `offset` | `number` | Position within the gradient (0 to 1) |
+| `color` | `string` | Stop color (hex) |
+| `opacity` | `number` | Stop opacity (0-1). Default: `1` |
+
+### `LinearGradientConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `"linear"` | Discriminant -- must be `"linear"` |
+| `angle` | `number` | Angle in degrees (CSS convention). Default: `0` (bottom to top) |
+| `stops` | `GradientStop[]` | Array of color stops |
+
+### `RadialGradientConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `"radial"` | Discriminant -- must be `"radial"` |
+| `cx` | `number` | Horizontal center (0-1 relative). Default: `0.5` |
+| `cy` | `number` | Vertical center (0-1 relative). Default: `0.5` |
+| `r` | `number` | Radius (0-1 relative). Default: `0.5` |
+| `stops` | `GradientStop[]` | Array of color stops |
+
+### `GradientConfig`
+
+```ts
+type GradientConfig = LinearGradientConfig | RadialGradientConfig;
+```
+
+A union of `LinearGradientConfig` and `RadialGradientConfig`. Use the `type` discriminant to select between them.
+
+## Examples
+
+### Multiple Shadows
+
+Pass an array of `ShadowConfig` objects to render layered shadows:
+
+```tsx
+import { useRef } from "react";
+import { useSmoothCorners } from "@smooth-corners/react";
+
+function ElevatedCard() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useSmoothCorners(ref, { radius: 24, smoothing: 0.6 }, {
+    wrapperRef,
+    effects: {
+      shadow: [
+        { offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: "#000000", opacity: 0.12 },
+        { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000000", opacity: 0.15 },
+      ],
+    },
+  });
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <div ref={ref} style={{ background: "#fff", padding: 32 }}>
+        Layered shadow
+      </div>
+    </div>
+  );
+}
+```
+
+Or with the component:
+
+```tsx
+<SmoothCorners
+  radius={24}
+  shadow={[
+    { offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: "#000000", opacity: 0.12 },
+    { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000000", opacity: 0.15 },
+  ]}
+  style={{ background: "#fff", padding: 32 }}
+>
+  Layered shadow
+</SmoothCorners>
+```
+
+### Gradient Border
+
+Use a `GradientConfig` for the border `color` to render a gradient stroke:
+
+```tsx
+<SmoothCorners
+  radius={24}
+  innerBorder={{
+    width: 2,
+    color: {
+      type: "linear",
+      angle: 135,
+      stops: [
+        { offset: 0, color: "#667eea" },
+        { offset: 1, color: "#764ba2" },
+      ],
+    },
+    opacity: 1,
+  }}
+  style={{ background: "#fff", padding: 32 }}
+>
+  Gradient border
+</SmoothCorners>
+```
 
 ## Server Components
 
@@ -341,4 +454,4 @@ For server-side path generation, use `@smooth-corners/core/path` instead.
 
 ## License
 
-[MIT](../../LICENSE)
+[MIT](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)

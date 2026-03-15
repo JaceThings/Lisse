@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createSvgEffects } from "../src/svg-effects.js";
 import type { SvgEffectsHandle } from "../src/svg-effects.js";
-import type { SmoothCornerOptions, EffectsConfig } from "../src/types.js";
+import type { SmoothCornerOptions, EffectsConfig, LinearGradientConfig, RadialGradientConfig } from "../src/types.js";
 
 let anchor: HTMLElement;
 const opts: SmoothCornerOptions = { radius: 16 };
@@ -13,14 +13,22 @@ beforeEach(() => {
 });
 
 describe("createSvgEffects", () => {
-  it("creates SVG child with defs containing clipPath, mask, filter", () => {
-    createSvgEffects(anchor);
+  it("creates SVG child with defs containing clipPath, mask; filter created on demand", () => {
+    const handle = createSvgEffects(anchor);
     const svg = anchor.querySelector("svg")!;
     expect(svg).not.toBeNull();
 
     const defs = svg.querySelector("defs")!;
     expect(defs.querySelector("clipPath")).not.toBeNull();
     expect(defs.querySelector("mask")).not.toBeNull();
+
+    // No filter before first inner shadow update (pool is empty)
+    expect(defs.querySelector("filter")).toBeNull();
+
+    // After update with inner shadow, filter is created
+    handle.update(opts, {
+      innerShadow: { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 },
+    }, 200, 100);
     expect(defs.querySelector("filter")).not.toBeNull();
   });
 
@@ -34,10 +42,10 @@ describe("createSvgEffects", () => {
   });
 
   it("two instances produce unique IDs", () => {
-    createSvgEffects(anchor);
+    const handle1 = createSvgEffects(anchor);
     const anchor2 = document.createElement("div");
     document.body.appendChild(anchor2);
-    createSvgEffects(anchor2);
+    const handle2 = createSvgEffects(anchor2);
 
     const clip1 = anchor.querySelector("clipPath")!;
     const clip2 = anchor2.querySelector("clipPath")!;
@@ -46,6 +54,13 @@ describe("createSvgEffects", () => {
     const mask1 = anchor.querySelector("mask")!;
     const mask2 = anchor2.querySelector("mask")!;
     expect(mask1.getAttribute("id")).not.toBe(mask2.getAttribute("id"));
+
+    // Trigger inner shadow update to create filters on demand
+    const effects = {
+      innerShadow: { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 },
+    };
+    handle1.update(opts, effects, 200, 100);
+    handle2.update(opts, effects, 200, 100);
 
     const filter1 = anchor.querySelector("filter")!;
     const filter2 = anchor2.querySelector("filter")!;
@@ -211,6 +226,73 @@ describe("createSvgEffects", () => {
       }
     }
   });
+
+  it("two inner shadows produce correct structure", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerShadow: [
+        { offsetX: 2, offsetY: 4, blur: 8, spread: 0, color: "#ff0000", opacity: 0.5 },
+        { offsetX: 0, offsetY: 0, blur: 4, spread: 2, color: "#0000ff", opacity: 0.8 },
+      ],
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+
+    // Should have two inner shadow masks (ishadow-mask)
+    const masks = [...svg.querySelectorAll("mask")].filter(
+      (m) => m.getAttribute("id")?.includes("ishadow-mask"),
+    );
+    expect(masks).toHaveLength(2);
+    expect(masks[0].getAttribute("id")).not.toBe(masks[1].getAttribute("id"));
+
+    // Should have two inner shadow filters (ishadow-blur)
+    const filters = [...svg.querySelectorAll("filter")].filter(
+      (f) => f.getAttribute("id")?.includes("ishadow-blur"),
+    );
+    expect(filters).toHaveLength(2);
+
+    // Should have two visible shadow rects
+    const rects = [...svg.querySelectorAll("rect")].filter(
+      (r) => r.getAttribute("mask")?.includes("ishadow-mask") && r.style.display !== "none",
+    );
+    expect(rects).toHaveLength(2);
+    expect(rects[0].getAttribute("fill")).toBe("rgb(255,0,0)");
+    expect(rects[1].getAttribute("fill")).toBe("rgb(0,0,255)");
+  });
+
+  it("reducing inner shadow count cleans up", () => {
+    const handle = createSvgEffects(anchor);
+    const twoShadows: EffectsConfig = {
+      innerShadow: [
+        { offsetX: 2, offsetY: 4, blur: 8, spread: 0, color: "#ff0000", opacity: 0.5 },
+        { offsetX: 0, offsetY: 0, blur: 4, spread: 2, color: "#0000ff", opacity: 0.8 },
+      ],
+    };
+    handle.update(opts, twoShadows, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    let masks = [...svg.querySelectorAll("mask")].filter(
+      (m) => m.getAttribute("id")?.includes("ishadow-mask"),
+    );
+    expect(masks).toHaveLength(2);
+
+    // Reduce to one
+    const oneShadow: EffectsConfig = {
+      innerShadow: { offsetX: 2, offsetY: 4, blur: 8, spread: 0, color: "#ff0000", opacity: 0.5 },
+    };
+    handle.update(opts, oneShadow, 200, 100);
+
+    masks = [...svg.querySelectorAll("mask")].filter(
+      (m) => m.getAttribute("id")?.includes("ishadow-mask"),
+    );
+    expect(masks).toHaveLength(1);
+
+    const filters = [...svg.querySelectorAll("filter")].filter(
+      (f) => f.getAttribute("id")?.includes("ishadow-blur"),
+    );
+    expect(filters).toHaveLength(1);
+  });
 });
 
 describe("border styles", () => {
@@ -352,6 +434,27 @@ describe("border styles", () => {
     expect(innerStroke!.getAttribute("stroke-dasharray")).toBeNull();
   });
 
+  it("middle border — stroke path displayed with correct color and width", () => {
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      middleBorder: { width: 2, color: "#ff00ff", opacity: 1 },
+    };
+    handle.update(opts, effects, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    // Middle border has no clip-path and no mask (it's centered on the path)
+    const middleStroke = [...paths].find(
+      (p) =>
+        p.getAttribute("clip-path") === null &&
+        p.getAttribute("mask") === null &&
+        p.style.display !== "none" &&
+        p.getAttribute("stroke") === "#ff00ff"
+    );
+    expect(middleStroke).not.toBeUndefined();
+    expect(middleStroke!.getAttribute("stroke-width")).toBe("2");
+  });
+
   it("outer border with dashed style sets stroke-dasharray", () => {
     const handle = createSvgEffects(anchor);
     const effects: EffectsConfig = {
@@ -366,5 +469,174 @@ describe("border styles", () => {
     );
     expect(outerStroke).not.toBeUndefined();
     expect(outerStroke!.getAttribute("stroke-dasharray")).toBe("9 6");
+  });
+});
+
+describe("gradient borders", () => {
+  const linearGrad: LinearGradientConfig = {
+    type: "linear",
+    angle: 90,
+    stops: [
+      { offset: 0, color: "#ff0000" },
+      { offset: 1, color: "#0000ff" },
+    ],
+  };
+
+  const radialGrad: RadialGradientConfig = {
+    type: "radial",
+    cx: 0.5,
+    cy: 0.5,
+    r: 0.5,
+    stops: [
+      { offset: 0, color: "#ffffff" },
+      { offset: 1, color: "#000000", opacity: 0.5 },
+    ],
+  };
+
+  it("linear gradient border creates <linearGradient> in defs with correct stops", () => {
+    const handle = createSvgEffects(anchor);
+    handle.update(opts, {
+      innerBorder: { width: 2, color: linearGrad, opacity: 1 },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const defs = svg.querySelector("defs")!;
+    const lg = defs.querySelector("linearGradient")!;
+    expect(lg).not.toBeNull();
+    expect(lg.getAttribute("x1")).not.toBeNull();
+    expect(lg.getAttribute("y1")).not.toBeNull();
+    expect(lg.getAttribute("x2")).not.toBeNull();
+    expect(lg.getAttribute("y2")).not.toBeNull();
+
+    const stops = lg.querySelectorAll("stop");
+    expect(stops).toHaveLength(2);
+    expect(stops[0].getAttribute("offset")).toBe("0");
+    expect(stops[0].getAttribute("stop-color")).toBe("#ff0000");
+    expect(stops[1].getAttribute("offset")).toBe("1");
+    expect(stops[1].getAttribute("stop-color")).toBe("#0000ff");
+  });
+
+  it("radial gradient border creates <radialGradient> in defs", () => {
+    const handle = createSvgEffects(anchor);
+    handle.update(opts, {
+      innerBorder: { width: 2, color: radialGrad, opacity: 1 },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const defs = svg.querySelector("defs")!;
+    const rg = defs.querySelector("radialGradient")!;
+    expect(rg).not.toBeNull();
+    expect(rg.getAttribute("cx")).toBe("0.5");
+    expect(rg.getAttribute("cy")).toBe("0.5");
+    expect(rg.getAttribute("r")).toBe("0.5");
+
+    const stops = rg.querySelectorAll("stop");
+    expect(stops).toHaveLength(2);
+    expect(stops[1].getAttribute("stop-opacity")).toBe("0.5");
+  });
+
+  it("stroke uses url(#...) reference for gradient color", () => {
+    const handle = createSvgEffects(anchor);
+    handle.update(opts, {
+      innerBorder: { width: 2, color: linearGrad, opacity: 1 },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    expect(innerStroke!.getAttribute("stroke")).toMatch(/^url\(#sc-grad-inner-/);
+  });
+
+  it("gradient + dashed style works (stroke-dasharray still applies)", () => {
+    const handle = createSvgEffects(anchor);
+    handle.update(opts, {
+      innerBorder: { width: 4, color: linearGrad, opacity: 1, style: "dashed" },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke).not.toBeUndefined();
+    expect(innerStroke!.getAttribute("stroke")).toMatch(/^url\(#/);
+    expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("12 8");
+  });
+
+  it("gradient + groove creates two gradient defs (normal + darkened)", () => {
+    const handle = createSvgEffects(anchor);
+    handle.update(opts, {
+      innerBorder: { width: 4, color: linearGrad, opacity: 1, style: "groove" },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const defs = svg.querySelector("defs")!;
+    const grads = defs.querySelectorAll("linearGradient");
+    expect(grads.length).toBe(2);
+
+    // One should have the original colors, one should have darkened colors
+    const allStops = [...grads].map(g =>
+      [...g.querySelectorAll("stop")].map(s => s.getAttribute("stop-color"))
+    );
+    // Check that one gradient has the darkened first stop (#aa0000) and
+    // the other has the original first stop (#ff0000)
+    const flatColors = allStops.flat();
+    expect(flatColors).toContain("#ff0000");
+    expect(flatColors).toContain("#aa0000");
+  });
+
+  it("switching from gradient to solid color removes gradient def", () => {
+    const handle = createSvgEffects(anchor);
+
+    // Start with gradient
+    handle.update(opts, {
+      innerBorder: { width: 2, color: linearGrad, opacity: 1 },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const defs = svg.querySelector("defs")!;
+    expect(defs.querySelector("linearGradient")).not.toBeNull();
+
+    // Switch to solid color
+    handle.update(opts, {
+      innerBorder: { width: 2, color: "#ff0000", opacity: 1 },
+    }, 200, 100);
+
+    expect(defs.querySelector("linearGradient")).toBeNull();
+
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke!.getAttribute("stroke")).toBe("#ff0000");
+  });
+
+  it("switching from solid to gradient works", () => {
+    const handle = createSvgEffects(anchor);
+
+    // Start with solid color
+    handle.update(opts, {
+      innerBorder: { width: 2, color: "#ff0000", opacity: 1 },
+    }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const defs = svg.querySelector("defs")!;
+    expect(defs.querySelector("linearGradient")).toBeNull();
+
+    // Switch to gradient
+    handle.update(opts, {
+      innerBorder: { width: 2, color: linearGrad, opacity: 1 },
+    }, 200, 100);
+
+    expect(defs.querySelector("linearGradient")).not.toBeNull();
+
+    const paths = svg.querySelectorAll("path");
+    const innerStroke = [...paths].find(
+      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
+    );
+    expect(innerStroke!.getAttribute("stroke")).toMatch(/^url\(#/);
   });
 });

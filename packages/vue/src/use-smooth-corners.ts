@@ -105,6 +105,7 @@ export function useSmoothCorners(
       const hasAny = !!(
         mergedEffects.innerBorder ||
         mergedEffects.outerBorder ||
+        mergedEffects.middleBorder ||
         mergedEffects.innerShadow ||
         mergedEffects.shadow
       );
@@ -162,6 +163,7 @@ export function useSmoothCorners(
       const hasAnyEffects = !!(
         mergedEffects.innerBorder ||
         mergedEffects.outerBorder ||
+        mergedEffects.middleBorder ||
         mergedEffects.innerShadow ||
         mergedEffects.shadow
       );

@@ -13,17 +13,21 @@ beforeEach(() => {
 });
 
 describe("createDropShadow", () => {
-  it("creates SVG child with defs/filter/feGaussianBlur and a path element", () => {
-    createDropShadow(anchor);
+  it("creates SVG child with defs; filter and path are created on first update", () => {
+    const handle = createDropShadow(anchor);
     const svg = anchor.querySelector("svg")!;
     expect(svg).not.toBeNull();
+    expect(svg.querySelector("defs")).not.toBeNull();
 
-    const filter = svg.querySelector("filter")!;
-    expect(filter).not.toBeNull();
-    expect(filter.querySelector("feGaussianBlur")).not.toBeNull();
+    // No filter/path before first update (pool is empty)
+    expect(svg.querySelector("filter")).toBeNull();
+    expect(svg.querySelector("path")).toBeNull();
 
-    const path = svg.querySelector("path");
-    expect(path).not.toBeNull();
+    // After update, filter and path are created
+    handle.update(opts, { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 }, 200, 100);
+    expect(svg.querySelector("filter")).not.toBeNull();
+    expect(svg.querySelector("filter")!.querySelector("feGaussianBlur")).not.toBeNull();
+    expect(svg.querySelector("path")).not.toBeNull();
   });
 
   it("sets isolation: isolate on anchor", () => {
@@ -172,5 +176,52 @@ describe("createDropShadow", () => {
 
     const svg = anchor.querySelector("svg")!;
     expect(svg.style.display).toBe("none");
+  });
+
+  it("two outer shadows produce two path elements", () => {
+    const handle = createDropShadow(anchor);
+    const shadows: ShadowConfig[] = [
+      { offsetX: 2, offsetY: 4, blur: 0, spread: 0, color: "#ff0000", opacity: 0.8 },
+      { offsetX: 0, offsetY: 0, blur: 8, spread: 0, color: "#0000ff", opacity: 0.5 },
+    ];
+    handle.update(opts, shadows, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    // Paths outside <defs>
+    const paths = [...svg.querySelectorAll("path")].filter(
+      (p) => !p.closest("defs"),
+    );
+    expect(paths).toHaveLength(2);
+    // Each filter should be unique
+    const filters = svg.querySelectorAll("filter");
+    expect(filters).toHaveLength(2);
+    expect(filters[0].getAttribute("id")).not.toBe(filters[1].getAttribute("id"));
+  });
+
+  it("reducing shadow count removes DOM elements", () => {
+    const handle = createDropShadow(anchor);
+    const twoShadows: ShadowConfig[] = [
+      { offsetX: 2, offsetY: 4, blur: 0, spread: 0, color: "#ff0000", opacity: 0.8 },
+      { offsetX: 0, offsetY: 0, blur: 8, spread: 0, color: "#0000ff", opacity: 0.5 },
+    ];
+    handle.update(opts, twoShadows, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    let paths = [...svg.querySelectorAll("path")].filter(
+      (p) => !p.closest("defs"),
+    );
+    expect(paths).toHaveLength(2);
+
+    // Reduce to one shadow
+    const oneShadow: ShadowConfig = {
+      offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000000", opacity: 1,
+    };
+    handle.update(opts, oneShadow, 200, 100);
+
+    paths = [...svg.querySelectorAll("path")].filter(
+      (p) => !p.closest("defs"),
+    );
+    expect(paths).toHaveLength(1);
+    expect(svg.querySelectorAll("filter")).toHaveLength(1);
   });
 });
