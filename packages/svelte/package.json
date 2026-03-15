@@ -1,5 +1,5 @@
 {
-  "name": "@smooth-corners/svelte",
+  "name": "@lisse/svelte",
   "version": "0.1.0",
   "description": "Svelte action for smooth-cornered (squircle) elements",
   "license": "MIT",
@@ -26,7 +26,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@smooth-corners/core": "workspace:*"
+    "@lisse/core": "workspace:*"
   },
   "sideEffects": false,
   "repository": {

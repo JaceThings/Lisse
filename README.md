@@ -6,14 +6,14 @@
 
 Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
-[![npm: @smooth-corners/core](https://img.shields.io/npm/v/%40smooth-corners%2Fcore?label=%40smooth-corners%2Fcore)](https://www.npmjs.com/package/@smooth-corners/core)
-[![npm: @smooth-corners/react](https://img.shields.io/npm/v/%40smooth-corners%2Freact?label=%40smooth-corners%2Freact)](https://www.npmjs.com/package/@smooth-corners/react)
-[![npm: @smooth-corners/vue](https://img.shields.io/npm/v/%40smooth-corners%2Fvue?label=%40smooth-corners%2Fvue)](https://www.npmjs.com/package/@smooth-corners/vue)
-[![npm: @smooth-corners/svelte](https://img.shields.io/npm/v/%40smooth-corners%2Fsvelte?label=%40smooth-corners%2Fsvelte)](https://www.npmjs.com/package/@smooth-corners/svelte)
+[![npm: @lisse/core](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
+[![npm: @lisse/react](https://img.shields.io/npm/v/%40lisse%2Freact?label=%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
+[![npm: @lisse/vue](https://img.shields.io/npm/v/%40lisse%2Fvue?label=%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
+[![npm: @lisse/svelte](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/JaceThings/smooth-corners/ci.yml?branch=main&label=CI)](https://github.com/JaceThings/smooth-corners/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/%40smooth-corners%2Fcore)](https://bundlephobia.com/package/@smooth-corners/core)
+[![Bundle size](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore)](https://bundlephobia.com/package/@lisse/core)
 
 </div>
 
@@ -56,13 +56,13 @@ If you're starting fresh, the component is simpler. If you're adding smooth corn
 ### React
 
 ```sh
-npm install @smooth-corners/react
+npm install @lisse/react
 ```
 
 **Component:**
 
 ```tsx
-import { SmoothCorners } from "@smooth-corners/react";
+import { SmoothCorners } from "@lisse/react";
 
 function Card() {
   return (
@@ -77,7 +77,7 @@ function Card() {
 
 ```tsx
 import { useRef } from "react";
-import { useSmoothCorners } from "@smooth-corners/react";
+import { useSmoothCorners } from "@lisse/react";
 
 function Card() {
   const ref = useRef<HTMLDivElement>(null);
@@ -89,7 +89,7 @@ function Card() {
 ### Vue
 
 ```sh
-npm install @smooth-corners/vue
+npm install @lisse/vue
 ```
 
 **Composable:**
@@ -97,7 +97,7 @@ npm install @smooth-corners/vue
 ```vue
 <script setup>
 import { ref } from "vue";
-import { useSmoothCorners } from "@smooth-corners/vue";
+import { useSmoothCorners } from "@lisse/vue";
 
 const el = ref(null);
 useSmoothCorners(el, { radius: 20, smoothing: 0.6 });
@@ -112,7 +112,7 @@ useSmoothCorners(el, { radius: 20, smoothing: 0.6 });
 
 ```vue
 <script setup>
-import { SmoothCorners } from "@smooth-corners/vue";
+import { SmoothCorners } from "@lisse/vue";
 </script>
 
 <template>
@@ -125,12 +125,12 @@ import { SmoothCorners } from "@smooth-corners/vue";
 ### Svelte
 
 ```sh
-npm install @smooth-corners/svelte
+npm install @lisse/svelte
 ```
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <div use:smoothCorners={{ radius: 20, smoothing: 0.6 }} style="background: #fff; padding: 24px">
@@ -141,11 +141,11 @@ npm install @smooth-corners/svelte
 ### Vanilla JS / Core
 
 ```sh
-npm install @smooth-corners/core
+npm install @lisse/core
 ```
 
 ```ts
-import { generatePath, generateClipPath } from "@smooth-corners/core";
+import { generatePath, generateClipPath } from "@lisse/core";
 
 const path = generatePath(200, 200, { radius: 40, smoothing: 0.6 });
 // Use in an <svg> element: <path d={path} />
@@ -408,7 +408,7 @@ The core package provides a `/path` subpath export that excludes all DOM-depende
 
 ```ts
 // DOM-free import - safe for SSR, Node.js, edge runtimes
-import { generatePath } from "@smooth-corners/core/path";
+import { generatePath } from "@lisse/core/path";
 ```
 
 The `/path` export includes `generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `getSVGPathFromPathParams`, `toRadians`, `rounded`, `nextUid`, `hexToRgb`, `SVG_NS`, and `DEFAULT_SHADOW`. It excludes `createSvgEffects`, `createDropShadow`, and `observeResize`.
@@ -417,10 +417,10 @@ The `/path` export includes `generatePath`, `generateClipPath`, `getPathParamsFo
 
 | Package | Description | Docs |
 |---------|-------------|------|
-| [`@smooth-corners/core`](https://www.npmjs.com/package/@smooth-corners/core) | Framework-agnostic path generation and effects | [README](./packages/core/README.md) |
-| [`@smooth-corners/react`](https://www.npmjs.com/package/@smooth-corners/react) | React hook and component | [README](./packages/react/README.md) |
-| [`@smooth-corners/vue`](https://www.npmjs.com/package/@smooth-corners/vue) | Vue composable and component | [README](./packages/vue/README.md) |
-| [`@smooth-corners/svelte`](https://www.npmjs.com/package/@smooth-corners/svelte) | Svelte action | [README](./packages/svelte/README.md) |
+| [`@lisse/core`](https://www.npmjs.com/package/@lisse/core) | Framework-agnostic path generation and effects | [README](./packages/core/README.md) |
+| [`@lisse/react`](https://www.npmjs.com/package/@lisse/react) | React hook and component | [README](./packages/react/README.md) |
+| [`@lisse/vue`](https://www.npmjs.com/package/@lisse/vue) | Vue composable and component | [README](./packages/vue/README.md) |
+| [`@lisse/svelte`](https://www.npmjs.com/package/@lisse/svelte) | Svelte action | [README](./packages/svelte/README.md) |
 
 ## How It Works
 

@@ -4,7 +4,7 @@
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@smooth-corners/core", "@smooth-corners/react", "@smooth-corners/vue", "@smooth-corners/svelte"]
+    ["@lisse/core", "@lisse/react", "@lisse/vue", "@lisse/svelte"]
   ],
   "access": "public",
   "baseBranch": "main",

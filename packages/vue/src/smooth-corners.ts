@@ -11,7 +11,7 @@ import type {
   SmoothCornerOptions,
   BorderConfig,
   ShadowConfig,
-} from "@smooth-corners/core";
+} from "@lisse/core";
 
 /**
  * Render-function component that applies smooth corners to a wrapper element.

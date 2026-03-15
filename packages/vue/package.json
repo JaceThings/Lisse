@@ -1,5 +1,5 @@
 {
-  "name": "@smooth-corners/vue",
+  "name": "@lisse/vue",
   "version": "0.1.0",
   "description": "Vue composable and component for smooth-cornered (squircle) elements",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@smooth-corners/core": "workspace:*"
+    "@lisse/core": "workspace:*"
   },
   "peerDependencies": {
     "vue": ">=3.3.0"

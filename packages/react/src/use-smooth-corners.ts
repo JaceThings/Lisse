@@ -9,8 +9,8 @@ import {
   restoreStyles,
   acquirePosition,
   releasePosition,
-} from "@smooth-corners/core";
-import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
+} from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 function mergeEffects(
   extracted: ReturnType<typeof extractAndStripEffects> | undefined,

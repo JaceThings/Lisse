@@ -1,14 +1,14 @@
-# @smooth-corners/svelte
+# @lisse/svelte
 
 Svelte action for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
 
-[![npm](https://img.shields.io/npm/v/%40smooth-corners%2Fsvelte)](https://www.npmjs.com/package/@smooth-corners/svelte)
+[![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
 
 ## Installation
 
 ```sh
-npm install @smooth-corners/svelte
+npm install @lisse/svelte
 ```
 
 Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
@@ -17,7 +17,7 @@ Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <div use:smoothCorners={{ radius: 20, smoothing: 0.6 }} style="background: #fff; padding: 24px">
@@ -37,7 +37,7 @@ Pass `SmoothCornerOptions` directly when you only need the clip-path:
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <!-- Uniform radius -->
@@ -57,7 +57,7 @@ Pass a `SmoothCornersConfig` object when you need effects:
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <div use:smoothCorners={{
@@ -77,7 +77,7 @@ The action responds to parameter changes automatically. Use reactive declaration
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 
   let radius = $state(20);
 </script>
@@ -92,7 +92,7 @@ The action responds to parameter changes automatically. Use reactive declaration
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <div use:smoothCorners={{
@@ -204,7 +204,7 @@ The SVG overlays are absolutely positioned inside the parent element. The librar
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <div style="position: relative">
@@ -228,7 +228,7 @@ Pass an array of `ShadowConfig` objects to `shadow` or `innerShadow` to render m
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <div style="position: relative">
@@ -253,7 +253,7 @@ Use a `GradientConfig` object for the border `color` property to render a gradie
 
 ```svelte
 <script>
-  import { smoothCorners } from "@smooth-corners/svelte";
+  import { smoothCorners } from "@lisse/svelte";
 </script>
 
 <div style="position: relative">
@@ -372,7 +372,7 @@ The `smoothCorners` action uses browser APIs (`ResizeObserver`, DOM manipulation
 For server-side path generation (e.g., generating SVG paths in a `+page.server.ts` load function), use the DOM-free subpath:
 
 ```ts
-import { generatePath } from "@smooth-corners/core/path";
+import { generatePath } from "@lisse/core/path";
 
 const d = generatePath(200, 100, { radius: 20, smoothing: 0.6 });
 ```

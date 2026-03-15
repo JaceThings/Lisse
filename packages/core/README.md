@@ -1,15 +1,15 @@
-# @smooth-corners/core
+# @lisse/core
 
 Framework-agnostic squircle path generation based on [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/). Generate smooth-cornered SVG paths, CSS clip-paths, and SVG effect overlays.
 
-[![npm](https://img.shields.io/npm/v/%40smooth-corners%2Fcore)](https://www.npmjs.com/package/@smooth-corners/core)
+[![npm](https://img.shields.io/npm/v/%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/%40smooth-corners%2Fcore)](https://bundlephobia.com/package/@smooth-corners/core)
+[![Bundle size](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore)](https://bundlephobia.com/package/@lisse/core)
 
 ## Installation
 
 ```sh
-npm install @smooth-corners/core
+npm install @lisse/core
 ```
 
 ## API Reference
@@ -19,7 +19,7 @@ npm install @smooth-corners/core
 Generate an SVG path `d` attribute string for a smooth-cornered rectangle.
 
 ```ts
-import { generatePath } from "@smooth-corners/core";
+import { generatePath } from "@lisse/core";
 
 const d = generatePath(300, 200, { radius: 24, smoothing: 0.6 });
 ```
@@ -39,7 +39,7 @@ const d = generatePath(300, 200, { radius: 24, smoothing: 0.6 });
 Generate a CSS `clip-path: path(...)` string. Same parameters as `generatePath`.
 
 ```ts
-import { generateClipPath } from "@smooth-corners/core";
+import { generateClipPath } from "@lisse/core";
 
 const clipPath = generateClipPath(300, 200, { radius: 24 });
 element.style.clipPath = clipPath;
@@ -52,7 +52,7 @@ element.style.clipPath = clipPath;
 Compute the bezier control point distances for a single corner.
 
 ```ts
-import { getPathParamsForCorner } from "@smooth-corners/core";
+import { getPathParamsForCorner } from "@lisse/core";
 
 const params = getPathParamsForCorner({
   cornerRadius: 24,
@@ -79,7 +79,7 @@ const params = getPathParamsForCorner({
 Distribute corner radii across a rectangle, proportionally reducing radii that overlap.
 
 ```ts
-import { distributeAndNormalize } from "@smooth-corners/core";
+import { distributeAndNormalize } from "@lisse/core";
 
 const corners = distributeAndNormalize({
   topLeftCornerRadius: 40,
@@ -111,7 +111,7 @@ const corners = distributeAndNormalize({
 Assemble a complete SVG path string from pre-computed corner parameters.
 
 ```ts
-import { getSVGPathFromPathParams } from "@smooth-corners/core";
+import { getSVGPathFromPathParams } from "@lisse/core";
 
 const path = getSVGPathFromPathParams({
   width: 200,
@@ -130,7 +130,7 @@ const path = getSVGPathFromPathParams({
 Convert degrees to radians.
 
 ```ts
-import { toRadians } from "@smooth-corners/core";
+import { toRadians } from "@lisse/core";
 
 const rad = toRadians(90); // 1.5707963...
 ```
@@ -140,7 +140,7 @@ const rad = toRadians(90); // 1.5707963...
 Tagged template literal that rounds all interpolated numbers to 4 decimal places for cleaner SVG output.
 
 ```ts
-import { rounded } from "@smooth-corners/core";
+import { rounded } from "@lisse/core";
 
 const x = 3.14159265;
 const y = 2.71828182;
@@ -152,7 +152,7 @@ const segment = rounded`L ${x} ${y}`; // "L 3.1416 2.7183"
 Observe an element's size changes using a shared `ResizeObserver`. Callbacks are batched with `requestAnimationFrame`.
 
 ```ts
-import { observeResize } from "@smooth-corners/core";
+import { observeResize } from "@lisse/core";
 
 const unsubscribe = observeResize(element, () => {
   // Element was resized, update clip-path
@@ -171,7 +171,7 @@ unsubscribe();
 Create an SVG overlay element for rendering inner/outer borders and inner shadows along a squircle path.
 
 ```ts
-import { createSvgEffects } from "@smooth-corners/core";
+import { createSvgEffects } from "@lisse/core";
 
 const effects = createSvgEffects(wrapperElement);
 
@@ -203,7 +203,7 @@ effects.destroy();
 Read CSS `border` and `box-shadow` from an element, strip them from inline styles, and return equivalent `EffectsConfig` values along with saved styles for restoration.
 
 ```ts
-import { extractAndStripEffects } from "@smooth-corners/core";
+import { extractAndStripEffects } from "@lisse/core";
 
 const { effects, savedStyles } = extractAndStripEffects(element);
 // effects: { innerBorder?, shadow?, innerShadow? }
@@ -217,7 +217,7 @@ const { effects, savedStyles } = extractAndStripEffects(element);
 Restore previously saved inline `border` and `boxShadow` styles. If the saved value was an empty string, this removes the inline override and lets stylesheet rules reassert.
 
 ```ts
-import { restoreStyles } from "@smooth-corners/core";
+import { restoreStyles } from "@lisse/core";
 
 restoreStyles(element, savedStyles);
 ```
@@ -227,7 +227,7 @@ restoreStyles(element, savedStyles);
 Parse an `rgb()` or `rgba()` color string (as returned by `getComputedStyle`) into hex and opacity.
 
 ```ts
-import { parseColor } from "@smooth-corners/core";
+import { parseColor } from "@lisse/core";
 
 const color = parseColor("rgba(255, 0, 0, 0.5)");
 // { hex: "#ff0000", opacity: 0.5 }
@@ -240,7 +240,7 @@ const color = parseColor("rgba(255, 0, 0, 0.5)");
 Read the computed border from an element and convert it to a `BorderConfig`. Returns `undefined` if the border is invisible (none/hidden, width 0, or transparent).
 
 ```ts
-import { parseBorder } from "@smooth-corners/core";
+import { parseBorder } from "@lisse/core";
 
 const border = parseBorder(element);
 // { width: 2, color: "#ff0000", opacity: 1 } or undefined
@@ -253,7 +253,7 @@ const border = parseBorder(element);
 Parse a computed `box-shadow` string into arrays of outer and inset shadow configs. All shadow layers are extracted and rendered, preserving CSS order.
 
 ```ts
-import { parseBoxShadow } from "@smooth-corners/core";
+import { parseBoxShadow } from "@lisse/core";
 
 const { shadow, innerShadow } = parseBoxShadow(computedStyle.boxShadow);
 // shadow: ShadowConfig[] | undefined
@@ -267,7 +267,7 @@ const { shadow, innerShadow } = parseBoxShadow(computedStyle.boxShadow);
 Create a path-based drop shadow rendered as an SVG element with gaussian blur.
 
 ```ts
-import { createDropShadow } from "@smooth-corners/core";
+import { createDropShadow } from "@lisse/core";
 
 const shadow = createDropShadow(wrapperElement);
 
@@ -289,7 +289,7 @@ shadow.destroy();
 Generate a monotonically increasing unique ID. Used internally for SVG element IDs.
 
 ```ts
-import { nextUid } from "@smooth-corners/core";
+import { nextUid } from "@lisse/core";
 
 const id = nextUid(); // 1, 2, 3, ...
 ```
@@ -299,7 +299,7 @@ const id = nextUid(); // 1, 2, 3, ...
 Convert a hex color string to an `r, g, b` string for use in SVG filters.
 
 ```ts
-import { hexToRgb } from "@smooth-corners/core";
+import { hexToRgb } from "@lisse/core";
 
 const rgb = hexToRgb("#ff6600"); // "255, 102, 0"
 ```
@@ -309,7 +309,7 @@ const rgb = hexToRgb("#ff6600"); // "255, 102, 0"
 Ref-counted helper that sets `position: relative` on an anchor element if it currently has `position: static`. Returns `true` if the position was changed, `false` if it was already non-static. Multiple calls on the same element increment a counter -- the position is only restored when all callers release.
 
 ```ts
-import { acquirePosition, releasePosition } from "@smooth-corners/core";
+import { acquirePosition, releasePosition } from "@lisse/core";
 
 const didSet = acquirePosition(wrapperDiv);
 // wrapperDiv.style.position is now "relative" (if it was "static")
@@ -331,7 +331,7 @@ import {
   DEFAULT_PRESERVE_SMOOTHING, // true
   DEFAULT_SHADOW,             // { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 0 }
   SVG_NS,                    // "http://www.w3.org/2000/svg"
-} from "@smooth-corners/core";
+} from "@lisse/core";
 ```
 
 ## Types Reference
@@ -536,7 +536,7 @@ interface NormalizedCorners {
 The `/path` subpath provides a DOM-free subset of the core API, safe for SSR, Node.js, and edge runtimes.
 
 ```ts
-import { generatePath, generateClipPath } from "@smooth-corners/core/path";
+import { generatePath, generateClipPath } from "@lisse/core/path";
 ```
 
 ### Included
@@ -563,10 +563,10 @@ The `extractAndStripEffects` and `restoreStyles` functions power the "auto effec
 3. Strip those CSS properties from the element's inline style (so they don't get clipped by `clip-path`)
 4. Return the extracted effects and saved original styles for later restoration
 
-This is used internally by `@smooth-corners/react`, `@smooth-corners/vue`, and `@smooth-corners/svelte` to make existing CSS borders and shadows "just work" without manual conversion. If you're using the core package directly, you can use these functions to implement the same behavior:
+This is used internally by `@lisse/react`, `@lisse/vue`, and `@lisse/svelte` to make existing CSS borders and shadows "just work" without manual conversion. If you're using the core package directly, you can use these functions to implement the same behavior:
 
 ```ts
-import { extractAndStripEffects, restoreStyles, createSvgEffects, createDropShadow } from "@smooth-corners/core";
+import { extractAndStripEffects, restoreStyles, createSvgEffects, createDropShadow } from "@lisse/core";
 
 const el = document.getElementById("card")!;
 const wrapper = el.parentElement!;
@@ -622,7 +622,7 @@ restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
 ### Generate an SVG path
 
 ```ts
-import { generatePath } from "@smooth-corners/core";
+import { generatePath } from "@lisse/core";
 
 const d = generatePath(400, 300, {
   topLeft: { radius: 32, smoothing: 0.8 },
@@ -637,7 +637,7 @@ const svg = `<svg width="400" height="300"><path d="${d}" fill="#3b82f6" /></svg
 ### Apply clip-path to a DOM element
 
 ```ts
-import { generateClipPath, observeResize } from "@smooth-corners/core";
+import { generateClipPath, observeResize } from "@lisse/core";
 
 const el = document.getElementById("card")!;
 const options = { radius: 24, smoothing: 0.6 };
@@ -654,7 +654,7 @@ const unsubscribe = observeResize(el, applyClipPath);
 ### Create effects overlay
 
 ```ts
-import { createSvgEffects, createDropShadow, generateClipPath, observeResize } from "@smooth-corners/core";
+import { createSvgEffects, createDropShadow, generateClipPath, observeResize } from "@lisse/core";
 
 const wrapper = document.getElementById("card-wrapper")!;
 const card = document.getElementById("card")!;
@@ -677,7 +677,7 @@ const unsubscribe = observeResize(card, update);
 ### Multiple outer shadows
 
 ```ts
-import { createDropShadow } from "@smooth-corners/core";
+import { createDropShadow } from "@lisse/core";
 
 const shadow = createDropShadow(wrapperElement);
 
@@ -696,7 +696,7 @@ shadow.update(
 ### Multiple inner shadows
 
 ```ts
-import { createSvgEffects } from "@smooth-corners/core";
+import { createSvgEffects } from "@lisse/core";
 
 const effects = createSvgEffects(wrapperElement);
 
@@ -718,7 +718,7 @@ Shadows are rendered in CSS order: the first shadow in the array is topmost (clo
 ### Linear gradient border
 
 ```ts
-import { createSvgEffects } from "@smooth-corners/core";
+import { createSvgEffects } from "@lisse/core";
 
 const effects = createSvgEffects(wrapperElement);
 
@@ -746,7 +746,7 @@ effects.update(
 ### Radial gradient border
 
 ```ts
-import { createSvgEffects } from "@smooth-corners/core";
+import { createSvgEffects } from "@lisse/core";
 
 const effects = createSvgEffects(wrapperElement);
 

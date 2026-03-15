@@ -28,7 +28,7 @@ importers:
 
   packages/react:
     dependencies:
-      '@smooth-corners/core':
+      '@lisse/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -41,7 +41,7 @@ importers:
 
   packages/svelte:
     dependencies:
-      '@smooth-corners/core':
+      '@lisse/core':
         specifier: workspace:*
         version: link:../core
       svelte:
@@ -50,7 +50,7 @@ importers:
 
   packages/vue:
     dependencies:
-      '@smooth-corners/core':
+      '@lisse/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -60,10 +60,10 @@ importers:
 
   playground:
     dependencies:
-      '@smooth-corners/core':
+      '@lisse/core':
         specifier: workspace:*
         version: link:../packages/core
-      '@smooth-corners/react':
+      '@lisse/react':
         specifier: workspace:*
         version: link:../packages/react
       react:

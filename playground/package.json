@@ -8,8 +8,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@smooth-corners/core": "workspace:*",
-    "@smooth-corners/react": "workspace:*",
+    "@lisse/core": "workspace:*",
+    "@lisse/react": "workspace:*",
     "system-1": "github:JaceThings/taxes",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

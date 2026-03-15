@@ -8,7 +8,7 @@ import {
   type HTMLAttributes,
 } from "react";
 import { useSmoothCorners } from "./use-smooth-corners.js";
-import type { SmoothCornerOptions, BorderConfig, ShadowConfig, CornerConfig } from "@smooth-corners/core";
+import type { SmoothCornerOptions, BorderConfig, ShadowConfig, CornerConfig } from "@lisse/core";
 
 export type SmoothCornersProps = {
   /** The HTML element to render. Default: "div" */

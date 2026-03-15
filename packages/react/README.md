@@ -1,14 +1,14 @@
-# @smooth-corners/react
+# @lisse/react
 
 React hook and component for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
 
-[![npm](https://img.shields.io/npm/v/%40smooth-corners%2Freact)](https://www.npmjs.com/package/@smooth-corners/react)
+[![npm](https://img.shields.io/npm/v/%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
 
 ## Installation
 
 ```sh
-npm install @smooth-corners/react
+npm install @lisse/react
 ```
 
 **Peer dependency:** `react >= 18.0.0`
@@ -21,7 +21,7 @@ npm install @smooth-corners/react
 ## Quick Start
 
 ```tsx
-import { SmoothCorners } from "@smooth-corners/react";
+import { SmoothCorners } from "@lisse/react";
 
 function Card() {
   return (
@@ -50,7 +50,7 @@ function useSmoothCorners(
 
 ```tsx
 import { useRef } from "react";
-import { useSmoothCorners } from "@smooth-corners/react";
+import { useSmoothCorners } from "@lisse/react";
 
 function Card() {
   const ref = useRef<HTMLDivElement>(null);
@@ -63,7 +63,7 @@ function Card() {
 
 ```tsx
 import { useRef } from "react";
-import { useSmoothCorners } from "@smooth-corners/react";
+import { useSmoothCorners } from "@lisse/react";
 
 function Card() {
   const ref = useRef<HTMLDivElement>(null);
@@ -83,7 +83,7 @@ When using effects with the hook, you need to provide a wrapper ref for the SVG 
 
 ```tsx
 import { useRef } from "react";
-import { useSmoothCorners } from "@smooth-corners/react";
+import { useSmoothCorners } from "@lisse/react";
 
 function Card() {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -145,7 +145,7 @@ All standard HTML attributes (e.g. `className`, `style`, `onClick`) are forwarde
 ### Basic Usage
 
 ```tsx
-import { SmoothCorners } from "@smooth-corners/react";
+import { SmoothCorners } from "@lisse/react";
 
 function Card() {
   return (
@@ -200,7 +200,7 @@ The component forwards refs to the underlying element:
 
 ```tsx
 import { useRef } from "react";
-import { SmoothCorners } from "@smooth-corners/react";
+import { SmoothCorners } from "@lisse/react";
 
 function Card() {
   const ref = useRef<HTMLDivElement>(null);
@@ -367,7 +367,7 @@ Pass an array of `ShadowConfig` objects to render layered shadows:
 
 ```tsx
 import { useRef } from "react";
-import { useSmoothCorners } from "@smooth-corners/react";
+import { useSmoothCorners } from "@lisse/react";
 
 function ElevatedCard() {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -440,7 +440,7 @@ The `SmoothCorners` component and `useSmoothCorners` hook use browser APIs (`Res
 ```tsx
 "use client";
 
-import { SmoothCorners } from "@smooth-corners/react";
+import { SmoothCorners } from "@lisse/react";
 
 export function Card() {
   return (
@@ -451,7 +451,7 @@ export function Card() {
 }
 ```
 
-For server-side path generation, use `@smooth-corners/core/path` instead.
+For server-side path generation, use `@lisse/core/path` instead.
 
 ## License
 

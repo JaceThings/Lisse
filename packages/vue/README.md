@@ -1,14 +1,14 @@
-# @smooth-corners/vue
+# @lisse/vue
 
 Vue composable and component for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
 
-[![npm](https://img.shields.io/npm/v/%40smooth-corners%2Fvue)](https://www.npmjs.com/package/@smooth-corners/vue)
+[![npm](https://img.shields.io/npm/v/%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
 
 ## Installation
 
 ```sh
-npm install @smooth-corners/vue
+npm install @lisse/vue
 ```
 
 **Peer dependency:** `vue >= 3.3.0`
@@ -23,7 +23,7 @@ npm install @smooth-corners/vue
 ```vue
 <script setup>
 import { ref } from "vue";
-import { useSmoothCorners } from "@smooth-corners/vue";
+import { useSmoothCorners } from "@lisse/vue";
 
 const el = ref(null);
 useSmoothCorners(el, { radius: 20, smoothing: 0.6 });
@@ -53,7 +53,7 @@ function useSmoothCorners(
 ```vue
 <script setup>
 import { ref } from "vue";
-import { useSmoothCorners } from "@smooth-corners/vue";
+import { useSmoothCorners } from "@lisse/vue";
 
 const el = ref(null);
 useSmoothCorners(el, { radius: 24, smoothing: 0.6 });
@@ -74,7 +74,7 @@ Pass a `ref` or `computed` as the options argument to reactively update the corn
 ```vue
 <script setup>
 import { ref } from "vue";
-import { useSmoothCorners } from "@smooth-corners/vue";
+import { useSmoothCorners } from "@lisse/vue";
 
 const el = ref(null);
 const radius = ref(20);
@@ -94,7 +94,7 @@ Or with `computed`:
 ```vue
 <script setup>
 import { ref, computed } from "vue";
-import { useSmoothCorners } from "@smooth-corners/vue";
+import { useSmoothCorners } from "@lisse/vue";
 
 const el = ref(null);
 const radius = ref(20);
@@ -117,7 +117,7 @@ When using effects with the composable, provide a wrapper ref for the SVG overla
 ```vue
 <script setup>
 import { ref } from "vue";
-import { useSmoothCorners } from "@smooth-corners/vue";
+import { useSmoothCorners } from "@lisse/vue";
 
 const wrapper = ref(null);
 const el = ref(null);
@@ -179,7 +179,7 @@ All other attributes and event listeners are forwarded to the rendered element.
 
 ```vue
 <script setup>
-import { SmoothCorners } from "@smooth-corners/vue";
+import { SmoothCorners } from "@lisse/vue";
 </script>
 
 <template>
@@ -258,7 +258,7 @@ With the composable:
 ```vue
 <script setup>
 import { ref } from "vue";
-import { useSmoothCorners } from "@smooth-corners/vue";
+import { useSmoothCorners } from "@lisse/vue";
 
 const wrapper = ref(null);
 const el = ref(null);
@@ -465,10 +465,10 @@ A union of `LinearGradientConfig` and `RadialGradientConfig`. Pass either to `Bo
 
 ## SSR
 
-The composable and component use browser APIs (`ResizeObserver`, DOM manipulation). In Nuxt or other SSR frameworks, they are safe to use in components that only render on the client. For server-side path generation, use `@smooth-corners/core/path`:
+The composable and component use browser APIs (`ResizeObserver`, DOM manipulation). In Nuxt or other SSR frameworks, they are safe to use in components that only render on the client. For server-side path generation, use `@lisse/core/path`:
 
 ```ts
-import { generatePath } from "@smooth-corners/core/path";
+import { generatePath } from "@lisse/core/path";
 ```
 
 ## License

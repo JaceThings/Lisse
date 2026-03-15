@@ -1,5 +1,5 @@
 {
-  "name": "@smooth-corners/react",
+  "name": "@lisse/react",
   "version": "0.1.0",
   "description": "React hook and component for smooth-cornered (squircle) elements",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@smooth-corners/core": "workspace:*"
+    "@lisse/core": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

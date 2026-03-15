@@ -1,5 +1,5 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@smooth-corners/core";
-import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 export interface SmoothCornersAction {
   update: (options: SmoothCornerOptions | SmoothCornersConfig) => void;
@@ -25,7 +25,7 @@ function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is Sm
  * @example
  * ```svelte
  * <script>
- *   import { smoothCorners } from '@smooth-corners/svelte';
+ *   import { smoothCorners } from '@lisse/svelte';
  * </script>
  * <div use:smoothCorners={{ radius: 20, smoothing: 0.6 }}>Content</div>
  * ```

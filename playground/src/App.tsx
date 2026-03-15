@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { SmoothCorners } from "@smooth-corners/react";
+import { SmoothCorners } from "@lisse/react";
 import { Button, SliderField } from "system-1";
 import { useSpring } from "./use-spring";
 

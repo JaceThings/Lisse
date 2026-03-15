@@ -1,5 +1,5 @@
 {
-  "name": "@smooth-corners/core",
+  "name": "@lisse/core",
   "version": "0.1.0",
   "description": "Framework-agnostic squircle path generation based on Figma's smoothing algorithm",
   "license": "MIT",

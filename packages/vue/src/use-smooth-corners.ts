@@ -16,8 +16,8 @@ import {
   restoreStyles,
   acquirePosition,
   releasePosition,
-} from "@smooth-corners/core";
-import type { SmoothCornerOptions, EffectsConfig } from "@smooth-corners/core";
+} from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 export interface UseEffectsOptions {
   wrapper?: Ref<HTMLElement | null>;
@@ -33,7 +33,7 @@ export interface UseEffectsOptions {
  * ```vue
  * <script setup>
  * import { ref } from 'vue';
- * import { useSmoothCorners } from '@smooth-corners/vue';
+ * import { useSmoothCorners } from '@lisse/vue';
  *
  * const el = ref(null);
  * useSmoothCorners(el, { radius: 20, smoothing: 0.6 });

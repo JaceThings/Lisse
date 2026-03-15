@@ -4,7 +4,7 @@
     "outDir": "dist",
     "jsx": "react-jsx",
     "paths": {
-      "@smooth-corners/core": ["../core/src/index.ts"]
+      "@lisse/core": ["../core/src/index.ts"]
     }
   },
   "include": ["src"]
