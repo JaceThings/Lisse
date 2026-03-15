@@ -128,13 +128,14 @@ A ready-to-use component that handles clip-path, resize observation, ref forward
 | `as` | `React.ElementType` | `"div"` | The HTML element or component to render |
 | `radius` | `number` | -- | Uniform corner radius (use this or per-corner props) |
 | `smoothing` | `number` | `0.6` | Corner smoothing factor (0-1) |
-| `preserveSmoothing` | `boolean` | `true` | Preserve smoothing at the cost of radius when space is limited |
+| `preserveSmoothing` | `boolean` | `true` | When `true` (default), the smoothing curve is preserved even when adjacent corners compete for space -- the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced. |
 | `topLeft` | `number \| CornerConfig` | -- | Top-left corner override |
 | `topRight` | `number \| CornerConfig` | -- | Top-right corner override |
 | `bottomRight` | `number \| CornerConfig` | -- | Bottom-right corner override |
 | `bottomLeft` | `number \| CornerConfig` | -- | Bottom-left corner override |
 | `innerBorder` | `BorderConfig` | -- | Inner border effect |
 | `outerBorder` | `BorderConfig` | -- | Outer border effect |
+| `middleBorder` | `BorderConfig` | -- | Middle border effect (centered on shape edge) |
 | `innerShadow` | `ShadowConfig \| ShadowConfig[]` | -- | Inner shadow effect (single or multiple) |
 | `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or multiple) |
 | `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
@@ -293,7 +294,7 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 - **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
 - **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
 - **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
-- **Wrapper div** -- `<SmoothCorners>` injects a wrapper `<div style="position:relative">` when effects are active. This can break CSS child selectors (`>`), flex/grid item sizing, and `:first-child`. To avoid it, use the `useSmoothCorners` hook directly, or pass `autoEffects={false}` when no effects are needed.
+- **Wrapper div** -- The `SmoothCorners` component always renders a wrapper `<div>` with `position: relative` around the inner element for SVG overlay positioning. This can affect flex/grid layouts and CSS child selectors (`:first-child`, `>`). Use the `useSmoothCorners` hook to avoid the wrapper -- you provide your own element and control the layout.
 
 ## CSS Borders and Shadows
 

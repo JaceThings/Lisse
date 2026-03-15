@@ -434,6 +434,38 @@ When `preserveSmoothing` is `true` (the default), the algorithm maintains the re
 
 <!-- Visual: Diagram showing a smooth corner's bezier control points (a, b, c, d, p) versus a standard circular arc. Reference Figma's blog post illustration style. Place at /assets/corner-anatomy.png -->
 
+### Border Rendering
+
+The library supports three border positions, each using a different SVG technique to achieve precise placement relative to the squircle path.
+
+**Inner border** draws the SVG stroke at double the specified width, then clips it to the squircle shape. Because a stroke straddles the path (half inside, half outside), clipping removes the outer half entirely. Only the inner portion remains visible, so `innerBorder` appears to sit neatly inside the shape.
+
+**Outer border** also draws the stroke at double width, but instead of clipping it uses an SVG mask. The mask is a white rectangle (fully visible) with a black squircle path cut out of it (fully hidden). This hides the inner half of the stroke and reveals only the outer half. The mask bounds are extended by the border width so the stroke is never cut off at the edges of the SVG.
+
+**Middle border** is the simplest case. The stroke is drawn at its actual width with no clip or mask applied. It naturally straddles the path, half inside and half outside the squircle.
+
+### Shadow Rendering
+
+**Drop shadow** does not use CSS `box-shadow`, which would follow the rectangular bounding box and get clipped. Instead, the library generates an actual squircle SVG path expanded by the `spread` value in all directions. This path is filled with the shadow color, translated by `offsetX`/`offsetY`, and blurred using an SVG `feGaussianBlur` filter. The shadow SVG is positioned behind the element at `z-index: -1` using `isolation: isolate` to create a proper stacking context.
+
+**Inner shadow** uses an SVG mask with a cutout. A white rectangle defines the visible area, and a black squircle path punched out of it creates the hole. A colored rectangle drawn behind this mask produces the appearance of shadow around the inside edges. The cutout path is adjusted for `spread` (shrinking the hole) and `offset` (shifting it). The result is blurred with `feGaussianBlur` and then clipped to the original squircle shape so nothing leaks outside.
+
+### Multiple Shadow Rendering Order
+
+When an array of shadows is provided, the first shadow in the array renders on top (closest to the element). Each shadow gets its own SVG filter element. Shadows are rendered in reverse order in the SVG DOM so that SVG's "later paints on top" rule matches CSS's "first listed is topmost" convention.
+
+### Auto-Effects: Content-Box Compensation
+
+When `autoEffects` strips a CSS border from an element using `box-sizing: content-box`, removing the border would cause layout shift -- the content area would expand to fill the space the border occupied. To prevent this, the library automatically increases padding by the border width on each side. The original padding values are saved and restored on cleanup.
+
+### Resize Handling
+
+All smooth-corners instances share a single `ResizeObserver`. Callbacks are batched via `requestAnimationFrame` so that multiple elements resizing in the same frame only trigger one re-render pass. When the last observed element is removed, the observer disconnects automatically.
+
+### Anchor Positioning
+
+The SVG overlays (borders, shadows) are absolutely positioned inside an anchor element. The library automatically sets `position: relative` on this anchor if it has `position: static`. A ref-counting system ensures that if multiple smooth-corners instances share the same anchor, the position is only reset to `static` when the last instance unmounts.
+
 ## API Reference
 
 | Function / Export | Package | Description |

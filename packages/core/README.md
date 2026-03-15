@@ -304,6 +304,25 @@ import { hexToRgb } from "@smooth-corners/core";
 const rgb = hexToRgb("#ff6600"); // "255, 102, 0"
 ```
 
+### `acquirePosition(anchor)`
+
+Ref-counted helper that sets `position: relative` on an anchor element if it currently has `position: static`. Returns `true` if the position was changed, `false` if it was already non-static. Multiple calls on the same element increment a counter -- the position is only restored when all callers release.
+
+```ts
+import { acquirePosition, releasePosition } from "@smooth-corners/core";
+
+const didSet = acquirePosition(wrapperDiv);
+// wrapperDiv.style.position is now "relative" (if it was "static")
+
+// Later, on cleanup:
+if (didSet) releasePosition(wrapperDiv);
+// position restored to "" only when all acquires are released
+```
+
+### `releasePosition(anchor)`
+
+Decrements the ref count for an anchor element. When the count reaches zero, `position` is cleared (restored to its original value). Safe to call even if `acquirePosition` was never called on this element.
+
 ### Constants
 
 ```ts
@@ -595,6 +614,7 @@ restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
 - **CSS transitions** -- stripped properties (`border`, `box-shadow`) are replaced with SVG equivalents that are not animatable via CSS transitions. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
 - **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double (needs space for two lines plus a gap). Thinner double borders fall back to solid.
 - **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **Content-box border compensation** -- when `extractAndStripEffects` removes a border from an element using `box-sizing: content-box`, the content area would expand by the border width (since content-box sizing excludes borders from the content dimensions). To prevent this layout shift, padding is automatically increased by the border width on each side. The original padding values are saved and restored when `restoreStyles` is called.
 - **Wrapper div** -- the SVG overlay is inserted into a wrapper element, which can affect `flex` and `grid` layouts. Account for the wrapper when styling parent containers.
 
 ## Examples
@@ -692,6 +712,8 @@ effects.update(
   200,
 );
 ```
+
+Shadows are rendered in CSS order: the first shadow in the array is topmost (closest to the element). Each shadow gets its own SVG filter and path element.
 
 ### Linear gradient border
 

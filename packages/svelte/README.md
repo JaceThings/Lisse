@@ -25,6 +25,8 @@ Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
 </div>
 ```
 
+> **Why an action instead of a component?** Svelte actions are the idiomatic way to attach behavior to existing elements. Unlike React or Vue, there is no wrapper `<div>` — the action attaches directly to your element and inserts the SVG overlay into its parent. This gives you full control over your DOM structure.
+
 ## `smoothCorners` Action
 
 The action accepts two input formats: simple mode (corner options only) or config mode (corners + effects).
@@ -102,6 +104,8 @@ The action responds to parameter changes automatically. Use reactive declaration
   Different corners
 </div>
 ```
+
+The `preserveSmoothing` option controls how corners behave when adjacent corners compete for space. When `true` (default), the smoothing curve is preserved even when adjacent corners compete for space — the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced.
 
 ## Auto Effects (enabled by default)
 
@@ -195,6 +199,8 @@ smooth-corners works by applying a CSS `clip-path` to the element. This means CS
 ## Effects
 
 Effects are rendered as SVG overlays. When using effects, the parent element must have `position: relative` for correct overlay positioning.
+
+The SVG overlays are absolutely positioned inside the parent element. The library automatically sets `position: relative` on the parent if it currently has `position: static`. If you already set `position: relative` (or `absolute`/`fixed`) on the parent, the library leaves it unchanged. When the action is destroyed, the position is restored to its original value — and if multiple smooth-corners instances share the same parent, the position is only restored when the last one unmounts.
 
 ```svelte
 <script>
@@ -358,6 +364,20 @@ interface RadialGradientConfig {
 
 type GradientConfig = LinearGradientConfig | RadialGradientConfig;
 ```
+
+## SSR / SvelteKit
+
+The `smoothCorners` action uses browser APIs (`ResizeObserver`, DOM manipulation) and only runs on the client. In SvelteKit, actions are automatically client-only — they run after the element is mounted in the DOM, so no special handling is needed.
+
+For server-side path generation (e.g., generating SVG paths in a `+page.server.ts` load function), use the DOM-free subpath:
+
+```ts
+import { generatePath } from "@smooth-corners/core/path";
+
+const d = generatePath(200, 100, { radius: 20, smoothing: 0.6 });
+```
+
+This entry point exports only pure functions with no DOM dependencies.
 
 ## License
 
