@@ -1,6 +1,6 @@
 <div align="center">
 
-<!-- Visual: Project logo (recommended ~150x150 PNG). Place at /assets/logo.png -->
+<img src="assets/logo.png" alt="Lisse" width="128" />
 
 # Lisse <sup><sub>rhymes with lease</sub></sup>
 
