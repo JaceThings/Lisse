@@ -3,9 +3,8 @@
 <img src="assets/logo.png" alt="Lisse" width="128" />
 
 <h1>Lisse</h1>
-<sub>rhymes with lease</sub>
 
-Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
+Lisse *(rhymes with lease)* — Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
 [![npm: @lisse/core](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![npm: @lisse/react](https://img.shields.io/npm/v/%40lisse%2Freact?label=%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
