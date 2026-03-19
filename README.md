@@ -4,7 +4,7 @@
 
 # Lisse
 
-**/liss/** — French for "smooth"
+Pronounced "lees" — French for smooth.
 
 Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
