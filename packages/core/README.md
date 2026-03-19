@@ -3,7 +3,7 @@
 Framework-agnostic squircle path generation based on [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/). Generate smooth-cornered SVG paths, CSS clip-paths, and SVG effect overlays.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore)](https://bundlephobia.com/package/@lisse/core)
 
 ## Installation
@@ -775,4 +775,4 @@ effects.update(
 
 ## License
 
-[MIT](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
+[MIT](https://github.com/JaceThings/Lisse/blob/main/LICENSE)

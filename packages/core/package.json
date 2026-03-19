@@ -38,10 +38,10 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/JaceThings/smooth-corners",
+    "url": "https://github.com/JaceThings/Lisse",
     "directory": "packages/core"
   },
   "keywords": ["squircle", "smooth-corners", "border-radius", "figma", "svg-path", "clip-path", "superellipse"],
-  "homepage": "https://github.com/JaceThings/smooth-corners#readme",
-  "bugs": "https://github.com/JaceThings/smooth-corners/issues"
+  "homepage": "https://github.com/JaceThings/Lisse#readme",
+  "bugs": "https://github.com/JaceThings/Lisse/issues"
 }

@@ -31,13 +31,13 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/JaceThings/smooth-corners",
+    "url": "https://github.com/JaceThings/Lisse",
     "directory": "packages/svelte"
   },
   "peerDependencies": {
     "svelte": ">=3.0.0"
   },
   "keywords": ["squircle", "smooth-corners", "svelte", "action", "border-radius", "clip-path"],
-  "homepage": "https://github.com/JaceThings/smooth-corners#readme",
-  "bugs": "https://github.com/JaceThings/smooth-corners/issues"
+  "homepage": "https://github.com/JaceThings/Lisse#readme",
+  "bugs": "https://github.com/JaceThings/Lisse/issues"
 }

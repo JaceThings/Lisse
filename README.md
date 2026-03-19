@@ -11,7 +11,7 @@ Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths
 [![npm: @lisse/vue](https://img.shields.io/npm/v/%40lisse%2Fvue?label=%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
 [![npm: @lisse/svelte](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/JaceThings/smooth-corners/ci.yml?branch=main&label=CI)](https://github.com/JaceThings/smooth-corners/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/JaceThings/Lisse/ci.yml?branch=main&label=CI)](https://github.com/JaceThings/Lisse/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore)](https://bundlephobia.com/package/@lisse/core)
 

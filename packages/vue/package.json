@@ -36,7 +36,7 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/JaceThings/smooth-corners",
+    "url": "https://github.com/JaceThings/Lisse",
     "directory": "packages/vue"
   },
   "keywords": [
@@ -48,8 +48,8 @@
     "border-radius",
     "clip-path"
   ],
-  "homepage": "https://github.com/JaceThings/smooth-corners#readme",
-  "bugs": "https://github.com/JaceThings/smooth-corners/issues",
+  "homepage": "https://github.com/JaceThings/Lisse#readme",
+  "bugs": "https://github.com/JaceThings/Lisse/issues",
   "devDependencies": {
     "vue": "^3.5.28"
   }

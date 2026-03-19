@@ -3,7 +3,7 @@
 Svelte action for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
 
 ## Installation
 
@@ -381,4 +381,4 @@ This entry point exports only pure functions with no DOM dependencies.
 
 ## License
 
-[MIT](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
+[MIT](https://github.com/JaceThings/Lisse/blob/main/LICENSE)

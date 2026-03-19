@@ -3,7 +3,7 @@
 Vue composable and component for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
 
 ## Installation
 
@@ -473,4 +473,4 @@ import { generatePath } from "@lisse/core/path";
 
 ## License
 
-[MIT](https://github.com/JaceThings/smooth-corners/blob/main/LICENSE)
+[MIT](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
