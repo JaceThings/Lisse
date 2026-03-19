@@ -2,7 +2,7 @@
 
 <!-- Visual: Project logo (recommended ~150x150 PNG). Place at /assets/logo.png -->
 
-# smooth-corners
+# Lisse
 
 Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
@@ -17,13 +17,13 @@ Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths
 
 </div>
 
-<!-- Visual: Hero image - side-by-side comparison of standard CSS border-radius vs smooth-corners squircle applied to a card. Show the difference clearly. Recommended ~800px wide. Place at /assets/hero.png -->
+<!-- Visual: Hero image - side-by-side comparison of standard CSS border-radius vs Lisse squircle applied to a card. Show the difference clearly. Recommended ~800px wide. Place at /assets/hero.png -->
 
 ## What is this?
 
 Standard CSS `border-radius` produces circular arcs at the corners of an element. Designers (and Apple, and Figma) prefer **squircles** -- corners where the curvature transitions smoothly into the straight edges, creating a more organic, polished shape.
 
-smooth-corners implements [Figma's corner smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/) in JavaScript. It generates SVG paths and CSS `clip-path` values that you can apply to any element, with first-class bindings for React, Vue, and Svelte.
+Lisse implements [Figma's corner smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/) in JavaScript. It generates SVG paths and CSS `clip-path` values that you can apply to any element, with first-class bindings for React, Vue, and Svelte.
 
 ## Features
 
@@ -154,7 +154,7 @@ const clipPath = generateClipPath(200, 200, { radius: 40 });
 element.style.clipPath = clipPath;
 ```
 
-<!-- Visual: Grid of 4 cards showing the library used in React, Vue, Svelte, and vanilla JS. Each card has the smooth-corners effect applied. Place at /assets/framework-examples.png -->
+<!-- Visual: Grid of 4 cards showing the library used in React, Vue, Svelte, and vanilla JS. Each card has smooth corners applied. Place at /assets/framework-examples.png -->
 
 ## Per-Corner Configuration
 
@@ -175,7 +175,7 @@ When adjacent corners compete for space, larger radii are given priority and sma
 
 ## Effects
 
-smooth-corners clips your element with `clip-path`, which slices through CSS borders and shadows. The library provides SVG-based replacements that follow the squircle shape perfectly.
+Lisse clips your element with `clip-path`, which slices through CSS borders and shadows. The library provides SVG-based replacements that follow the squircle shape perfectly.
 
 ### Built-in Effects
 
@@ -339,7 +339,7 @@ Radial gradient example:
 
 ### Auto Effects
 
-By default, smooth-corners automatically reads your CSS and converts it to SVG equivalents. On mount, the library:
+By default, Lisse automatically reads your CSS and converts it to SVG equivalents. On mount, the library:
 
 1. Reads the element's computed `border` and `box-shadow`
 2. Converts them to SVG effects (`innerBorder`, `shadow`, `innerShadow`)
@@ -460,11 +460,11 @@ When `autoEffects` strips a CSS border from an element using `box-sizing: conten
 
 ### Resize Handling
 
-All smooth-corners instances share a single `ResizeObserver`. Callbacks are batched via `requestAnimationFrame` so that multiple elements resizing in the same frame only trigger one re-render pass. When the last observed element is removed, the observer disconnects automatically.
+All Lisse instances share a single `ResizeObserver`. Callbacks are batched via `requestAnimationFrame` so that multiple elements resizing in the same frame only trigger one re-render pass. When the last observed element is removed, the observer disconnects automatically.
 
 ### Anchor Positioning
 
-The SVG overlays (borders, shadows) are absolutely positioned inside an anchor element. The library automatically sets `position: relative` on this anchor if it has `position: static`. A ref-counting system ensures that if multiple smooth-corners instances share the same anchor, the position is only reset to `static` when the last instance unmounts.
+The SVG overlays (borders, shadows) are absolutely positioned inside an anchor element. The library automatically sets `position: relative` on this anchor if it has `position: static`. A ref-counting system ensures that if multiple Lisse instances share the same anchor, the position is only reset to `static` when the last instance unmounts.
 
 ## API Reference
 

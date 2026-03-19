@@ -109,7 +109,7 @@ The `preserveSmoothing` option controls how corners behave when adjacent corners
 
 ## Auto Effects (enabled by default)
 
-smooth-corners clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect config -- extra work that's easy to forget.
+Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect config -- extra work that's easy to forget.
 
 **Auto effects removes that step.** When the action initializes, the library automatically:
 
@@ -194,13 +194,13 @@ Note: in simple mode (passing `SmoothCornerOptions` directly), `autoEffects` is 
 
 ## CSS Borders and Shadows
 
-smooth-corners works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` effect config directly -- these render as SVG overlays that correctly follow the squircle path.
+Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` effect config directly -- these render as SVG overlays that correctly follow the squircle path.
 
 ## Effects
 
 Effects are rendered as SVG overlays. When using effects, the parent element must have `position: relative` for correct overlay positioning.
 
-The SVG overlays are absolutely positioned inside the parent element. The library automatically sets `position: relative` on the parent if it currently has `position: static`. If you already set `position: relative` (or `absolute`/`fixed`) on the parent, the library leaves it unchanged. When the action is destroyed, the position is restored to its original value — and if multiple smooth-corners instances share the same parent, the position is only restored when the last one unmounts.
+The SVG overlays are absolutely positioned inside the parent element. The library automatically sets `position: relative` on the parent if it currently has `position: static`. If you already set `position: relative` (or `absolute`/`fixed`) on the parent, the library leaves it unchanged. When the action is destroyed, the position is restored to its original value — and if multiple Lisse instances share the same parent, the position is only restored when the last one unmounts.
 
 ```svelte
 <script>
