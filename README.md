@@ -2,9 +2,7 @@
 
 <!-- Visual: Project logo (recommended ~150x150 PNG). Place at /assets/logo.png -->
 
-# Lisse
-
-Pronounced "lees" — French for smooth.
+# Lisse <sup><sub>rhymes with lease</sub></sup>
 
 Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
