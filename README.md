@@ -4,6 +4,8 @@
 
 # Lisse
 
+**/liss/** — French for "smooth"
+
 Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
 [![npm: @lisse/core](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
