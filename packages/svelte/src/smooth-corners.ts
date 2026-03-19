@@ -17,7 +17,7 @@ function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is Sm
 }
 
 /**
- * Svelte action that applies smooth-corners clip-path to an element.
+ * Svelte action that applies smooth-cornered clip-path to an element.
  * Automatically updates on resize via a shared ResizeObserver.
  * By default, CSS `border` and `box-shadow` are automatically extracted and
  * converted to SVG effects (autoEffects).

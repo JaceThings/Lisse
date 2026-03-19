@@ -26,7 +26,7 @@ export interface UseEffectsOptions {
 }
 
 /**
- * Vue composable that applies smooth-corners clip-path to a template ref.
+ * Vue composable that applies smooth-cornered clip-path to a template ref.
  * Reactive to option changes and auto-resizes via a shared ResizeObserver.
  *
  * @example

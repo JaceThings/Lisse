@@ -24,7 +24,7 @@ export interface UniformCornerOptions {
   preserveSmoothing?: boolean;
 }
 
-/** Options for generating a smooth-corners path. */
+/** Options for generating a smooth-cornered path. */
 export type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
 
 // --- Internal types ---

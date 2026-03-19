@@ -1,5 +1,5 @@
 {
-  "name": "smooth-corners",
+  "name": "lisse",
   "private": true,
   "scripts": {
     "build": "pnpm -r build",

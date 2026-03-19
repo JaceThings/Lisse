@@ -37,7 +37,7 @@ export interface UseEffectsOptions {
 }
 
 /**
- * React hook that applies a smooth-corners clip-path to a referenced element.
+ * React hook that applies a smooth-cornered clip-path to a referenced element.
  * Automatically updates on resize via a shared ResizeObserver.
  *
  * @example
