@@ -2,8 +2,7 @@
 
 <img src="assets/logo.png" alt="Lisse" width="128" />
 
-# Lisse
-
+<h1>Lisse</h1>
 <sub>rhymes with lease</sub>
 
 Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
