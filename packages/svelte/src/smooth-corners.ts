@@ -77,6 +77,7 @@ export function smoothCorners(
     shadowHandle = createDropShadow(anchor);
   }
 
+  const savedClipPath = node.style.clipPath;
   node.setAttribute("data-slot", "smooth-corners");
   node.setAttribute("data-state", "pending");
 
@@ -124,7 +125,7 @@ export function smoothCorners(
     },
     destroy() {
       unobserve();
-      node.style.clipPath = "";
+      node.style.clipPath = savedClipPath;
       node.removeAttribute("data-slot");
       node.removeAttribute("data-state");
       effectsHandle?.destroy();

@@ -86,6 +86,7 @@ export function useSmoothCorners(
     const el = ref.current;
     if (!el) return;
 
+    const previousClipPath = el.style.clipPath;
     el.setAttribute("data-slot", "smooth-corners");
     el.setAttribute("data-state", "pending");
 
@@ -99,7 +100,7 @@ export function useSmoothCorners(
 
     return () => {
       unobserve();
-      el.style.clipPath = "";
+      el.style.clipPath = previousClipPath;
       el.removeAttribute("data-slot");
       el.removeAttribute("data-state");
     };
