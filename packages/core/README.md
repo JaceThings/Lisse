@@ -4,7 +4,6 @@ Framework-agnostic squircle path generation based on [Figma's smoothing algorith
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore)](https://bundlephobia.com/package/@lisse/core)
 
 ## Installation
 
