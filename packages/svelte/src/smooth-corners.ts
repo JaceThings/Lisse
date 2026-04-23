@@ -55,10 +55,13 @@ export function smoothCorners(
     currentOptions = input;
   }
 
-  // Effects handles
+  // Effects handles. The anchor is captured the first time we attach to a
+  // parent and reused thereafter, so reparenting the node doesn't strand
+  // the SVG overlay on the old parent or leak its position ref-count.
   let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
   let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
   let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
+  let attachedAnchor: HTMLElement | null = null;
   let didAcquire = false;
 
   // Auto-extract CSS effects on init
@@ -70,12 +73,17 @@ export function smoothCorners(
     return mergeEffects(extractedResult, currentEffects);
   }
 
-  if (hasEffects(getMergedEffects()) && node.parentElement) {
+  function attachEffects(): void {
+    if (effectsHandle || !hasEffects(getMergedEffects())) return;
     const anchor = node.parentElement;
+    if (!anchor) return;
+    attachedAnchor = anchor;
     didAcquire = acquirePosition(anchor);
     effectsHandle = createSvgEffects(anchor);
     shadowHandle = createDropShadow(anchor);
   }
+
+  attachEffects();
 
   const savedClipPath = node.style.clipPath;
   node.setAttribute("data-slot", "smooth-corners");
@@ -114,12 +122,7 @@ export function smoothCorners(
       }
 
       // Create handles if they didn't exist but now effects are provided
-      if (hasEffects(getMergedEffects()) && !effectsHandle && node.parentElement) {
-        const anchor = node.parentElement;
-        didAcquire = acquirePosition(anchor);
-        effectsHandle = createSvgEffects(anchor);
-        shadowHandle = createDropShadow(anchor);
-      }
+      attachEffects();
 
       apply();
     },
@@ -133,9 +136,10 @@ export function smoothCorners(
       if (extractedResult) {
         restoreStyles(node, extractedResult.savedStyles);
       }
-      if (didAcquire && node.parentElement) {
-        releasePosition(node.parentElement);
+      if (didAcquire && attachedAnchor) {
+        releasePosition(attachedAnchor);
       }
+      attachedAnchor = null;
     },
   };
 }
