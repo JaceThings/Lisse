@@ -8,6 +8,7 @@ import {
   type HTMLAttributes,
 } from "react";
 import { useSmoothCorners } from "./use-smooth-corners.js";
+import { hasEffects } from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig, CornerConfig } from "@lisse/core";
 
 export type SmoothCornersProps = {
@@ -75,13 +76,11 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
         ? { radius, smoothing, preserveSmoothing }
         : { topLeft, topRight, bottomRight, bottomLeft };
 
-    const hasExplicitEffects = !!(innerBorder || outerBorder || middleBorder || innerShadow || shadow);
+    const explicitEffects = { innerBorder, outerBorder, middleBorder, innerShadow, shadow };
 
     const effectsOptions = {
       wrapperRef: wrapperRef as React.RefObject<HTMLElement | null>,
-      effects: hasExplicitEffects
-        ? { innerBorder, outerBorder, middleBorder, innerShadow, shadow }
-        : undefined,
+      effects: hasEffects(explicitEffects) ? explicitEffects : undefined,
       autoEffects,
     };
 

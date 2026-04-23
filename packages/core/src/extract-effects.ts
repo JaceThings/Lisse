@@ -183,6 +183,30 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
 }
 
 /**
+ * Returns true if the config defines any renderable effect.
+ */
+export function hasEffects(config: EffectsConfig | undefined | null): boolean {
+  if (!config) return false;
+  return !!(
+    config.innerBorder ||
+    config.outerBorder ||
+    config.middleBorder ||
+    config.innerShadow ||
+    config.shadow
+  );
+}
+
+/**
+ * Merge auto-extracted effects with explicit effects. Explicit values win per key.
+ */
+export function mergeEffects(
+  extracted: ExtractedEffects | undefined,
+  explicit: EffectsConfig | undefined,
+): EffectsConfig {
+  return { ...extracted?.effects, ...explicit };
+}
+
+/**
  * Restore previously saved inline border and boxShadow styles.
  * If the saved value was empty string, this removes the inline override
  * and lets stylesheet rules reassert.

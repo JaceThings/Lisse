@@ -7,11 +7,18 @@ import {
   type SlotsType,
 } from "vue";
 import { useSmoothCorners } from "./use-smooth-corners.js";
+import { hasEffects } from "@lisse/core";
 import type {
   SmoothCornerOptions,
   BorderConfig,
   ShadowConfig,
+  CornerConfig,
 } from "@lisse/core";
+
+const cornerProp = {
+  type: [Number, Object] as PropType<number | CornerConfig>,
+  default: undefined,
+} as const;
 
 /**
  * Render-function component that applies smooth corners to a wrapper element.
@@ -44,34 +51,10 @@ export const SmoothCorners = defineComponent({
       type: Boolean,
       default: undefined,
     },
-    topLeft: {
-      type: [Number, Object] as PropType<
-        | number
-        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
-      >,
-      default: undefined,
-    },
-    topRight: {
-      type: [Number, Object] as PropType<
-        | number
-        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
-      >,
-      default: undefined,
-    },
-    bottomRight: {
-      type: [Number, Object] as PropType<
-        | number
-        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
-      >,
-      default: undefined,
-    },
-    bottomLeft: {
-      type: [Number, Object] as PropType<
-        | number
-        | { radius: number; smoothing?: number; preserveSmoothing?: boolean }
-      >,
-      default: undefined,
-    },
+    topLeft: cornerProp,
+    topRight: cornerProp,
+    bottomRight: cornerProp,
+    bottomLeft: cornerProp,
     innerBorder: {
       type: Object as PropType<BorderConfig>,
       default: undefined,
@@ -118,21 +101,6 @@ export const SmoothCorners = defineComponent({
       };
     });
 
-    const hasExplicitEffects = computed(
-      () =>
-        !!(
-          props.innerBorder ||
-          props.outerBorder ||
-          props.middleBorder ||
-          props.innerShadow ||
-          props.shadow
-        ),
-    );
-
-    const needsWrapper = computed(
-      () => (props.autoEffects ?? true) || hasExplicitEffects.value,
-    );
-
     const effectsConfig = computed(() => ({
       innerBorder: props.innerBorder,
       outerBorder: props.outerBorder,
@@ -140,6 +108,10 @@ export const SmoothCorners = defineComponent({
       innerShadow: props.innerShadow,
       shadow: props.shadow,
     }));
+
+    const needsWrapper = computed(
+      () => (props.autoEffects ?? true) || hasEffects(effectsConfig.value),
+    );
 
     useSmoothCorners(elRef, options, {
       wrapper: wrapperRef,

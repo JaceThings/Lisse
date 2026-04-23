@@ -31,13 +31,17 @@ interface ResolvedCorners {
   bottomLeft: Required<CornerConfig>;
 }
 
+function fillDefaults(c: CornerConfig): Required<CornerConfig> {
+  return {
+    radius: c.radius,
+    smoothing: c.smoothing ?? DEFAULT_SMOOTHING,
+    preserveSmoothing: c.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
+  };
+}
+
 function resolveOptions(options: SmoothCornerOptions): ResolvedCorners {
   if (isUniform(options)) {
-    const corner: Required<CornerConfig> = {
-      radius: options.radius,
-      smoothing: options.smoothing ?? DEFAULT_SMOOTHING,
-      preserveSmoothing: options.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
-    };
+    const corner = fillDefaults(options);
     return {
       topLeft: corner,
       topRight: corner,
@@ -47,32 +51,11 @@ function resolveOptions(options: SmoothCornerOptions): ResolvedCorners {
   }
 
   const defaults: CornerConfig = { radius: 0 };
-  const tl = resolveCorner(options.topLeft, defaults);
-  const tr = resolveCorner(options.topRight, defaults);
-  const br = resolveCorner(options.bottomRight, defaults);
-  const bl = resolveCorner(options.bottomLeft, defaults);
-
   return {
-    topLeft: {
-      radius: tl.radius,
-      smoothing: tl.smoothing ?? DEFAULT_SMOOTHING,
-      preserveSmoothing: tl.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
-    },
-    topRight: {
-      radius: tr.radius,
-      smoothing: tr.smoothing ?? DEFAULT_SMOOTHING,
-      preserveSmoothing: tr.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
-    },
-    bottomRight: {
-      radius: br.radius,
-      smoothing: br.smoothing ?? DEFAULT_SMOOTHING,
-      preserveSmoothing: br.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
-    },
-    bottomLeft: {
-      radius: bl.radius,
-      smoothing: bl.smoothing ?? DEFAULT_SMOOTHING,
-      preserveSmoothing: bl.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
-    },
+    topLeft: fillDefaults(resolveCorner(options.topLeft, defaults)),
+    topRight: fillDefaults(resolveCorner(options.topRight, defaults)),
+    bottomRight: fillDefaults(resolveCorner(options.bottomRight, defaults)),
+    bottomLeft: fillDefaults(resolveCorner(options.bottomLeft, defaults)),
   };
 }
 
@@ -114,43 +97,21 @@ export function generatePath(
     height,
   });
 
-  const topLeftParams = getPathParamsForCorner({
-    cornerRadius: normalized.topLeft.radius,
-    cornerSmoothing: corners.topLeft.smoothing,
-    preserveSmoothing: corners.topLeft.preserveSmoothing,
-    roundingAndSmoothingBudget: normalized.topLeft.roundingAndSmoothingBudget,
-  });
-
-  const topRightParams = getPathParamsForCorner({
-    cornerRadius: normalized.topRight.radius,
-    cornerSmoothing: corners.topRight.smoothing,
-    preserveSmoothing: corners.topRight.preserveSmoothing,
-    roundingAndSmoothingBudget: normalized.topRight.roundingAndSmoothingBudget,
-  });
-
-  const bottomRightParams = getPathParamsForCorner({
-    cornerRadius: normalized.bottomRight.radius,
-    cornerSmoothing: corners.bottomRight.smoothing,
-    preserveSmoothing: corners.bottomRight.preserveSmoothing,
-    roundingAndSmoothingBudget:
-      normalized.bottomRight.roundingAndSmoothingBudget,
-  });
-
-  const bottomLeftParams = getPathParamsForCorner({
-    cornerRadius: normalized.bottomLeft.radius,
-    cornerSmoothing: corners.bottomLeft.smoothing,
-    preserveSmoothing: corners.bottomLeft.preserveSmoothing,
-    roundingAndSmoothingBudget:
-      normalized.bottomLeft.roundingAndSmoothingBudget,
-  });
+  const paramsFor = (name: keyof ResolvedCorners) =>
+    getPathParamsForCorner({
+      cornerRadius: normalized[name].radius,
+      cornerSmoothing: corners[name].smoothing,
+      preserveSmoothing: corners[name].preserveSmoothing,
+      roundingAndSmoothingBudget: normalized[name].roundingAndSmoothingBudget,
+    });
 
   return getSVGPathFromPathParams({
     width,
     height,
-    topLeftPathParams: topLeftParams,
-    topRightPathParams: topRightParams,
-    bottomRightPathParams: bottomRightParams,
-    bottomLeftPathParams: bottomLeftParams,
+    topLeftPathParams: paramsFor("topLeft"),
+    topRightPathParams: paramsFor("topRight"),
+    bottomRightPathParams: paramsFor("bottomRight"),
+    bottomLeftPathParams: paramsFor("bottomLeft"),
   });
 }
 

@@ -1,4 +1,4 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition } from "@lisse/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 export interface SmoothCornersAction {
@@ -66,24 +66,11 @@ export function smoothCorners(
     extractedResult = extractAndStripEffects(node);
   }
 
-  // Merge extracted + explicit effects
   function getMergedEffects(): EffectsConfig {
-    return {
-      ...extractedResult?.effects,
-      ...currentEffects,
-    };
+    return mergeEffects(extractedResult, currentEffects);
   }
 
-  const mergedEffects = getMergedEffects();
-  const hasAnyEffects = !!(
-    mergedEffects.innerBorder ||
-    mergedEffects.outerBorder ||
-    mergedEffects.middleBorder ||
-    mergedEffects.innerShadow ||
-    mergedEffects.shadow
-  );
-
-  if (hasAnyEffects && node.parentElement) {
+  if (hasEffects(getMergedEffects()) && node.parentElement) {
     const anchor = node.parentElement;
     didAcquire = acquirePosition(anchor);
     effectsHandle = createSvgEffects(anchor);
@@ -122,11 +109,7 @@ export function smoothCorners(
       }
 
       // Create handles if they didn't exist but now effects are provided
-      const merged = getMergedEffects();
-      const hasEffects = !!(
-        merged.innerBorder || merged.outerBorder || merged.middleBorder || merged.innerShadow || merged.shadow
-      );
-      if (hasEffects && !effectsHandle && node.parentElement) {
+      if (hasEffects(getMergedEffects()) && !effectsHandle && node.parentElement) {
         const anchor = node.parentElement;
         didAcquire = acquirePosition(anchor);
         effectsHandle = createSvgEffects(anchor);

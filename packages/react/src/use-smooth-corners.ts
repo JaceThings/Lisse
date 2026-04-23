@@ -9,15 +9,10 @@ import {
   restoreStyles,
   acquirePosition,
   releasePosition,
+  hasEffects,
+  mergeEffects,
 } from "@lisse/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
-
-function mergeEffects(
-  extracted: ReturnType<typeof extractAndStripEffects> | undefined,
-  explicit: EffectsConfig | undefined,
-): EffectsConfig {
-  return { ...extracted?.effects, ...explicit };
-}
 
 function syncEffects(
   options: SmoothCornerOptions,
@@ -94,13 +89,7 @@ export function useSmoothCorners(
 
   // Track whether explicit effects are present so the setup/teardown effect
   // re-runs when the wrapper div mounts or unmounts (needsWrapper toggles).
-  const hasExplicitEffects = !!(
-    effectsOptions?.effects?.innerBorder ||
-    effectsOptions?.effects?.outerBorder ||
-    effectsOptions?.effects?.middleBorder ||
-    effectsOptions?.effects?.innerShadow ||
-    effectsOptions?.effects?.shadow
-  );
+  const hasExplicitEffects = hasEffects(effectsOptions?.effects);
 
   // Effects overlay (SVG effects + drop shadow)
   useEffect(() => {
@@ -120,16 +109,7 @@ export function useSmoothCorners(
     // Merge: explicit effects override auto-extracted
     const mergedEffects = mergeEffects(extracted, explicitEffects);
 
-    // Determine if there are any effects to render
-    const hasAnyEffects = !!(
-      mergedEffects.innerBorder ||
-      mergedEffects.outerBorder ||
-      mergedEffects.middleBorder ||
-      mergedEffects.innerShadow ||
-      mergedEffects.shadow
-    );
-
-    if (!hasAnyEffects) {
+    if (!hasEffects(mergedEffects)) {
       return () => {
         if (extracted) restoreStyles(el, extracted.savedStyles);
       };

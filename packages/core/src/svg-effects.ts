@@ -7,6 +7,14 @@ export interface SvgEffectsHandle {
   destroy(): void;
 }
 
+/** Set x/y/width/height on an element to cover a `w`×`h` area expanded by `pad` on every side. */
+function padBounds(el: Element, pad: number, w: number, h: number): void {
+  el.setAttribute("x", String(-pad));
+  el.setAttribute("y", String(-pad));
+  el.setAttribute("width", String(w + pad * 2));
+  el.setAttribute("height", String(h + pad * 2));
+}
+
 function createKnockoutMask(
   maskId: string,
   defs: Element,
@@ -306,37 +314,24 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   anchor.appendChild(svg);
 
   // Border element bags for the shared updateBorder function
-  const innerGradId = `sc-grad-inner-${id}`;
-  const innerOverlayGradId = `sc-grad-inner-ov-${id}`;
-  const outerGradId = `sc-grad-outer-${id}`;
-  const outerOverlayGradId = `sc-grad-outer-ov-${id}`;
-  const middleGradId = `sc-grad-middle-${id}`;
-  const middleOverlayGradId = `sc-grad-middle-ov-${id}`;
-
   const innerBorderEls: BorderElements = {
     strokePath: innerStrokePath, grooveOverlay: innerGrooveOverlay,
     strokeGroup: innerStrokeGroup, dblMaskId: innerDblMaskId,
     dblKnockout: innerDblKnockout, dblRect: innerDblRect,
     strokeMultiplier: 2,
-    defs, gradientEl: null, gradientId: innerGradId,
-    overlayGradientEl: null, overlayGradientId: innerOverlayGradId,
+    defs, gradientEl: null, gradientId: `sc-grad-inner-${id}`,
+    overlayGradientEl: null, overlayGradientId: `sc-grad-inner-ov-${id}`,
   };
   const outerBorderEls: BorderElements = {
     strokePath: outerStrokePath, grooveOverlay: outerGrooveOverlay,
     strokeGroup: outerStrokeGroup, dblMaskId: outerDblMaskId,
     dblKnockout: outerDblKnockout, dblRect: outerDblRect,
     strokeMultiplier: 2,
-    defs, gradientEl: null, gradientId: outerGradId,
-    overlayGradientEl: null, overlayGradientId: outerOverlayGradId,
+    defs, gradientEl: null, gradientId: `sc-grad-outer-${id}`,
+    overlayGradientEl: null, overlayGradientId: `sc-grad-outer-ov-${id}`,
     padDblMask(pad, w, h) {
-      outerDblMask.setAttribute("x", String(-pad));
-      outerDblMask.setAttribute("y", String(-pad));
-      outerDblMask.setAttribute("width", String(w + pad * 2));
-      outerDblMask.setAttribute("height", String(h + pad * 2));
-      outerDblRect.setAttribute("x", String(-pad));
-      outerDblRect.setAttribute("y", String(-pad));
-      outerDblRect.setAttribute("width", String(w + pad * 2));
-      outerDblRect.setAttribute("height", String(h + pad * 2));
+      padBounds(outerDblMask, pad, w, h);
+      padBounds(outerDblRect, pad, w, h);
     },
   };
   const middleBorderEls: BorderElements = {
@@ -344,17 +339,11 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
     strokeGroup: middleStrokeGroup, dblMaskId: middleDblMaskId,
     dblKnockout: middleDblKnockout, dblRect: middleDblRect,
     strokeMultiplier: 1,
-    defs, gradientEl: null, gradientId: middleGradId,
-    overlayGradientEl: null, overlayGradientId: middleOverlayGradId,
+    defs, gradientEl: null, gradientId: `sc-grad-middle-${id}`,
+    overlayGradientEl: null, overlayGradientId: `sc-grad-middle-ov-${id}`,
     padDblMask(pad, w, h) {
-      middleDblMask.setAttribute("x", String(-pad));
-      middleDblMask.setAttribute("y", String(-pad));
-      middleDblMask.setAttribute("width", String(w + pad * 2));
-      middleDblMask.setAttribute("height", String(h + pad * 2));
-      middleDblRect.setAttribute("x", String(-pad));
-      middleDblRect.setAttribute("y", String(-pad));
-      middleDblRect.setAttribute("width", String(w + pad * 2));
-      middleDblRect.setAttribute("height", String(h + pad * 2));
+      padBounds(middleDblMask, pad, w, h);
+      padBounds(middleDblRect, pad, w, h);
     },
   };
 
@@ -380,15 +369,8 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
       // Outer border — extend main mask bounds before the border call
       const ob = effects.outerBorder;
       if (ob && ob.width > 0 && ob.opacity > 0) {
-        const pad = ob.width;
-        maskEl.setAttribute("x", String(-pad));
-        maskEl.setAttribute("y", String(-pad));
-        maskEl.setAttribute("width", String(width + pad * 2));
-        maskEl.setAttribute("height", String(height + pad * 2));
-        maskRect.setAttribute("x", String(-pad));
-        maskRect.setAttribute("y", String(-pad));
-        maskRect.setAttribute("width", String(width + pad * 2));
-        maskRect.setAttribute("height", String(height + pad * 2));
+        padBounds(maskEl, ob.width, width, height);
+        padBounds(maskRect, ob.width, width, height);
       }
       updateBorder(ob, d, width, height, outerBorderEls);
 
@@ -422,14 +404,8 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         const pad = Math.max(is.blur * 3, 20) + Math.max(Math.abs(is.offsetX), Math.abs(is.offsetY)) + Math.abs(spread);
 
         // Mask: white rect (visible) + black squircle cutout (hole)
-        entry.mask.setAttribute("x", String(-pad));
-        entry.mask.setAttribute("y", String(-pad));
-        entry.mask.setAttribute("width", String(width + pad * 2));
-        entry.mask.setAttribute("height", String(height + pad * 2));
-        entry.maskRect.setAttribute("x", String(-pad));
-        entry.maskRect.setAttribute("y", String(-pad));
-        entry.maskRect.setAttribute("width", String(width + pad * 2));
-        entry.maskRect.setAttribute("height", String(height + pad * 2));
+        padBounds(entry.mask, pad, width, height);
+        padBounds(entry.maskRect, pad, width, height);
 
         // Cutout path — adjusted for spread, offset for positioning
         const cutW = Math.max(1, width - spread * 2);
@@ -448,10 +424,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         }
 
         // Shadow rect (covers full padded area, masked to frame shape)
-        entry.rect.setAttribute("x", String(-pad));
-        entry.rect.setAttribute("y", String(-pad));
-        entry.rect.setAttribute("width", String(width + pad * 2));
-        entry.rect.setAttribute("height", String(height + pad * 2));
+        padBounds(entry.rect, pad, width, height);
         entry.rect.setAttribute("fill", hexToRgb(is.color));
         entry.rect.setAttribute("fill-opacity", String(is.opacity));
       }

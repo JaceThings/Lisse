@@ -14,6 +14,8 @@ export {
   parseColor,
   parseBorder,
   parseBoxShadow,
+  hasEffects,
+  mergeEffects,
   type ExtractedEffects,
 } from "./extract-effects.js";
 export { acquirePosition, releasePosition } from "./position-ref-count.js";

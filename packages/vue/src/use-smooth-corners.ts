@@ -16,6 +16,8 @@ import {
   restoreStyles,
   acquirePosition,
   releasePosition,
+  hasEffects,
+  mergeEffects,
 } from "@lisse/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
@@ -23,6 +25,10 @@ export interface UseEffectsOptions {
   wrapper?: Ref<HTMLElement | null>;
   effects?: MaybeRef<EffectsConfig>;
   autoEffects?: MaybeRef<boolean>;
+}
+
+function unrefOr<T, D>(r: MaybeRef<T> | undefined, fallback: D): T | D {
+  return r !== undefined ? unref(r) : fallback;
 }
 
 /**
@@ -93,29 +99,11 @@ export function useSmoothCorners(
       const { width, height } = el.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
 
-      // Merge extracted + explicit effects
-      const explicit = effectsOptions?.effects
-        ? unref(effectsOptions.effects)
-        : undefined;
-      const mergedEffects: EffectsConfig = {
-        ...extractedResult?.effects,
-        ...explicit,
-      };
-
-      const hasAny = !!(
-        mergedEffects.innerBorder ||
-        mergedEffects.outerBorder ||
-        mergedEffects.middleBorder ||
-        mergedEffects.innerShadow ||
-        mergedEffects.shadow
-      );
+      const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
 
       // Lazy handle creation (matches Svelte pattern)
-      if (hasAny && !effectsHandle) {
-        const explicitWrapper = effectsOptions?.wrapper
-          ? unref(effectsOptions.wrapper)
-          : null;
-        const anchor = explicitWrapper ?? el.parentElement;
+      if (hasEffects(merged) && !effectsHandle) {
+        const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
         if (!anchor) return;
         didAcquire = acquirePosition(anchor);
         effectsHandle = createSvgEffects(anchor);
@@ -127,10 +115,10 @@ export function useSmoothCorners(
 
       if (!effectsHandle || !shadowHandle) return;
 
-      effectsHandle.update(unref(options), mergedEffects, width, height);
+      effectsHandle.update(unref(options), merged, width, height);
       shadowHandle.update(
         unref(options),
-        mergedEffects.shadow ?? DEFAULT_SHADOW,
+        merged.shadow ?? DEFAULT_SHADOW,
         width,
         height,
       );
@@ -141,40 +129,15 @@ export function useSmoothCorners(
       const el = unref(target);
       if (!el) return;
 
-      const autoEffects =
-        effectsOptions?.autoEffects !== undefined
-          ? unref(effectsOptions.autoEffects)
-          : true;
-
       // Auto-extract CSS effects
-      if (autoEffects) {
+      if (unrefOr(effectsOptions?.autoEffects, true)) {
         extractedResult = extractAndStripEffects(el);
       }
 
-      // Merge extracted + explicit effects
-      const explicit = effectsOptions?.effects
-        ? unref(effectsOptions.effects)
-        : undefined;
-      const mergedEffects: EffectsConfig = {
-        ...extractedResult?.effects,
-        ...explicit,
-      };
+      const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
+      if (!hasEffects(merged)) return;
 
-      const hasAnyEffects = !!(
-        mergedEffects.innerBorder ||
-        mergedEffects.outerBorder ||
-        mergedEffects.middleBorder ||
-        mergedEffects.innerShadow ||
-        mergedEffects.shadow
-      );
-
-      if (!hasAnyEffects) return;
-
-      // Determine anchor element
-      const explicitWrapper = effectsOptions?.wrapper
-        ? unref(effectsOptions.wrapper)
-        : null;
-      const anchor = explicitWrapper ?? el.parentElement;
+      const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
       if (!anchor) return;
 
       // Ensure anchor has positioning (ref-counted)
@@ -201,10 +164,7 @@ export function useSmoothCorners(
       extractedResult = undefined;
 
       if (didAcquire) {
-        const explicitWrapper = effectsOptions?.wrapper
-          ? unref(effectsOptions.wrapper)
-          : null;
-        const anchor = explicitWrapper ?? unref(target)?.parentElement;
+        const anchor = unrefOr(effectsOptions?.wrapper, null) ?? unref(target)?.parentElement;
         if (anchor) releasePosition(anchor);
         didAcquire = false;
       }

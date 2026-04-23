@@ -64,22 +64,15 @@ export function distributeAndNormalize({
       cornerRadiusMap[corner] = Math.min(radius, budget);
     });
 
+  const toCorner = (c: Corner) => ({
+    radius: cornerRadiusMap[c],
+    roundingAndSmoothingBudget: roundingAndSmoothingBudgetMap[c],
+  });
+
   return {
-    topLeft: {
-      radius: cornerRadiusMap.topLeft,
-      roundingAndSmoothingBudget: roundingAndSmoothingBudgetMap.topLeft,
-    },
-    topRight: {
-      radius: cornerRadiusMap.topRight,
-      roundingAndSmoothingBudget: roundingAndSmoothingBudgetMap.topRight,
-    },
-    bottomLeft: {
-      radius: cornerRadiusMap.bottomLeft,
-      roundingAndSmoothingBudget: roundingAndSmoothingBudgetMap.bottomLeft,
-    },
-    bottomRight: {
-      radius: cornerRadiusMap.bottomRight,
-      roundingAndSmoothingBudget: roundingAndSmoothingBudgetMap.bottomRight,
-    },
+    topLeft: toCorner("topLeft"),
+    topRight: toCorner("topRight"),
+    bottomLeft: toCorner("bottomLeft"),
+    bottomRight: toCorner("bottomRight"),
   };
 }
