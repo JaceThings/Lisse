@@ -36,7 +36,7 @@ export const SmoothCorners = defineComponent({
   name: "SmoothCorners",
   props: {
     as: {
-      type: String as PropType<string>,
+      type: String as PropType<keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap>,
       default: "div",
     },
     radius: {
