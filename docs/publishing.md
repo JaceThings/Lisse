@@ -172,19 +172,27 @@ The secret is a GitHub PAT with `repo` scope that can read the private `taxes` r
 
 ### OIDC trusted publishing requires npm ≥11.5.1
 
-**Problem:** `setup-node@v4` with `node-version: 22` ships npm 10.x, which doesn't know how to use GitHub's OIDC token for npm authentication. `changeset publish` would fall back to requiring an `NPM_TOKEN` secret.
+**Problem:** OIDC trusted publishing — where npm trusts a GitHub-issued OIDC token instead of requiring an `NPM_TOKEN` — landed in npm 11.5.1. Older npm silently falls back to needing an `NPM_TOKEN`, and the publish fails.
 
-**Cause:** OIDC support in the npm CLI landed in npm 11.5.1. Node 22's bundled npm predates that.
+**Cause:** OIDC auth exchange is a newer feature. `setup-node@v4` with `node-version: 22` ships npm 10.x.
 
-**Solution:** The release workflow runs `npm install -g npm@latest --force` as an explicit step before `pnpm install`. This upgrades the runner's npm to the latest, which supports OIDC.
+**Solution:** The release workflow uses `node-version: 24`. Node 24 (released April 2026) ships with npm ≥11.5.1 out of the box.
 
-**When to remove this step:** When Node's bundled npm version is ≥11.5.1 by default. Check the `setup-node` default for whichever Node version the workflow uses.
+**Why not Node 22 + manual `npm install -g npm@latest`?** Tried it. Fails on a self-upgrade race — see the quirk below. Upgrading Node instead avoids the whole class of problem.
+
+**Note:** `ci.yml` stays on Node 22 (LTS) for compatibility testing. Only the release workflow uses Node 24.
 
 ---
 
 ### `npm install -g npm@latest` fails with "Cannot find module 'promise-retry'"
 
-**Problem:** First attempt at the npm self-upgrade on the GitHub Actions runner errored with:
+**Problem:** Tried to manually upgrade npm on a Node 22 runner with:
+
+```yaml
+- run: npm install -g npm@latest
+```
+
+Failed with:
 
 ```
 npm error code MODULE_NOT_FOUND
@@ -193,18 +201,14 @@ npm error Require stack:
 npm error - .../node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/rebuild.js
 ```
 
-**Cause:** npm is upgrading itself — replacing its own files on disk while still running. The old npm's `@npmcli/arborist` module needs `promise-retry` to finish the post-install rebuild step, but the dependency has already been evicted by the new npm's install layout. A self-modification race condition.
+**Cause:** npm is upgrading itself — replacing its own files on disk while still running. The old npm's `@npmcli/arborist` module needs `promise-retry` to finish the post-install `reify-finish` step, but the dependency has already been evicted by the new npm's install layout. A self-modification race condition.
 
-**Solution:** Add `--force` to the install command:
+**Attempted fixes that did NOT work:**
+- `npm install -g npm@latest --force` — still fails the same way. `--force` doesn't reach `reify-finish`.
+- `--ignore-scripts` — the failure is inside npm's own internal code path, not a user lifecycle script.
 
-```yaml
-- run: npm install -g npm@latest --force
-```
+**What did work:** Skip the upgrade entirely by using a Node version whose bundled npm is already ≥11.5.1. Node 24 does.
 
-`--force` relaxes npm's integrity and ordering checks enough that the upgrade finishes even when the running npm's own dependencies get shuffled out from under it.
-
-**Why this works:** With `--force`, npm doesn't bail when it can't re-resolve its own modules mid-upgrade. The new npm is written to disk, and subsequent invocations (from the very next step onwards) use the fully-installed new binary.
-
-**Failure mode if removed:** The workflow fails at the upgrade step, every time, on any runner that defaults to npm <11. The rest of the release never runs.
+**Failure mode if someone reverts the workflow to Node 22 + manual upgrade:** Release workflow fails on the upgrade step every single time. No publish ever happens.
 
 **First observed:** 2026-04-23 on `ubuntu-latest` with Node 22.22.2 (bundled npm ~10.9).
