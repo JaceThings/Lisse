@@ -18,7 +18,6 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm build

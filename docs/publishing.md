@@ -34,7 +34,7 @@ Captured here so future-you knows what's been configured:
 - **Release workflow** at `.github/workflows/release.yml` uses `changesets/action@v1`, has `id-token: write` permission, and sets `NPM_CONFIG_PROVENANCE: "true"`.
 - **`publishConfig.access: public`** is set on every package's `package.json` (scoped `@lisse/*` names publish private by default otherwise).
 - **`LICENSE` is copied into each package directory** so it ships in the tarball. The root `LICENSE` alone doesn't propagate to `@scope/pkg` tarballs.
-- **Root `build` script** is scoped to `./packages/*` so `pnpm build` skips the playground (which has a private `system-1` dependency).
+- **Root `build` script** is scoped to `./packages/*`. Defensive so a future playground workspace doesn't accidentally get pulled into release builds.
 
 ## Pre-publish sanity checks
 
@@ -120,39 +120,6 @@ Opening `/dev/tty` failed (6): Device not configured
 **Solution:** Wait 5–15 minutes. Check `https://www.npmjs.com/package/@lisse/core` in a browser — the web frontend usually shows packages before the registry API catches up. Don't re-run the publish; the packages ARE published, you just can't fetch them yet.
 
 **Failure mode if misdiagnosed:** Re-running `changeset publish` immediately would fail with "You cannot publish over the previously published versions" once propagation catches up, but during the propagation window it might attempt to publish duplicates and return confusing errors.
-
----
-
-## Build & workspace
-
-### `pnpm -r build` builds the playground, which depends on a private repo
-
-**Problem:** The playground at `/playground` depends on `system-1` (a private repo at `github:JaceThings/taxes`). Running `pnpm build` via the old root script (`pnpm -r build`) tried to build the playground too, which fails in environments that don't have access to the private repo.
-
-**Cause:** `pnpm -r` iterates every workspace listed in `pnpm-workspace.yaml`, which includes `playground`.
-
-**Solution:** The root `build` script is now scoped: `pnpm -r --filter="./packages/*" build`. This skips the playground. The playground still builds via its own `pnpm --filter playground build` command when needed.
-
-**See:** Commit [73e1890](https://github.com/JaceThings/Lisse/commit/73e1890) (2026-04-23).
-
----
-
-### CI needs `PRIVATE_REPO_TOKEN` secret for `pnpm install`
-
-**Problem:** Even though the release workflow doesn't build the playground, `pnpm install --frozen-lockfile` still tries to resolve the `system-1` entry in `pnpm-lock.yaml`, which points at a private GitHub repo. Without credentials, install fails.
-
-**Cause:** pnpm resolves the full workspace dependency graph regardless of which packages get built afterwards.
-
-**Solution:** Both `.github/workflows/ci.yml` and `.github/workflows/release.yml` include this step before `pnpm install`:
-
-```yaml
-- name: Configure private repo access for playground deps
-  run: git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
-```
-
-The secret is a GitHub PAT with `repo` scope that can read the private `taxes` repo. Rotate the PAT when it expires and update the repo secret.
-
-**When to stop needing this:** If the playground is ever rewritten to not depend on `system-1`, remove this step from both workflows and delete the secret.
 
 ---
 

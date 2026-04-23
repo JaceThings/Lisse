@@ -28,9 +28,6 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Configure private repo access for playground deps
-        run: git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm typecheck
