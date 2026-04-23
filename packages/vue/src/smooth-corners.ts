@@ -14,13 +14,7 @@ import type {
   SmoothCornerOptions,
   BorderConfig,
   ShadowConfig,
-  CornerConfig,
 } from "@lisse/core";
-
-const cornerProp = {
-  type: [Number, Object] as PropType<number | CornerConfig>,
-  default: undefined,
-} as const;
 
 /**
  * Render-function component that applies smooth corners to a wrapper element.
@@ -41,22 +35,10 @@ export const SmoothCorners = defineComponent({
       type: String as PropType<keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap>,
       default: "div",
     },
-    radius: {
-      type: Number,
+    corners: {
+      type: Object as PropType<SmoothCornerOptions>,
       default: undefined,
     },
-    smoothing: {
-      type: Number,
-      default: undefined,
-    },
-    preserveSmoothing: {
-      type: Boolean,
-      default: undefined,
-    },
-    topLeft: cornerProp,
-    topRight: cornerProp,
-    bottomRight: cornerProp,
-    bottomLeft: cornerProp,
     innerBorder: {
       type: Object as PropType<BorderConfig>,
       default: undefined,
@@ -93,21 +75,7 @@ export const SmoothCorners = defineComponent({
 
     expose({ el: elRef, wrapper: wrapperRef });
 
-    const options = computed((): SmoothCornerOptions => {
-      if (props.radius !== undefined) {
-        return {
-          radius: props.radius,
-          smoothing: props.smoothing,
-          preserveSmoothing: props.preserveSmoothing,
-        };
-      }
-      return {
-        topLeft: props.topLeft,
-        topRight: props.topRight,
-        bottomRight: props.bottomRight,
-        bottomLeft: props.bottomLeft,
-      };
-    });
+    const options = computed((): SmoothCornerOptions => props.corners ?? { radius: 0 });
 
     const effectsConfig = computed(() => ({
       innerBorder: props.innerBorder,

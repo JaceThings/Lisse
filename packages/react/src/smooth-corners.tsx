@@ -13,11 +13,13 @@ import { useSmoothCorners } from "./use-smooth-corners.js";
 import { Slot } from "./slot.js";
 import { composeRefs } from "./compose-refs.js";
 import { hasEffects } from "@lisse/core";
-import type { SmoothCornerOptions, BorderConfig, ShadowConfig, CornerConfig } from "@lisse/core";
+import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@lisse/core";
 
 /** Own props of <SmoothCorners /> independent of the rendered element. */
 export type SmoothCornersOwnProps = {
   children?: ReactNode;
+  /** Corner configuration: uniform `{ radius, smoothing }` or per-corner `{ topLeft, topRight, ... }`. */
+  corners?: SmoothCornerOptions;
   innerBorder?: BorderConfig;
   outerBorder?: BorderConfig;
   middleBorder?: BorderConfig;
@@ -31,7 +33,7 @@ export type SmoothCornersOwnProps = {
    * set, the `as` prop is ignored. Default: false.
    */
   asChild?: boolean;
-} & SmoothCornerOptions;
+};
 
 type ReservedKeys = keyof SmoothCornersOwnProps | "as";
 
@@ -54,13 +56,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     as,
     asChild,
     children,
-    radius,
-    smoothing,
-    preserveSmoothing,
-    topLeft,
-    topRight,
-    bottomRight,
-    bottomLeft,
+    corners,
     innerBorder,
     outerBorder,
     middleBorder,
@@ -68,15 +64,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     shadow,
     autoEffects,
     ...rest
-  } = props as SmoothCornersProps<E> & {
-    radius?: number;
-    smoothing?: number;
-    preserveSmoothing?: boolean;
-    topLeft?: CornerConfig | number;
-    topRight?: CornerConfig | number;
-    bottomRight?: CornerConfig | number;
-    bottomLeft?: CornerConfig | number;
-  };
+  } = props;
 
   const Component = (as ?? "div") as ElementType;
 
@@ -87,10 +75,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     [externalRef],
   );
 
-  const options: SmoothCornerOptions =
-    radius !== undefined
-      ? { radius, smoothing, preserveSmoothing }
-      : { topLeft, topRight, bottomRight, bottomLeft };
+  const options: SmoothCornerOptions = corners ?? { radius: 0 };
 
   const explicitEffects = { innerBorder, outerBorder, middleBorder, innerShadow, shadow };
   const hasExplicit = hasEffects(explicitEffects);

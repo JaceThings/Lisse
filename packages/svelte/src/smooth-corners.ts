@@ -2,7 +2,7 @@ import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DE
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 export interface SmoothCornersAction {
-  update: (options: SmoothCornerOptions | SmoothCornersConfig) => void;
+  update: (config: SmoothCornersConfig) => void;
   destroy: () => void;
 }
 
@@ -10,10 +10,6 @@ export interface SmoothCornersConfig {
   corners: SmoothCornerOptions;
   effects?: EffectsConfig;
   autoEffects?: boolean;
-}
-
-function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is SmoothCornersConfig {
-  return "corners" in input;
 }
 
 /**
@@ -27,7 +23,7 @@ function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is Sm
  * <script>
  *   import { smoothCorners } from '@lisse/svelte';
  * </script>
- * <div use:smoothCorners={{ radius: 20, smoothing: 0.6 }}>Content</div>
+ * <div use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }}>Content</div>
  * ```
  *
  * @example With effects (parent must have position:relative)
@@ -41,19 +37,11 @@ function isConfig(input: SmoothCornerOptions | SmoothCornersConfig): input is Sm
  */
 export function smoothCorners(
   node: HTMLElement,
-  input: SmoothCornerOptions | SmoothCornersConfig
+  config: SmoothCornersConfig,
 ): SmoothCornersAction {
-  let currentOptions: SmoothCornerOptions;
-  let currentEffects: EffectsConfig | undefined;
-  let autoEffects = true;
-
-  if (isConfig(input)) {
-    currentOptions = input.corners;
-    currentEffects = input.effects;
-    autoEffects = input.autoEffects ?? true;
-  } else {
-    currentOptions = input;
-  }
+  let currentOptions: SmoothCornerOptions = config.corners;
+  let currentEffects: EffectsConfig | undefined = config.effects;
+  const autoEffects = config.autoEffects ?? true;
 
   // Effects handles. The anchor is captured the first time we attach to a
   // parent and reused thereafter, so reparenting the node doesn't strand
@@ -112,14 +100,9 @@ export function smoothCorners(
   let unobserve = observeResize(node, apply);
 
   return {
-    update(newInput: SmoothCornerOptions | SmoothCornersConfig) {
-      if (isConfig(newInput)) {
-        currentOptions = newInput.corners;
-        currentEffects = newInput.effects;
-      } else {
-        currentOptions = newInput;
-        currentEffects = undefined;
-      }
+    update(newConfig: SmoothCornersConfig) {
+      currentOptions = newConfig.corners;
+      currentEffects = newConfig.effects;
 
       // Create handles if they didn't exist but now effects are provided
       attachEffects();
