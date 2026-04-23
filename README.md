@@ -488,6 +488,10 @@ The SVG overlays (borders, shadows) are absolutely positioned inside an anchor e
 
 See individual package READMEs for full API details.
 
+## Documentation
+
+Contributor and release docs live in [`docs/`](./docs/) — start with [`docs/publishing.md`](./docs/publishing.md) for the release process and known quirks.
+
 ## License
 
 [MIT](./LICENSE)
