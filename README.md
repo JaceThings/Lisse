@@ -13,7 +13,6 @@ Lisse *(rhymes with lease)* — Figma-quality squircle smoothing for the web. Ge
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/JaceThings/Lisse/ci.yml?branch=main&label=CI)](https://github.com/JaceThings/Lisse/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore)](https://bundlephobia.com/package/@lisse/core)
 
 </div>
 
