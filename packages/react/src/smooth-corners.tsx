@@ -1,7 +1,7 @@
 import {
   forwardRef,
+  useCallback,
   useRef,
-  useImperativeHandle,
   createElement,
   type ElementType,
   type ReactNode,
@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useSmoothCorners } from "./use-smooth-corners.js";
 import { Slot } from "./slot.js";
+import { composeRefs } from "./compose-refs.js";
 import { hasEffects } from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig, CornerConfig } from "@lisse/core";
 
@@ -81,7 +82,10 @@ function SmoothCornersImpl<E extends ElementType = "div">(
 
   const internalRef = useRef<HTMLElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  useImperativeHandle(externalRef as ForwardedRef<HTMLElement>, () => internalRef.current!);
+  const setInnerRef = useCallback(
+    composeRefs<HTMLElement>(internalRef, externalRef as ForwardedRef<HTMLElement>),
+    [externalRef],
+  );
 
   const options: SmoothCornerOptions =
     radius !== undefined
@@ -103,8 +107,8 @@ function SmoothCornersImpl<E extends ElementType = "div">(
   useSmoothCorners(internalRef, options, effectsOptions);
 
   const inner = asChild
-    ? createElement(Slot, { ...rest, ref: internalRef }, children)
-    : createElement(Component, { ...rest, ref: internalRef }, children);
+    ? createElement(Slot, { ...rest, ref: setInnerRef }, children)
+    : createElement(Component, { ...rest, ref: setInnerRef }, children);
 
   if (!needsWrapper) {
     return inner;

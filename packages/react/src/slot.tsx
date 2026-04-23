@@ -7,27 +7,10 @@ import {
   type ReactElement,
   type ReactNode,
   type Ref,
-  type MutableRefObject,
 } from "react";
+import { composeRefs } from "./compose-refs.js";
 
 type AnyProps = Record<string, unknown>;
-
-function composeRefs<T>(...refs: Array<Ref<T> | undefined | null>): Ref<T> {
-  return (node: T | null) => {
-    for (const ref of refs) {
-      if (!ref) continue;
-      if (typeof ref === "function") {
-        ref(node);
-      } else {
-        try {
-          (ref as MutableRefObject<T | null>).current = node;
-        } catch {
-          // Ignore read-only refs (rare).
-        }
-      }
-    }
-  };
-}
 
 function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
   const merged: AnyProps = { ...parent };
