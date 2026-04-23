@@ -5,6 +5,7 @@ import {
   computed,
   type PropType,
   type SlotsType,
+  type VNode,
 } from "vue";
 import { useSmoothCorners } from "./use-smooth-corners.js";
 import { Slot } from "./slot.js";
@@ -85,10 +86,12 @@ export const SmoothCorners = defineComponent({
       default: false,
     },
   },
-  slots: Object as SlotsType<{ default: () => any }>,
-  setup(props, { slots }) {
+  slots: Object as SlotsType<{ default: () => VNode[] }>,
+  setup(props, { slots, expose }) {
     const elRef = ref<HTMLElement | null>(null);
     const wrapperRef = ref<HTMLElement | null>(null);
+
+    expose({ el: elRef, wrapper: wrapperRef });
 
     const options = computed((): SmoothCornerOptions => {
       if (props.radius !== undefined) {
