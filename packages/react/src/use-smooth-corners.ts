@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   generateClipPath,
   createSvgEffects,
@@ -13,6 +13,13 @@ import {
   mergeEffects,
 } from "@lisse/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
+
+/**
+ * useLayoutEffect on the client, useEffect during SSR. Lets us mutate the
+ * DOM synchronously after layout (avoiding a flash of un-clipped corners
+ * or un-stripped CSS borders) without warning under server rendering.
+ */
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 function syncEffects(
   options: SmoothCornerOptions,
@@ -60,7 +67,7 @@ export function useSmoothCorners(
     el: HTMLElement;
   } | null>(null);
 
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
@@ -78,7 +85,7 @@ export function useSmoothCorners(
   }, [ref]);
 
   // Re-apply clip-path on every render to pick up option changes
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
@@ -92,7 +99,7 @@ export function useSmoothCorners(
   const hasExplicitEffects = hasEffects(effectsOptions?.effects);
 
   // Effects overlay (SVG effects + drop shadow)
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
@@ -148,7 +155,7 @@ export function useSmoothCorners(
   }, [ref, effectsOptions?.wrapperRef, hasExplicitEffects]);
 
   // Sync SVG effects on every render to pick up explicit effect prop changes
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     const handles = handlesRef.current;
     if (!handles) return;
     const { effectsHandle, shadowHandle, extracted, el } = handles;
