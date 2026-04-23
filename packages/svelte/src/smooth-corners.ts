@@ -77,10 +77,14 @@ export function smoothCorners(
     shadowHandle = createDropShadow(anchor);
   }
 
+  node.setAttribute("data-slot", "smooth-corners");
+  node.setAttribute("data-state", "pending");
+
   function apply() {
     const { width, height } = node.getBoundingClientRect();
     if (width > 0 && height > 0) {
       node.style.clipPath = generateClipPath(width, height, currentOptions);
+      node.setAttribute("data-state", "ready");
 
       const merged = getMergedEffects();
       if (effectsHandle) {
@@ -121,6 +125,8 @@ export function smoothCorners(
     destroy() {
       unobserve();
       node.style.clipPath = "";
+      node.removeAttribute("data-slot");
+      node.removeAttribute("data-state");
       effectsHandle?.destroy();
       shadowHandle?.destroy();
       if (extractedResult) {

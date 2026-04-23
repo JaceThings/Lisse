@@ -86,16 +86,22 @@ export function useSmoothCorners(
     const el = ref.current;
     if (!el) return;
 
+    el.setAttribute("data-slot", "smooth-corners");
+    el.setAttribute("data-state", "pending");
+
     const unobserve = observeResize(el, () => {
       const { width, height } = el.getBoundingClientRect();
       if (width > 0 && height > 0) {
         el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+        el.setAttribute("data-state", "ready");
       }
     });
 
     return () => {
       unobserve();
       el.style.clipPath = "";
+      el.removeAttribute("data-slot");
+      el.removeAttribute("data-state");
     };
   }, [ref]);
 
@@ -106,6 +112,7 @@ export function useSmoothCorners(
     const { width, height } = el.getBoundingClientRect();
     if (width > 0 && height > 0) {
       el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+      el.setAttribute("data-state", "ready");
     }
   }, [ref, optionsKey]);
 
