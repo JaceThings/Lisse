@@ -27,7 +27,10 @@ jobs:
           cache: pnpm
 
       - name: Update npm (trusted publishing requires >=11.5.1)
-        run: npm install -g npm@latest
+        # --force sidesteps a self-upgrade race where the old npm loses
+        # track of its own arborist deps mid-install and errors with
+        # "Cannot find module 'promise-retry'". See docs/publishing.md.
+        run: npm install -g npm@latest --force
 
       - name: Configure private repo access for playground deps
         run: git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
