@@ -42,6 +42,12 @@ export interface UseEffectsOptions {
  * React hook that applies a smooth-cornered clip-path to a referenced element.
  * Automatically updates on resize via a shared ResizeObserver.
  *
+ * @remarks
+ * `effectsOptions.wrapperRef` should be a stable ref (created via
+ * `useRef`). Each rendered call to the hook reads `effects` and
+ * `autoEffects` via their values, so passing a freshly-allocated object
+ * each render is fine.
+ *
  * @example
  * ```tsx
  * const ref = useRef<HTMLDivElement>(null);
@@ -54,11 +60,13 @@ export function useSmoothCorners(
   options: SmoothCornerOptions,
   effectsOptions?: UseEffectsOptions,
 ): void {
+  const { wrapperRef, effects, autoEffects } = effectsOptions ?? {};
+
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const effectsRef = useRef(effectsOptions);
-  effectsRef.current = effectsOptions;
+  const effectsRef = useRef({ wrapperRef, effects, autoEffects });
+  effectsRef.current = { wrapperRef, effects, autoEffects };
 
   const handlesRef = useRef<{
     effectsHandle: ReturnType<typeof createSvgEffects>;
@@ -71,10 +79,8 @@ export function useSmoothCorners(
   // JSON.stringify safe and cheap, and lets us avoid re-running effects
   // on every parent render when prop identity changes but values don't.
   const optionsKey = useMemo(() => JSON.stringify(options), [options]);
-  const effectsKey = useMemo(
-    () => JSON.stringify(effectsOptions?.effects ?? null),
-    [effectsOptions?.effects],
-  );
+  const effectsKey = useMemo(() => JSON.stringify(effects ?? null), [effects]);
+  const autoEffectsKey = autoEffects ?? true;
 
   useIsoLayoutEffect(() => {
     const el = ref.current;
@@ -105,7 +111,7 @@ export function useSmoothCorners(
 
   // Track whether explicit effects are present so the setup/teardown effect
   // re-runs when the wrapper div mounts or unmounts (needsWrapper toggles).
-  const hasExplicitEffects = hasEffects(effectsOptions?.effects);
+  const hasExplicitEffects = hasEffects(effects);
 
   // Effects overlay (SVG effects + drop shadow)
   useIsoLayoutEffect(() => {
@@ -161,7 +167,7 @@ export function useSmoothCorners(
       if (extracted) restoreStyles(el, extracted.savedStyles);
       if (didAcquire) releasePosition(anchor);
     };
-  }, [ref, effectsOptions?.wrapperRef, hasExplicitEffects]);
+  }, [ref, wrapperRef, hasExplicitEffects, autoEffectsKey]);
 
   // Sync SVG effects when corner options or explicit effects change.
   useIsoLayoutEffect(() => {
