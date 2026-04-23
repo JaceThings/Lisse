@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   generateClipPath,
   createSvgEffects,
@@ -67,6 +67,15 @@ export function useSmoothCorners(
     el: HTMLElement;
   } | null>(null);
 
+  // Stable signature of the corner options. Bounded object size makes
+  // JSON.stringify safe and cheap, and lets us avoid re-running effects
+  // on every parent render when prop identity changes but values don't.
+  const optionsKey = useMemo(() => JSON.stringify(options), [options]);
+  const effectsKey = useMemo(
+    () => JSON.stringify(effectsOptions?.effects ?? null),
+    [effectsOptions?.effects],
+  );
+
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -84,7 +93,7 @@ export function useSmoothCorners(
     };
   }, [ref]);
 
-  // Re-apply clip-path on every render to pick up option changes
+  // Re-apply clip-path when corner options change.
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -92,7 +101,7 @@ export function useSmoothCorners(
     if (width > 0 && height > 0) {
       el.style.clipPath = generateClipPath(width, height, optionsRef.current);
     }
-  });
+  }, [ref, optionsKey]);
 
   // Track whether explicit effects are present so the setup/teardown effect
   // re-runs when the wrapper div mounts or unmounts (needsWrapper toggles).
@@ -154,7 +163,7 @@ export function useSmoothCorners(
     };
   }, [ref, effectsOptions?.wrapperRef, hasExplicitEffects]);
 
-  // Sync SVG effects on every render to pick up explicit effect prop changes
+  // Sync SVG effects when corner options or explicit effects change.
   useIsoLayoutEffect(() => {
     const handles = handlesRef.current;
     if (!handles) return;
@@ -163,5 +172,5 @@ export function useSmoothCorners(
     const { width, height } = el.getBoundingClientRect();
     if (width <= 0 || height <= 0) return;
     syncEffects(optionsRef.current, currentMerged, effectsHandle, shadowHandle, width, height);
-  });
+  }, [optionsKey, effectsKey]);
 }
