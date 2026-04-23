@@ -10,6 +10,7 @@ import {
   type ForwardedRef,
 } from "react";
 import { useSmoothCorners } from "./use-smooth-corners.js";
+import { Slot } from "./slot.js";
 import { hasEffects } from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig, CornerConfig } from "@lisse/core";
 
@@ -23,6 +24,12 @@ export type SmoothCornersOwnProps = {
   shadow?: ShadowConfig | ShadowConfig[];
   /** Automatically extract CSS border and box-shadow as SVG effects. Default: true */
   autoEffects?: boolean;
+  /**
+   * Merge SmoothCorners onto its single child element instead of rendering
+   * its own. The child receives the internal ref and any spread props. When
+   * set, the `as` prop is ignored. Default: false.
+   */
+  asChild?: boolean;
 } & SmoothCornerOptions;
 
 type ReservedKeys = keyof SmoothCornersOwnProps | "as";
@@ -44,6 +51,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
 ) {
   const {
     as,
+    asChild,
     children,
     radius,
     smoothing,
@@ -94,7 +102,9 @@ function SmoothCornersImpl<E extends ElementType = "div">(
 
   useSmoothCorners(internalRef, options, effectsOptions);
 
-  const inner = createElement(Component, { ...rest, ref: internalRef }, children);
+  const inner = asChild
+    ? createElement(Slot, { ...rest, ref: internalRef }, children)
+    : createElement(Component, { ...rest, ref: internalRef }, children);
 
   if (!needsWrapper) {
     return inner;

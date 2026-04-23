@@ -7,6 +7,7 @@ import {
   type SlotsType,
 } from "vue";
 import { useSmoothCorners } from "./use-smooth-corners.js";
+import { Slot } from "./slot.js";
 import { hasEffects } from "@lisse/core";
 import type {
   SmoothCornerOptions,
@@ -79,6 +80,10 @@ export const SmoothCorners = defineComponent({
       type: Boolean as PropType<boolean>,
       default: undefined,
     },
+    asChild: {
+      type: Boolean as PropType<boolean>,
+      default: false,
+    },
   },
   slots: Object as SlotsType<{ default: () => any }>,
   setup(props, { slots }) {
@@ -120,14 +125,18 @@ export const SmoothCorners = defineComponent({
     });
 
     return () => {
+      const inner = props.asChild
+        ? h(Slot, { ref: elRef }, slots.default)
+        : h(props.as, { ref: elRef }, slots.default?.());
+
       if (needsWrapper.value) {
         return h(
           "div",
           { ref: wrapperRef, style: { position: "relative" } },
-          h(props.as, { ref: elRef }, slots.default?.()),
+          inner,
         );
       }
-      return h(props.as, { ref: elRef }, slots.default?.());
+      return inner;
     };
   },
 });
