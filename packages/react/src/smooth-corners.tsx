@@ -77,19 +77,29 @@ export const SmoothCorners = forwardRef<HTMLElement, SmoothCornersProps>(
         : { topLeft, topRight, bottomRight, bottomLeft };
 
     const explicitEffects = { innerBorder, outerBorder, middleBorder, innerShadow, shadow };
+    const hasExplicit = hasEffects(explicitEffects);
+    const needsWrapper = (autoEffects ?? true) || hasExplicit;
 
     const effectsOptions = {
-      wrapperRef: wrapperRef as React.RefObject<HTMLElement | null>,
-      effects: hasEffects(explicitEffects) ? explicitEffects : undefined,
+      wrapperRef: needsWrapper
+        ? (wrapperRef as React.RefObject<HTMLElement | null>)
+        : undefined,
+      effects: hasExplicit ? explicitEffects : undefined,
       autoEffects,
     };
 
     useSmoothCorners(internalRef, options, effectsOptions);
 
+    const inner = createElement(Component, { ...rest, ref: internalRef }, children);
+
+    if (!needsWrapper) {
+      return inner;
+    }
+
     return createElement(
       "div",
       { ref: wrapperRef, style: { position: "relative" as const } },
-      createElement(Component, { ...rest, ref: internalRef }, children),
+      inner,
     );
   }
 );
