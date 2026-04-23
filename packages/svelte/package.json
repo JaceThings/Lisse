@@ -39,5 +39,11 @@
   },
   "keywords": ["squircle", "smooth-corners", "svelte", "action", "border-radius", "clip-path"],
   "homepage": "https://github.com/JaceThings/Lisse#readme",
-  "bugs": "https://github.com/JaceThings/Lisse/issues"
+  "bugs": "https://github.com/JaceThings/Lisse/issues",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

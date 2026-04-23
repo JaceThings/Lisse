@@ -50,6 +50,12 @@
   ],
   "homepage": "https://github.com/JaceThings/Lisse#readme",
   "bugs": "https://github.com/JaceThings/Lisse/issues",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/react": "^19.2.13",
     "react": "^19.2.4"
