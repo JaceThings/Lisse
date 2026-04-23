@@ -20,7 +20,10 @@ Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
   import { smoothCorners } from "@lisse/svelte";
 </script>
 
-<div use:smoothCorners={{ radius: 20, smoothing: 0.6 }} style="background: #fff; padding: 24px">
+<div
+  use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }}
+  style="background: #fff; padding: 24px"
+>
   Hello, squircle
 </div>
 ```
@@ -29,37 +32,38 @@ Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
 
 ## `smoothCorners` Action
 
-The action accepts two input formats: simple mode (corner options only) or config mode (corners + effects).
+The action takes a single `SmoothCornersConfig` parameter: `{ corners, effects?, autoEffects? }`. The `corners` property is required and accepts a `SmoothCornerOptions` object — uniform or per-corner.
 
-### Simple Mode
-
-Pass `SmoothCornerOptions` directly when you only need the clip-path:
+### Uniform Corners
 
 ```svelte
 <script>
   import { smoothCorners } from "@lisse/svelte";
 </script>
 
-<!-- Uniform radius -->
-<div use:smoothCorners={{ radius: 24, smoothing: 0.6 }}>
-  Content
-</div>
-
-<!-- Per-corner -->
-<div use:smoothCorners={{ topLeft: 32, topRight: 16, bottomRight: 8, bottomLeft: 0 }}>
+<div use:smoothCorners={{ corners: { radius: 24, smoothing: 0.6 } }}>
   Content
 </div>
 ```
 
-### Config Mode
-
-Pass a `SmoothCornersConfig` object when you need effects:
+### Per-Corner
 
 ```svelte
-<script>
-  import { smoothCorners } from "@lisse/svelte";
-</script>
+<div use:smoothCorners={{
+  corners: {
+    topLeft: { radius: 40, smoothing: 0.8 },
+    topRight: 20,
+    bottomRight: { radius: 30, smoothing: 0.4, preserveSmoothing: false },
+    bottomLeft: 0,
+  },
+}}>
+  Different corners
+</div>
+```
 
+### Effects
+
+```svelte
 <div use:smoothCorners={{
   corners: { radius: 24, smoothing: 0.6 },
   effects: {
@@ -83,26 +87,20 @@ The action responds to parameter changes automatically. Use reactive declaration
 </script>
 
 <input type="range" min="0" max="60" bind:value={radius} />
-<div use:smoothCorners={{ radius, smoothing: 0.6 }} style="background: #3b82f6; padding: 24px; color: #fff">
+<div
+  use:smoothCorners={{ corners: { radius, smoothing: 0.6 } }}
+  style="background: #3b82f6; padding: 24px; color: #fff"
+>
   Radius: {radius}
 </div>
 ```
 
-### Per-Corner Configuration
+### Styling Hooks
 
-```svelte
-<script>
-  import { smoothCorners } from "@lisse/svelte";
-</script>
+The action sets `data-slot="smooth-corners"` and `data-state="pending" | "ready"` on the host element. The state flips to `"ready"` after the first clip-path application:
 
-<div use:smoothCorners={{
-  topLeft: { radius: 40, smoothing: 0.8 },
-  topRight: 20,
-  bottomRight: { radius: 30, smoothing: 0.4, preserveSmoothing: false },
-  bottomLeft: 0,
-}}>
-  Different corners
-</div>
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
 ```
 
 The `preserveSmoothing` option controls how corners behave when adjacent corners compete for space. When `true` (default), the smoothing curve is preserved even when adjacent corners compete for space — the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced.
@@ -119,12 +117,12 @@ Lisse clips your element with `clip-path`, which slices through CSS `border` and
 4. Sets `position: relative` on the parent element if needed
 5. Restores the original CSS and parent position on destroy
 
-This is enabled by default in both simple mode and config mode -- existing CSS borders and shadows just work.
+This is enabled by default — existing CSS borders and shadows just work.
 
 ```svelte
 <!-- The CSS border is automatically converted to an SVG inner border -->
 <div
-  use:smoothCorners={{ radius: 24 }}
+  use:smoothCorners={{ corners: { radius: 24 } }}
   style="border: 2px solid red; padding: 24px"
 >
   Content with auto border
@@ -133,7 +131,7 @@ This is enabled by default in both simple mode and config mode -- existing CSS b
 
 ### Explicit effects win
 
-If you pass effects in config mode, they take priority over auto-extracted values per key:
+If you pass `effects`, they take priority over auto-extracted values per key:
 
 ```svelte
 <!-- Explicit innerBorder overrides the CSS border; CSS box-shadow is still auto-extracted -->
@@ -150,7 +148,7 @@ If you pass effects in config mode, they take priority over auto-extracted value
 
 ### Disabling auto effects
 
-Use config mode and set `autoEffects: false`:
+Set `autoEffects: false`:
 
 ```svelte
 <div use:smoothCorners={{ corners: { radius: 24 }, autoEffects: false }}>
@@ -159,8 +157,6 @@ Use config mode and set `autoEffects: false`:
 ```
 
 When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behavior. You will need to ensure the parent has `position: relative` yourself if using manual effects.
-
-Note: in simple mode (passing `SmoothCornerOptions` directly), `autoEffects` is always `true` and cannot be disabled. Switch to config mode to control it.
 
 ### How CSS properties are mapped
 
@@ -310,7 +306,7 @@ Use a `GradientConfig` object for the border `color` property to render a gradie
 
 ```ts
 interface SmoothCornersAction {
-  update(options: SmoothCornerOptions | SmoothCornersConfig): void;
+  update(options: SmoothCornersConfig): void;
   destroy(): void;
 }
 ```
