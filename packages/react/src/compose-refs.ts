@@ -11,11 +11,7 @@ export function composeRefs<T>(...refs: Array<Ref<T> | undefined | null>): (node
       if (typeof ref === "function") {
         ref(node);
       } else {
-        try {
-          (ref as MutableRefObject<T | null>).current = node;
-        } catch {
-          // Ignore read-only refs (rare).
-        }
+        (ref as MutableRefObject<T | null>).current = node;
       }
     }
   };

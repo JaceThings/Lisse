@@ -163,7 +163,7 @@ A ready-to-use component that handles clip-path, resize observation, and effects
 | `corners` | `SmoothCornerOptions` | -- | Corner configuration: `{ radius, smoothing?, preserveSmoothing? }` or `{ topLeft, topRight, bottomRight, bottomLeft }`. |
 | `innerBorder` | `BorderConfig` | -- | Inner border effect |
 | `outerBorder` | `BorderConfig` | -- | Outer border effect |
-| `middleBorder` | `BorderConfig` | -- | Middle border effect (centered on shape edge) |
+| `middleBorder` | `BorderConfig` | -- | Middle border effect (centred on shape edge) |
 | `innerShadow` | `ShadowConfig \| ShadowConfig[]` | -- | Inner shadow effect (single or array) |
 | `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or array) |
 | `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
@@ -402,7 +402,7 @@ With the composable:
 useSmoothCorners(el, { radius: 24 }, { autoEffects: false });
 ```
 
-When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behavior.
+When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behaviour.
 
 ### How CSS properties are mapped
 

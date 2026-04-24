@@ -53,6 +53,10 @@ export function useSmoothCorners(
   effectsOptions?: UseEffectsOptions,
 ): void {
   let unobserve: (() => void) | undefined;
+  // Captured at setup so cleanup restores onto the exact element we
+  // mutated, even if target.value was reassigned to a different element
+  // between setup and cleanup.
+  let attachedEl: HTMLElement | null = null;
   let savedClipPath: string | undefined;
 
   function update() {
@@ -70,6 +74,7 @@ export function useSmoothCorners(
     const el = unref(target);
     if (!el) return;
 
+    attachedEl = el;
     savedClipPath = el.style.clipPath;
     el.setAttribute("data-slot", "smooth-corners");
     el.setAttribute("data-state", "pending");
@@ -80,12 +85,12 @@ export function useSmoothCorners(
   function cleanup() {
     unobserve?.();
     unobserve = undefined;
-    const el = unref(target);
-    if (el) {
-      el.style.clipPath = savedClipPath ?? "";
-      el.removeAttribute("data-slot");
-      el.removeAttribute("data-state");
+    if (attachedEl) {
+      attachedEl.style.clipPath = savedClipPath ?? "";
+      attachedEl.removeAttribute("data-slot");
+      attachedEl.removeAttribute("data-state");
     }
+    attachedEl = null;
     savedClipPath = undefined;
   }
 
@@ -101,6 +106,9 @@ export function useSmoothCorners(
     let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
     let unobserveEffects: (() => void) | undefined;
     let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
+    // Captured at attach so cleanup releases the same element we acquired
+    // on, even if the target element is reparented between setup and unmount.
+    let attachedAnchor: HTMLElement | null = null;
     let didAcquire = false;
 
     function updateEffects() {
@@ -116,6 +124,7 @@ export function useSmoothCorners(
       if (hasEffects(merged) && !effectsHandle) {
         const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
         if (!anchor) return;
+        attachedAnchor = anchor;
         didAcquire = acquirePosition(anchor);
         effectsHandle = createSvgEffects(anchor);
         shadowHandle = createDropShadow(anchor);
@@ -152,6 +161,7 @@ export function useSmoothCorners(
       if (!anchor) return;
 
       // Ensure anchor has positioning (ref-counted)
+      attachedAnchor = anchor;
       didAcquire = acquirePosition(anchor);
 
       effectsHandle = createSvgEffects(anchor);
@@ -174,11 +184,11 @@ export function useSmoothCorners(
       }
       extractedResult = undefined;
 
-      if (didAcquire) {
-        const anchor = unrefOr(effectsOptions?.wrapper, null) ?? unref(target)?.parentElement;
-        if (anchor) releasePosition(anchor);
-        didAcquire = false;
+      if (didAcquire && attachedAnchor) {
+        releasePosition(attachedAnchor);
       }
+      attachedAnchor = null;
+      didAcquire = false;
     }
 
     if (effectsOptions?.effects) {

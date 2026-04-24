@@ -41,7 +41,7 @@ export function smoothCorners(
 ): SmoothCornersAction {
   let currentOptions: SmoothCornerOptions = config.corners;
   let currentEffects: EffectsConfig | undefined = config.effects;
-  const autoEffects = config.autoEffects ?? true;
+  let currentAutoEffects = config.autoEffects ?? true;
 
   // Effects handles. The anchor is captured the first time we attach to a
   // parent and reused thereafter, so reparenting the node doesn't strand
@@ -52,10 +52,18 @@ export function smoothCorners(
   let attachedAnchor: HTMLElement | null = null;
   let didAcquire = false;
 
-  // Auto-extract CSS effects on init
-  if (autoEffects) {
-    extractedResult = extractAndStripEffects(node);
+  // Start or stop auto-extraction to match the desired state.
+  function setAutoExtraction(enable: boolean): void {
+    if (enable && !extractedResult) {
+      extractedResult = extractAndStripEffects(node);
+    } else if (!enable && extractedResult) {
+      restoreStyles(node, extractedResult.savedStyles);
+      extractedResult = undefined;
+    }
   }
+
+  // Auto-extract CSS effects on init
+  setAutoExtraction(currentAutoEffects);
 
   function getMergedEffects(): EffectsConfig {
     return mergeEffects(extractedResult, currentEffects);
@@ -104,6 +112,12 @@ export function smoothCorners(
       currentOptions = newConfig.corners;
       currentEffects = newConfig.effects;
 
+      const nextAuto = newConfig.autoEffects ?? true;
+      if (nextAuto !== currentAutoEffects) {
+        currentAutoEffects = nextAuto;
+        setAutoExtraction(currentAutoEffects);
+      }
+
       // Create handles if they didn't exist but now effects are provided
       attachEffects();
 
@@ -118,6 +132,7 @@ export function smoothCorners(
       shadowHandle?.destroy();
       if (extractedResult) {
         restoreStyles(node, extractedResult.savedStyles);
+        extractedResult = undefined;
       }
       if (didAcquire && attachedAnchor) {
         releasePosition(attachedAnchor);
