@@ -63,3 +63,9 @@
   - The clip-path save/restore path now captures the managed element at setup time and restores onto the same element at cleanup. Previously the composable read `unref(target)` again at cleanup, so reassigning the target ref to a different element between setup and cleanup could apply the saved clip-path to the wrong element.
 
   - `Slot` now recursively flattens `Fragment` vnodes and rejects text vnodes explicitly. Previously a single-element child wrapped in a `<template>` was filtered out entirely, and a text-only child was accepted but could not carry attributes or a ref.
+
+## 0.1.0
+
+### Minor Changes
+
+- Initial public release of `@lisse/vue`: a `<SmoothCorners>` component and `useSmoothCorners` composable that render squircle clip paths with optional SVG effects, built on `@lisse/core`.

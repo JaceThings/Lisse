@@ -77,3 +77,9 @@
   ```
 
 - 80a52aa: Polymorphic `as` prop is now generically typed. In React, attributes are inferred from the element passed to `as` (e.g. `<SmoothCorners as="a" href="/x">` typechecks). In Vue, `as` is narrowed to known HTML/SVG tag names. The `SmoothCornersProps` type is now generic (`SmoothCornersProps<E>`) — consumers extending the type need to pass an element type parameter.
+
+## 0.1.0
+
+### Minor Changes
+
+- Initial public release of `@lisse/react`: a `<SmoothCorners>` component that renders squircle clip paths with optional inner and outer SVG effects, built on `@lisse/core`.
