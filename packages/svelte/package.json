@@ -1,6 +1,6 @@
 {
   "name": "@lisse/svelte",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Svelte action for smooth-cornered (squircle) elements",
   "license": "MIT",
   "type": "module",
@@ -19,7 +19,9 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
@@ -37,7 +39,14 @@
   "peerDependencies": {
     "svelte": ">=3.0.0"
   },
-  "keywords": ["squircle", "smooth-corners", "svelte", "action", "border-radius", "clip-path"],
+  "keywords": [
+    "squircle",
+    "smooth-corners",
+    "svelte",
+    "action",
+    "border-radius",
+    "clip-path"
+  ],
   "homepage": "https://github.com/JaceThings/Lisse#readme",
   "bugs": "https://github.com/JaceThings/Lisse/issues",
   "engines": {
