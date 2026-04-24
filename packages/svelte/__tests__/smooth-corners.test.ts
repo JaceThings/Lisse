@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import * as core from "@lisse/core";
 import { smoothCorners } from "../src/smooth-corners.js";
 
 let container: HTMLDivElement;
@@ -103,5 +104,36 @@ describe("smoothCorners action - anchor capture", () => {
     parent.removeChild(node);
 
     expect(() => action.destroy()).not.toThrow();
+  });
+});
+
+describe("smoothCorners action - destroy idempotency", () => {
+  it("second destroy() does not throw and does not double-release the anchor", () => {
+    const anchor = document.createElement("div");
+    container.appendChild(anchor);
+    const node = document.createElement("div");
+    anchor.appendChild(node);
+
+    const action = smoothCorners(node, {
+      corners: { radius: 8 },
+      effects: { innerBorder: { width: 2, color: "#000", opacity: 1 } },
+    });
+
+    // First destroy: releases the anchor and clears the inline position.
+    action.destroy();
+    expect(anchor.style.position).toBe("");
+
+    // Second destroy: must not call releasePosition again, which would
+    // decrement the shared ref-count past zero for any other consumer
+    // of the same anchor. Observable via acquirePosition behaviour:
+    // acquiring fresh should start a new ref-count cleanly.
+    expect(() => action.destroy()).not.toThrow();
+
+    // A fresh acquire now should succeed and set position:relative,
+    // confirming the anchor's ref-count state wasn't corrupted.
+    expect(core.acquirePosition(anchor)).toBe(true);
+    expect(anchor.style.position).toBe("relative");
+    core.releasePosition(anchor);
+    expect(anchor.style.position).toBe("");
   });
 });

@@ -70,13 +70,26 @@ export function smoothCorners(
   }
 
   function attachEffects(): void {
-    if (effectsHandle || !hasEffects(getMergedEffects())) return;
-    const anchor = node.parentElement;
-    if (!anchor) return;
-    attachedAnchor = anchor;
-    didAcquire = acquirePosition(anchor);
-    effectsHandle = createSvgEffects(anchor);
-    shadowHandle = createDropShadow(anchor);
+    const merged = getMergedEffects();
+    if (!hasEffects(merged)) return;
+
+    // Lazy anchor capture. Only happens once; reused if the shadow
+    // handle is added later.
+    if (!attachedAnchor) {
+      const anchor = node.parentElement;
+      if (!anchor) return;
+      attachedAnchor = anchor;
+      didAcquire = acquirePosition(anchor);
+    }
+
+    if (!effectsHandle) {
+      effectsHandle = createSvgEffects(attachedAnchor);
+    }
+    // Skip drop-shadow DOM nodes and the isolation:isolate mutation when
+    // only border effects are in play.
+    if (!shadowHandle && merged.shadow) {
+      shadowHandle = createDropShadow(attachedAnchor);
+    }
   }
 
   attachEffects();
@@ -129,7 +142,9 @@ export function smoothCorners(
       node.removeAttribute("data-slot");
       node.removeAttribute("data-state");
       effectsHandle?.destroy();
+      effectsHandle = undefined;
       shadowHandle?.destroy();
+      shadowHandle = undefined;
       if (extractedResult) {
         restoreStyles(node, extractedResult.savedStyles);
         extractedResult = undefined;
@@ -138,6 +153,7 @@ export function smoothCorners(
         releasePosition(attachedAnchor);
       }
       attachedAnchor = null;
+      didAcquire = false;
     },
   };
 }

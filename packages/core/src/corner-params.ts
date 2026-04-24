@@ -14,6 +14,11 @@ export function getPathParamsForCorner({
   preserveSmoothing,
   roundingAndSmoothingBudget,
 }: CornerParams): CornerPathParams {
+  // Short-circuit at zero radius: otherwise the `!preserveSmoothing` branch divides by `cornerRadius` and returns NaN fields.
+  if (cornerRadius <= 0) {
+    return { a: 0, b: 0, c: 0, d: 0, p: 0, arcSectionLength: 0, cornerRadius: 0 };
+  }
+
   // From figure 12.2: p = (1 + cornerSmoothing) * q, where q = R (theta = 90deg)
   let p = (1 + cornerSmoothing) * cornerRadius;
 

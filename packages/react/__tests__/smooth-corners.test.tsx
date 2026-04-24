@@ -464,6 +464,76 @@ describe("<SmoothCorners /> - effects toggle stability", () => {
   });
 });
 
+describe("<SmoothCorners /> - lazy drop-shadow", () => {
+  it("creates no drop-shadow SVG when only innerBorder is present", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          innerBorder={{ width: 2, color: "#000", opacity: 1 }}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+
+    const inner = container.querySelector("[data-slot='smooth-corners']");
+    const wrapper = inner?.parentElement as HTMLElement | null;
+    expect(wrapper).not.toBeNull();
+
+    // svg-effects ships one SVG overlay for borders / inner shadows.
+    // The drop-shadow SVG is a separate second element with z-index:-1.
+    // With the lazy fix it should not be created when only border effects
+    // are in play.
+    const svgs = wrapper!.querySelectorAll("svg");
+    expect(svgs.length).toBe(1);
+    const dropShadowSvg = Array.from(svgs).find(
+      (s) => (s as SVGElement).style.zIndex === "-1",
+    );
+    expect(dropShadowSvg).toBeUndefined();
+
+    // `createDropShadow` also sets `isolation:isolate` on the anchor.
+    // When skipped, the anchor must not carry that mutation.
+    expect(wrapper!.style.isolation).toBe("");
+  });
+
+  it("creates a drop-shadow SVG lazily when shadow is added later", () => {
+    function Tester({ withShadow }: { withShadow: boolean }) {
+      return (
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          innerBorder={{ width: 2, color: "#000", opacity: 1 }}
+          shadow={
+            withShadow
+              ? { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 }
+              : undefined
+          }
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => {
+      root.render(<Tester withShadow={false} />);
+    });
+
+    const inner = container.querySelector("[data-slot='smooth-corners']");
+    const wrapper = inner!.parentElement as HTMLElement;
+    expect(wrapper.querySelectorAll("svg").length).toBe(1);
+
+    act(() => {
+      root.render(<Tester withShadow={true} />);
+    });
+
+    // Shadow arriving later should create the drop-shadow SVG on demand.
+    expect(wrapper.querySelectorAll("svg").length).toBe(2);
+    expect(wrapper.style.isolation).toBe("isolate");
+  });
+});
+
 describe("<SmoothCorners /> - ref forwarding", () => {
   it("forwards the external ref to the inner element", () => {
     const ref = { current: null as HTMLElement | null };

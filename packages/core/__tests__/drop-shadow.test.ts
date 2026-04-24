@@ -150,6 +150,15 @@ describe("createDropShadow", () => {
     expect(svg.style.display).toBe("none");
   });
 
+  it("filter element declares color-interpolation-filters=sRGB for cross-browser parity", () => {
+    const handle = createDropShadow(anchor);
+    handle.update(opts, { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 }, 200, 100);
+
+    const svg = anchor.querySelector("svg")!;
+    const filter = svg.querySelector("filter")!;
+    expect(filter.getAttribute("color-interpolation-filters")).toBe("sRGB");
+  });
+
   it("update() with blur > 0 — filter attribute applied, stdDeviation set", () => {
     const handle = createDropShadow(anchor);
     const shadow: ShadowConfig = {
