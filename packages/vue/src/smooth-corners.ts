@@ -30,6 +30,11 @@ import type {
  */
 export const SmoothCorners = defineComponent({
   name: "SmoothCorners",
+  // Consumer attrs (class, style, event listeners, aria-*, data-*, etc.)
+  // must land on the inner clipped element, not on the wrapper div we
+  // inject when effects are present. With inheritAttrs: false, Vue skips
+  // the automatic fallthrough and we forward attrs explicitly below.
+  inheritAttrs: false,
   props: {
     as: {
       type: String as PropType<keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap>,
@@ -69,7 +74,7 @@ export const SmoothCorners = defineComponent({
     },
   },
   slots: Object as SlotsType<{ default: () => VNode[] }>,
-  setup(props, { slots, expose }) {
+  setup(props, { slots, expose, attrs }) {
     const elRef = ref<HTMLElement | null>(null);
     const wrapperRef = ref<HTMLElement | null>(null);
 
@@ -97,8 +102,8 @@ export const SmoothCorners = defineComponent({
 
     return () => {
       const inner = props.asChild
-        ? h(Slot, { ref: elRef }, slots.default)
-        : h(props.as, { ref: elRef }, slots.default?.());
+        ? h(Slot, { ...attrs, ref: elRef }, slots.default)
+        : h(props.as, { ...attrs, ref: elRef }, slots.default?.());
 
       if (needsWrapper.value) {
         return h(

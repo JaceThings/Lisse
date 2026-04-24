@@ -83,6 +83,63 @@ describe("<SmoothCorners /> Vue - asChild", () => {
   });
 });
 
+describe("<SmoothCorners /> Vue - attr forwarding", () => {
+  it("forwards class and style to the inner element, not the wrapper, when wrapped", () => {
+    // With autoEffects=true (default), needsWrapper is true. Consumer
+    // attrs must land on the inner clipped element, not on the wrapper
+    // div. Vue's default inheritAttrs=true would leak them onto the
+    // wrapper.
+    const unmount = mount(() =>
+      h(
+        SmoothCorners,
+        {
+          corners: { radius: 8 },
+          class: "consumer-class",
+          "data-testid": "consumer-node",
+        },
+        () => "x",
+      ),
+    );
+
+    const inner = container.querySelector<HTMLElement>("[data-testid='consumer-node']");
+    expect(inner).not.toBeNull();
+    expect(inner?.className).toContain("consumer-class");
+
+    // The wrapper div above it must NOT carry the consumer class.
+    const wrapper = inner?.parentElement;
+    expect(wrapper?.tagName).toBe("DIV");
+    expect(wrapper?.className).not.toContain("consumer-class");
+
+    unmount();
+  });
+
+  it("forwards class to the cloned child when asChild and wrapped", () => {
+    const unmount = mount(() =>
+      h(
+        SmoothCorners,
+        {
+          asChild: true,
+          corners: { radius: 8 },
+          class: "consumer-class",
+        },
+        () => h("button", { class: "button-class", type: "button" }, "click"),
+      ),
+    );
+
+    const button = container.querySelector<HTMLButtonElement>("button");
+    expect(button).not.toBeNull();
+    expect(button?.className.split(" ").sort()).toEqual(
+      expect.arrayContaining(["button-class", "consumer-class"]),
+    );
+    // The wrapper should not carry the consumer class.
+    const wrapper = button?.parentElement;
+    expect(wrapper?.tagName).toBe("DIV");
+    expect(wrapper?.className).not.toContain("consumer-class");
+
+    unmount();
+  });
+});
+
 describe("<SmoothCorners /> Vue - defineExpose", () => {
   it("exposes el and wrapper via template ref", () => {
     const tplRef = ref<{ el: HTMLElement | null; wrapper: HTMLElement | null } | null>(null);
