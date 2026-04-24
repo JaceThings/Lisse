@@ -59,13 +59,51 @@ export function useSmoothCorners(
   let attachedEl: HTMLElement | null = null;
   let savedClipPath: string | undefined;
 
-  function update() {
+  // Effects state. Hoisted so the shared resize callback can reach it.
+  let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
+  let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
+  let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
+  // Captured at attach so cleanup releases the same element we acquired
+  // on, even if the target element is reparented between setup and unmount.
+  let attachedAnchor: HTMLElement | null = null;
+  let didAcquire = false;
+
+  function ensureHandles(el: HTMLElement): boolean {
+    if (effectsHandle && shadowHandle) return true;
+    const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
+    if (!anchor) return false;
+    attachedAnchor = anchor;
+    didAcquire = acquirePosition(anchor);
+    effectsHandle = createSvgEffects(anchor);
+    shadowHandle = createDropShadow(anchor);
+    return true;
+  }
+
+  // Single resize-synchronised callback. Mirrors the React hook's sync()
+  // pattern: one observeResize registration per element routes both the
+  // clip-path update and the effects update through one getBoundingClientRect
+  // read per frame.
+  function syncAll() {
     const el = unref(target);
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
-    if (width > 0 && height > 0) {
-      el.style.clipPath = generateClipPath(width, height, unref(options));
-      el.setAttribute("data-state", "ready");
+    if (width <= 0 || height <= 0) return;
+
+    el.style.clipPath = generateClipPath(width, height, unref(options));
+    el.setAttribute("data-state", "ready");
+
+    const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
+    if (hasEffects(merged) && !effectsHandle) {
+      if (!ensureHandles(el)) return;
+    }
+    if (effectsHandle && shadowHandle) {
+      effectsHandle.update(unref(options), merged, width, height);
+      shadowHandle.update(
+        unref(options),
+        merged.shadow ?? DEFAULT_SHADOW,
+        width,
+        height,
+      );
     }
   }
 
@@ -79,12 +117,40 @@ export function useSmoothCorners(
     el.setAttribute("data-slot", "smooth-corners");
     el.setAttribute("data-state", "pending");
 
-    unobserve = observeResize(el, update);
+    // Auto-extract CSS effects before first sync so handles, if needed,
+    // are created with the merged config on the first observeResize tick.
+    if (unrefOr(effectsOptions?.autoEffects, true)) {
+      extractedResult = extractAndStripEffects(el);
+    }
+
+    // Eager handle creation when effects are present at setup so the overlay
+    // exists before the resize observer's first callback fires.
+    const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
+    if (hasEffects(merged)) ensureHandles(el);
+
+    unobserve = observeResize(el, syncAll);
   }
 
   function cleanup() {
     unobserve?.();
     unobserve = undefined;
+
+    effectsHandle?.destroy();
+    effectsHandle = undefined;
+    shadowHandle?.destroy();
+    shadowHandle = undefined;
+
+    if (attachedEl && extractedResult) {
+      restoreStyles(attachedEl, extractedResult.savedStyles);
+    }
+    extractedResult = undefined;
+
+    if (didAcquire && attachedAnchor) {
+      releasePosition(attachedAnchor);
+    }
+    attachedAnchor = null;
+    didAcquire = false;
+
     if (attachedEl) {
       attachedEl.style.clipPath = savedClipPath ?? "";
       attachedEl.removeAttribute("data-slot");
@@ -95,115 +161,17 @@ export function useSmoothCorners(
   }
 
   watch(() => unref(target), setup);
-  watch(() => unref(options), update, { deep: true });
+  watch(() => unref(options), syncAll, { deep: true });
+  if (effectsOptions?.effects) {
+    watch(() => unref(effectsOptions!.effects!), syncAll, { deep: true });
+  }
+  // Re-run setup when autoEffects toggles so extraction lifecycle stays
+  // correct (stripping / restoring CSS). syncAll alone can't express the
+  // teardown half.
+  if (effectsOptions?.autoEffects !== undefined) {
+    watch(() => unref(effectsOptions!.autoEffects!), setup);
+  }
 
   onMounted(setup);
   onBeforeUnmount(cleanup);
-
-  // Effects overlay
-  {
-    let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
-    let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
-    let unobserveEffects: (() => void) | undefined;
-    let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
-    // Captured at attach so cleanup releases the same element we acquired
-    // on, even if the target element is reparented between setup and unmount.
-    let attachedAnchor: HTMLElement | null = null;
-    let didAcquire = false;
-
-    function updateEffects() {
-      const el = unref(target);
-      if (!el) return;
-
-      const { width, height } = el.getBoundingClientRect();
-      if (width <= 0 || height <= 0) return;
-
-      const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
-
-      // Lazy handle creation (matches Svelte pattern)
-      if (hasEffects(merged) && !effectsHandle) {
-        const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
-        if (!anchor) return;
-        attachedAnchor = anchor;
-        didAcquire = acquirePosition(anchor);
-        effectsHandle = createSvgEffects(anchor);
-        shadowHandle = createDropShadow(anchor);
-        if (!unobserveEffects) {
-          unobserveEffects = observeResize(el, updateEffects);
-        }
-      }
-
-      if (!effectsHandle || !shadowHandle) return;
-
-      effectsHandle.update(unref(options), merged, width, height);
-      shadowHandle.update(
-        unref(options),
-        merged.shadow ?? DEFAULT_SHADOW,
-        width,
-        height,
-      );
-    }
-
-    function setupEffects() {
-      cleanupEffects();
-      const el = unref(target);
-      if (!el) return;
-
-      // Auto-extract CSS effects
-      if (unrefOr(effectsOptions?.autoEffects, true)) {
-        extractedResult = extractAndStripEffects(el);
-      }
-
-      const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
-      if (!hasEffects(merged)) return;
-
-      const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
-      if (!anchor) return;
-
-      // Ensure anchor has positioning (ref-counted)
-      attachedAnchor = anchor;
-      didAcquire = acquirePosition(anchor);
-
-      effectsHandle = createSvgEffects(anchor);
-      shadowHandle = createDropShadow(anchor);
-
-      unobserveEffects = observeResize(el, updateEffects);
-    }
-
-    function cleanupEffects() {
-      unobserveEffects?.();
-      unobserveEffects = undefined;
-      effectsHandle?.destroy();
-      effectsHandle = undefined;
-      shadowHandle?.destroy();
-      shadowHandle = undefined;
-
-      const el = unref(target);
-      if (el && extractedResult) {
-        restoreStyles(el, extractedResult.savedStyles);
-      }
-      extractedResult = undefined;
-
-      if (didAcquire && attachedAnchor) {
-        releasePosition(attachedAnchor);
-      }
-      attachedAnchor = null;
-      didAcquire = false;
-    }
-
-    if (effectsOptions?.effects) {
-      watch(() => unref(effectsOptions!.effects!), updateEffects, {
-        deep: true,
-      });
-    }
-    watch(() => unref(options), updateEffects, { deep: true });
-
-    watch(() => unref(target), setupEffects);
-    if (effectsOptions?.autoEffects !== undefined) {
-      watch(() => unref(effectsOptions!.autoEffects!), setupEffects);
-    }
-
-    onMounted(setupEffects);
-    onBeforeUnmount(cleanupEffects);
-  }
 }

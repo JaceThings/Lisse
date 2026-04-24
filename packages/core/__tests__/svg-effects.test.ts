@@ -1,8 +1,17 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createSvgEffects } from "../src/svg-effects.js";
 import type { SvgEffectsHandle } from "../src/svg-effects.js";
+import * as generatePathModule from "../src/generate-path.js";
 import type { SmoothCornerOptions, EffectsConfig, LinearGradientConfig, RadialGradientConfig } from "../src/types.js";
+
+// Wrap generatePath with a spy that still calls through. This lets the new
+// path-cache regression test count unique (w, h, spread) invocations while
+// leaving the output identical for all other tests.
+vi.mock("../src/generate-path.js", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../src/generate-path.js")>();
+  return { ...mod, generatePath: vi.fn(mod.generatePath) };
+});
 
 let anchor: HTMLElement;
 const opts: SmoothCornerOptions = { radius: 16 };
@@ -640,3 +649,34 @@ describe("gradient borders", () => {
     expect(innerStroke!.getAttribute("stroke")).toMatch(/^url\(#/);
   });
 });
+
+describe("generatePath memoisation per update dispatch", () => {
+  it("calls generatePath once per unique (width, height, spread, options) combo within a dispatch, and repeats the cost on subsequent dispatches", () => {
+    const spy = vi.mocked(generatePathModule.generatePath);
+    spy.mockClear();
+
+    const handle = createSvgEffects(anchor);
+
+    // Three inner shadows: two at spread 0 share the same (w, h, options)
+    // as the main path, and one at spread 4 distinguishes a second combo.
+    // Unique (w, h, spread, optionsKey) combos expected: 2 — (200,100,0,...)
+    // and (192,92,4,...).
+    const effects: EffectsConfig = {
+      innerShadow: [
+        { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 0.5 },
+        { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#f00", opacity: 0.5 },
+        { offsetX: 0, offsetY: 0, blur: 4, spread: 4, color: "#00f", opacity: 0.5 },
+      ],
+    };
+
+    handle.update(opts, effects, 200, 100);
+    expect(spy).toHaveBeenCalledTimes(2);
+
+    // Second dispatch with identical args recomputes because the cache is
+    // scoped to a single update() call.
+    spy.mockClear();
+    handle.update(opts, effects, 200, 100);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
