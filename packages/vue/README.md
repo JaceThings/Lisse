@@ -158,14 +158,9 @@ A ready-to-use component that handles clip-path, resize observation, and effects
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `as` | `string` | `"div"` | The HTML element tag to render |
-| `radius` | `number` | -- | Uniform corner radius (use this or per-corner props) |
-| `smoothing` | `number` | `0.6` | Corner smoothing factor (0-1) |
-| `preserveSmoothing` | `boolean` | `true` | When `true` (default), the smoothing curve is preserved even when adjacent corners compete for space -- the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced. |
-| `topLeft` | `number \| CornerConfig` | -- | Top-left corner override |
-| `topRight` | `number \| CornerConfig` | -- | Top-right corner override |
-| `bottomRight` | `number \| CornerConfig` | -- | Bottom-right corner override |
-| `bottomLeft` | `number \| CornerConfig` | -- | Bottom-left corner override |
+| `as` | `keyof HTMLElementTagNameMap \| keyof SVGElementTagNameMap` | `"div"` | The HTML element tag to render |
+| `asChild` | `boolean` | `false` | If `true`, clone the single default-slot child and apply SmoothCorners to it instead of rendering its own element. |
+| `corners` | `SmoothCornerOptions` | -- | Corner configuration: `{ radius, smoothing?, preserveSmoothing? }` or `{ topLeft, topRight, bottomRight, bottomLeft }`. |
 | `innerBorder` | `BorderConfig` | -- | Inner border effect |
 | `outerBorder` | `BorderConfig` | -- | Outer border effect |
 | `middleBorder` | `BorderConfig` | -- | Middle border effect (centered on shape edge) |
@@ -175,6 +170,44 @@ A ready-to-use component that handles clip-path, resize observation, and effects
 
 All other attributes and event listeners are forwarded to the rendered element.
 
+The component exposes `el` and `wrapper` template refs via `defineExpose`, e.g.:
+
+```vue
+<script setup>
+import { ref, onMounted } from "vue";
+import { SmoothCorners } from "@lisse/vue";
+
+const card = ref(null);
+onMounted(() => console.log(card.value.el)); // the inner element
+</script>
+
+<template>
+  <SmoothCorners ref="card" :corners="{ radius: 16 }">Hello</SmoothCorners>
+</template>
+```
+
+### Styling Hooks
+
+The rendered (or cloned) element gets `data-slot="smooth-corners"` and `data-state="pending" | "ready"`. The state flips to `"ready"` after the first clip-path application:
+
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
+```
+
+### `asChild`
+
+Pass `asChild` with a single default-slot child to apply SmoothCorners onto that element instead of rendering a `<div>`:
+
+```vue
+<template>
+  <SmoothCorners as-child :corners="{ radius: 12 }" class="shadow">
+    <a href="/signup" class="cta">Sign up</a>
+  </SmoothCorners>
+</template>
+```
+
+Class names and other attrs merge onto the child. When using `asChild`, the `as` prop is ignored.
+
 ### Basic Usage
 
 ```vue
@@ -183,7 +216,7 @@ import { SmoothCorners } from "@lisse/vue";
 </script>
 
 <template>
-  <SmoothCorners :radius="24" style="background: #f8fafc; padding: 32px">
+  <SmoothCorners :corners="{ radius: 24 }" style="background: #f8fafc; padding: 32px">
     <h2>Card Title</h2>
     <p>Card content goes here.</p>
   </SmoothCorners>
@@ -194,7 +227,7 @@ import { SmoothCorners } from "@lisse/vue";
 
 ```vue
 <template>
-  <SmoothCorners as="section" :radius="16" class="hero">
+  <SmoothCorners as="section" :corners="{ radius: 16 }" class="hero">
     <h1>Hero Section</h1>
   </SmoothCorners>
 </template>
@@ -205,10 +238,12 @@ import { SmoothCorners } from "@lisse/vue";
 ```vue
 <template>
   <SmoothCorners
-    :top-left="{ radius: 40, smoothing: 0.8 }"
-    :top-right="20"
-    :bottom-right="0"
-    :bottom-left="0"
+    :corners="{
+      topLeft: { radius: 40, smoothing: 0.8 },
+      topRight: 20,
+      bottomRight: 0,
+      bottomLeft: 0,
+    }"
     style="background: #e2e8f0; padding: 24px"
   >
     Asymmetric corners
@@ -221,7 +256,7 @@ import { SmoothCorners } from "@lisse/vue";
 ```vue
 <template>
   <SmoothCorners
-    :radius="24"
+    :corners="{ radius: 24 }"
     :inner-border="{ width: 1, color: '#ffffff', opacity: 0.2 }"
     :outer-border="{ width: 2, color: '#000000', opacity: 0.1 }"
     :inner-shadow="{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: '#000000', opacity: 0.15 }"
@@ -240,7 +275,7 @@ Pass an array to `shadow` or `innerShadow` to layer multiple shadows:
 ```vue
 <template>
   <SmoothCorners
-    :radius="24"
+    :corners="{ radius: 24 }"
     :shadow="[
       { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: '#000000', opacity: 0.1 },
       { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: '#000000', opacity: 0.15 },
@@ -290,7 +325,7 @@ Pass a `GradientConfig` object as the border `color` to render a gradient border
 ```vue
 <template>
   <SmoothCorners
-    :radius="24"
+    :corners="{ radius: 24 }"
     :inner-border="{
       width: 2,
       color: {
@@ -326,7 +361,7 @@ This is enabled by default -- existing CSS borders and shadows just work.
 ```vue
 <!-- The CSS border is automatically converted to an SVG inner border -->
 <template>
-  <SmoothCorners :radius="24" style="border: 2px solid red; padding: 24px">
+  <SmoothCorners :corners="{ radius: 24 }" style="border: 2px solid red; padding: 24px">
     Content with auto border
   </SmoothCorners>
 </template>
@@ -340,7 +375,7 @@ If you pass effect props like `inner-border` or `shadow`, they take priority ove
 <!-- Explicit inner-border overrides the CSS border; CSS box-shadow is still auto-extracted -->
 <template>
   <SmoothCorners
-    :radius="24"
+    :corners="{ radius: 24 }"
     style="border: 2px solid red; box-shadow: 0 4px 12px rgba(0,0,0,0.2)"
     :inner-border="{ width: 1, color: '#00ff00', opacity: 1 }"
   >
@@ -355,7 +390,7 @@ With the component:
 
 ```vue
 <template>
-  <SmoothCorners :radius="24" :auto-effects="false">
+  <SmoothCorners :corners="{ radius: 24 }" :auto-effects="false">
     Content
   </SmoothCorners>
 </template>

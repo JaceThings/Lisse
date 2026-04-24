@@ -25,7 +25,7 @@ import { SmoothCorners } from "@lisse/react";
 
 function Card() {
   return (
-    <SmoothCorners radius={20} smoothing={0.6} style={{ background: "#fff", padding: 24 }}>
+    <SmoothCorners corners={{ radius: 20, smoothing: 0.6 }} style={{ background: "#fff", padding: 24 }}>
       <h2>Hello, squircle</h2>
     </SmoothCorners>
   );
@@ -125,14 +125,9 @@ A ready-to-use component that handles clip-path, resize observation, ref forward
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `as` | `React.ElementType` | `"div"` | The HTML element or component to render |
-| `radius` | `number` | -- | Uniform corner radius (use this or per-corner props) |
-| `smoothing` | `number` | `0.6` | Corner smoothing factor (0-1) |
-| `preserveSmoothing` | `boolean` | `true` | When `true` (default), the smoothing curve is preserved even when adjacent corners compete for space -- the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced. |
-| `topLeft` | `number \| CornerConfig` | -- | Top-left corner override |
-| `topRight` | `number \| CornerConfig` | -- | Top-right corner override |
-| `bottomRight` | `number \| CornerConfig` | -- | Bottom-right corner override |
-| `bottomLeft` | `number \| CornerConfig` | -- | Bottom-left corner override |
+| `as` | `React.ElementType` | `"div"` | The HTML element or component to render. Other props are typed against this element. |
+| `asChild` | `boolean` | `false` | If `true`, clone the single child element and merge SmoothCorners onto it instead of rendering its own element. Mutually exclusive with `as`. |
+| `corners` | `SmoothCornerOptions` | -- | Corner configuration: uniform `{ radius, smoothing, preserveSmoothing? }` or per-corner `{ topLeft, topRight, bottomRight, bottomLeft }`. Each corner is a number or `CornerConfig`. |
 | `innerBorder` | `BorderConfig` | -- | Inner border effect |
 | `outerBorder` | `BorderConfig` | -- | Outer border effect |
 | `middleBorder` | `BorderConfig` | -- | Middle border effect (centered on shape edge) |
@@ -140,7 +135,34 @@ A ready-to-use component that handles clip-path, resize observation, ref forward
 | `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or multiple) |
 | `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
 
-All standard HTML attributes (e.g. `className`, `style`, `onClick`) are forwarded to the rendered element.
+All other HTML attributes (e.g. `className`, `style`, `onClick`, `href` when `as="a"`) are forwarded to the rendered element and typed against the chosen element.
+
+### Styling Hooks
+
+The rendered (or cloned) element gets `data-slot="smooth-corners"` and `data-state="pending" | "ready"` attributes. The `data-state` flips to `"ready"` after the first successful clip-path application — useful for masking the first paint:
+
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
+[data-slot="smooth-corners"][data-state="ready"]   { opacity: 1; transition: opacity 100ms; }
+```
+
+### `asChild`
+
+When you don't want SmoothCorners to render its own element, pass `asChild` and a single child:
+
+```tsx
+import { SmoothCorners } from "@lisse/react";
+
+function Cta({ children }: { children: React.ReactNode }) {
+  return (
+    <SmoothCorners asChild corners={{ radius: 12 }} className="shadow">
+      <a href="/signup" className="cta">{children}</a>
+    </SmoothCorners>
+  );
+}
+```
+
+The child receives the internal ref. Class names merge (parent first, child second). Event handlers compose (child handler runs first, then parent's). When using `asChild`, the `as` prop is ignored.
 
 ### Basic Usage
 
@@ -149,7 +171,7 @@ import { SmoothCorners } from "@lisse/react";
 
 function Card() {
   return (
-    <SmoothCorners radius={24} style={{ background: "#f8fafc", padding: 32 }}>
+    <SmoothCorners corners={{ radius: 24 }} style={{ background: "#f8fafc", padding: 32 }}>
       <h2>Card Title</h2>
       <p>Card content goes here.</p>
     </SmoothCorners>
@@ -160,8 +182,13 @@ function Card() {
 ### Custom Element
 
 ```tsx
-<SmoothCorners as="section" radius={16} className="hero">
+<SmoothCorners as="section" corners={{ radius: 16 }} className="hero">
   <h1>Hero Section</h1>
+</SmoothCorners>
+
+{/* Element-specific attributes are typed against `as` */}
+<SmoothCorners as="a" href="/signup" corners={{ radius: 12 }}>
+  Sign up
 </SmoothCorners>
 ```
 
@@ -169,10 +196,12 @@ function Card() {
 
 ```tsx
 <SmoothCorners
-  topLeft={{ radius: 40, smoothing: 0.8 }}
-  topRight={20}
-  bottomRight={0}
-  bottomLeft={0}
+  corners={{
+    topLeft: { radius: 40, smoothing: 0.8 },
+    topRight: 20,
+    bottomRight: 0,
+    bottomLeft: 0,
+  }}
   style={{ background: "#e2e8f0", padding: 24 }}
 >
   Asymmetric corners
@@ -183,7 +212,7 @@ function Card() {
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   innerBorder={{ width: 1, color: "#ffffff", opacity: 0.2 }}
   outerBorder={{ width: 2, color: "#000000", opacity: 0.1 }}
   innerShadow={{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.15 }}
@@ -205,7 +234,7 @@ import { SmoothCorners } from "@lisse/react";
 function Card() {
   const ref = useRef<HTMLDivElement>(null);
   return (
-    <SmoothCorners ref={ref} radius={20} style={{ background: "#fff", padding: 24 }}>
+    <SmoothCorners ref={ref} corners={{ radius: 20 }} style={{ background: "#fff", padding: 24 }}>
       Content
     </SmoothCorners>
   );
@@ -227,7 +256,7 @@ This is enabled by default -- existing CSS borders and shadows just work.
 
 ```tsx
 {/* The CSS border is automatically converted to an SVG inner border */}
-<SmoothCorners radius={24} style={{ border: "2px solid red", padding: 24 }}>
+<SmoothCorners corners={{ radius: 24 }} style={{ border: "2px solid red", padding: 24 }}>
   Content with auto border
 </SmoothCorners>
 ```
@@ -239,7 +268,7 @@ If you pass effect props like `innerBorder` or `shadow`, they take priority over
 ```tsx
 {/* Explicit innerBorder overrides the CSS border; CSS box-shadow is still auto-extracted */}
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   style={{ border: "2px solid red", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}
   innerBorder={{ width: 1, color: "#00ff00", opacity: 1 }}
 >
@@ -252,7 +281,7 @@ If you pass effect props like `innerBorder` or `shadow`, they take priority over
 With the component:
 
 ```tsx
-<SmoothCorners radius={24} autoEffects={false}>
+<SmoothCorners corners={{ radius: 24 }} autoEffects={false}>
   Content
 </SmoothCorners>
 ```
@@ -397,7 +426,7 @@ Or with the component:
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   shadow={[
     { offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: "#000000", opacity: 0.12 },
     { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000000", opacity: 0.15 },
@@ -414,7 +443,7 @@ Use a `GradientConfig` for the border `color` to render a gradient stroke:
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   innerBorder={{
     width: 2,
     color: {
@@ -444,7 +473,7 @@ import { SmoothCorners } from "@lisse/react";
 
 export function Card() {
   return (
-    <SmoothCorners radius={20} style={{ background: "#fff", padding: 24 }}>
+    <SmoothCorners corners={{ radius: 20 }} style={{ background: "#fff", padding: 24 }}>
       Client-side squircle
     </SmoothCorners>
   );

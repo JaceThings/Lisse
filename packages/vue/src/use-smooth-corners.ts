@@ -53,6 +53,7 @@ export function useSmoothCorners(
   effectsOptions?: UseEffectsOptions,
 ): void {
   let unobserve: (() => void) | undefined;
+  let savedClipPath: string | undefined;
 
   function update() {
     const el = unref(target);
@@ -60,6 +61,7 @@ export function useSmoothCorners(
     const { width, height } = el.getBoundingClientRect();
     if (width > 0 && height > 0) {
       el.style.clipPath = generateClipPath(width, height, unref(options));
+      el.setAttribute("data-state", "ready");
     }
   }
 
@@ -68,6 +70,10 @@ export function useSmoothCorners(
     const el = unref(target);
     if (!el) return;
 
+    savedClipPath = el.style.clipPath;
+    el.setAttribute("data-slot", "smooth-corners");
+    el.setAttribute("data-state", "pending");
+
     unobserve = observeResize(el, update);
   }
 
@@ -75,7 +81,12 @@ export function useSmoothCorners(
     unobserve?.();
     unobserve = undefined;
     const el = unref(target);
-    if (el) el.style.clipPath = "";
+    if (el) {
+      el.style.clipPath = savedClipPath ?? "";
+      el.removeAttribute("data-slot");
+      el.removeAttribute("data-state");
+    }
+    savedClipPath = undefined;
   }
 
   watch(() => unref(target), setup);

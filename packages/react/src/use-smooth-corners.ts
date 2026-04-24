@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   generateClipPath,
   createSvgEffects,
@@ -13,6 +13,13 @@ import {
   mergeEffects,
 } from "@lisse/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
+
+/**
+ * useLayoutEffect on the client, useEffect during SSR. Lets us mutate the
+ * DOM synchronously after layout (avoiding a flash of un-clipped corners
+ * or un-stripped CSS borders) without warning under server rendering.
+ */
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 function syncEffects(
   options: SmoothCornerOptions,
@@ -35,6 +42,12 @@ export interface UseEffectsOptions {
  * React hook that applies a smooth-cornered clip-path to a referenced element.
  * Automatically updates on resize via a shared ResizeObserver.
  *
+ * @remarks
+ * `effectsOptions.wrapperRef` should be a stable ref (created via
+ * `useRef`). Each rendered call to the hook reads `effects` and
+ * `autoEffects` via their values, so passing a freshly-allocated object
+ * each render is fine.
+ *
  * @example
  * ```tsx
  * const ref = useRef<HTMLDivElement>(null);
@@ -47,11 +60,13 @@ export function useSmoothCorners(
   options: SmoothCornerOptions,
   effectsOptions?: UseEffectsOptions,
 ): void {
+  const { wrapperRef, effects, autoEffects } = effectsOptions ?? {};
+
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const effectsRef = useRef(effectsOptions);
-  effectsRef.current = effectsOptions;
+  const effectsRef = useRef({ wrapperRef, effects, autoEffects });
+  effectsRef.current = { wrapperRef, effects, autoEffects };
 
   const handlesRef = useRef<{
     effectsHandle: ReturnType<typeof createSvgEffects>;
@@ -60,39 +75,54 @@ export function useSmoothCorners(
     el: HTMLElement;
   } | null>(null);
 
-  useEffect(() => {
+  // Stable signature of the corner options. Bounded object size makes
+  // JSON.stringify safe and cheap, and lets us avoid re-running effects
+  // on every parent render when prop identity changes but values don't.
+  const optionsKey = useMemo(() => JSON.stringify(options), [options]);
+  const effectsKey = useMemo(() => JSON.stringify(effects ?? null), [effects]);
+  const autoEffectsKey = autoEffects ?? true;
+
+  useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    const previousClipPath = el.style.clipPath;
+    el.setAttribute("data-slot", "smooth-corners");
+    el.setAttribute("data-state", "pending");
 
     const unobserve = observeResize(el, () => {
       const { width, height } = el.getBoundingClientRect();
       if (width > 0 && height > 0) {
         el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+        el.setAttribute("data-state", "ready");
       }
     });
 
     return () => {
       unobserve();
-      el.style.clipPath = "";
+      el.style.clipPath = previousClipPath;
+      el.removeAttribute("data-slot");
+      el.removeAttribute("data-state");
     };
   }, [ref]);
 
-  // Re-apply clip-path on every render to pick up option changes
-  useEffect(() => {
+  // Re-apply clip-path when corner options change.
+  useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
     if (width > 0 && height > 0) {
       el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+      el.setAttribute("data-state", "ready");
     }
-  });
+  }, [ref, optionsKey]);
 
   // Track whether explicit effects are present so the setup/teardown effect
   // re-runs when the wrapper div mounts or unmounts (needsWrapper toggles).
-  const hasExplicitEffects = hasEffects(effectsOptions?.effects);
+  const hasExplicitEffects = hasEffects(effects);
 
   // Effects overlay (SVG effects + drop shadow)
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
@@ -145,10 +175,10 @@ export function useSmoothCorners(
       if (extracted) restoreStyles(el, extracted.savedStyles);
       if (didAcquire) releasePosition(anchor);
     };
-  }, [ref, effectsOptions?.wrapperRef, hasExplicitEffects]);
+  }, [ref, wrapperRef, hasExplicitEffects, autoEffectsKey]);
 
-  // Sync SVG effects on every render to pick up explicit effect prop changes
-  useEffect(() => {
+  // Sync SVG effects when corner options or explicit effects change.
+  useIsoLayoutEffect(() => {
     const handles = handlesRef.current;
     if (!handles) return;
     const { effectsHandle, shadowHandle, extracted, el } = handles;
@@ -156,5 +186,5 @@ export function useSmoothCorners(
     const { width, height } = el.getBoundingClientRect();
     if (width <= 0 || height <= 0) return;
     syncEffects(optionsRef.current, currentMerged, effectsHandle, shadowHandle, width, height);
-  });
+  }, [optionsKey, effectsKey]);
 }

@@ -65,11 +65,23 @@ import { SmoothCorners } from "@lisse/react";
 
 function Card() {
   return (
-    <SmoothCorners radius={20} smoothing={0.6} style={{ background: "#fff", padding: 24 }}>
+    <SmoothCorners corners={{ radius: 20, smoothing: 0.6 }} style={{ background: "#fff", padding: 24 }}>
       <h2>Hello, squircle</h2>
     </SmoothCorners>
   );
 }
+```
+
+**Polymorphic `as` and `asChild`:**
+
+```tsx
+// Render any HTML element (attributes are typed against `as`).
+<SmoothCorners as="a" href="/x" corners={{ radius: 12 }}>Link</SmoothCorners>
+
+// Or merge SmoothCorners onto your own element / component without extra wrappers.
+<SmoothCorners asChild corners={{ radius: 12 }}>
+  <MyButton onClick={handle}>Click</MyButton>
+</SmoothCorners>
 ```
 
 **Hook:**
@@ -115,11 +127,13 @@ import { SmoothCorners } from "@lisse/vue";
 </script>
 
 <template>
-  <SmoothCorners :radius="20" :smoothing="0.6" style="background: #fff; padding: 24px">
+  <SmoothCorners :corners="{ radius: 20, smoothing: 0.6 }" style="background: #fff; padding: 24px">
     <h2>Hello, squircle</h2>
   </SmoothCorners>
 </template>
 ```
+
+`SmoothCorners` also accepts an `asChild` boolean that clones the single default slot child instead of rendering its own element. Template refs (`ref="x"`) on `<SmoothCorners>` expose `{ el, wrapper }`.
 
 ### Svelte
 
@@ -132,7 +146,7 @@ npm install @lisse/svelte
   import { smoothCorners } from "@lisse/svelte";
 </script>
 
-<div use:smoothCorners={{ radius: 20, smoothing: 0.6 }} style="background: #fff; padding: 24px">
+<div use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }} style="background: #fff; padding: 24px">
   Hello, squircle
 </div>
 ```
@@ -190,7 +204,7 @@ All framework bindings support five effects rendered as SVG overlays:
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   innerBorder={{ width: 1, color: "#ffffff", opacity: 0.2 }}
   outerBorder={{ width: 2, color: "#000000", opacity: 0.1 }}
   middleBorder={{ width: 1, color: "#ff0000", opacity: 0.5 }}
@@ -208,7 +222,7 @@ Both `shadow` and `innerShadow` accept a single `ShadowConfig` or an array of `S
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   shadow={[
     { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.1 },
     { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000000", opacity: 0.2 },
@@ -228,7 +242,7 @@ CSS `box-shadow` with multiple layers is also extracted automatically:
 ```tsx
 {/* Both shadow layers are extracted and rendered as SVG */}
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   style={{
     background: "#fff",
     padding: 32,
@@ -256,7 +270,7 @@ All three border types (`innerBorder`, `outerBorder`, `middleBorder`) support st
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   innerBorder={{
     width: 4,
     color: "#3b82f6",
@@ -288,7 +302,7 @@ For `groove` and `ridge` border styles, each stop's color is automatically darke
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   innerBorder={{
     width: 2,
     color: {
@@ -311,7 +325,7 @@ Radial gradient example:
 
 ```tsx
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   outerBorder={{
     width: 3,
     color: {
@@ -349,7 +363,7 @@ This means elements with existing CSS borders and shadows just work:
 
 ```tsx
 {/* CSS border is automatically converted to an SVG inner border */}
-<SmoothCorners radius={24} style={{ border: "2px solid red" }}>
+<SmoothCorners corners={{ radius: 24 }} style={{ border: "2px solid red" }}>
   Content
 </SmoothCorners>
 ```
@@ -359,7 +373,7 @@ Explicit effect props take priority over auto-extracted values:
 ```tsx
 {/* Explicit innerBorder wins over the CSS border */}
 <SmoothCorners
-  radius={24}
+  corners={{ radius: 24 }}
   style={{ border: "2px solid red" }}
   innerBorder={{ width: 1, color: "#00ff00", opacity: 1 }}
 >
@@ -400,6 +414,39 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 - **`groove` / `ridge` shading** -- The dark shade is computed as `RGB * 2/3`, matching Firefox's algorithm. This may look slightly different from browser CSS rendering on standard rectangles, but produces consistent results across browsers on squircle shapes.
 - **Wrapper div (React/Vue)** -- The `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. This can affect flex/grid layouts and child selectors. Use the hook/composable/action approach for full layout control.
 - **Gradient border auto-extraction** -- Gradient borders are API-only. CSS `border-image` is not detected or extracted because its syntax (angle units, color spaces, slice semantics) is too complex to reliably parse. Use explicit `GradientConfig` via `BorderConfig.color` instead.
+
+## Styling Hooks (`data-slot`, `data-state`)
+
+Every element managed by Lisse — whether via the React/Vue components, the React/Vue hooks/composables, or the Svelte action — gets two stable attributes:
+
+- `data-slot="smooth-corners"` — present for the lifetime of the binding.
+- `data-state="pending" | "ready"` — flips to `"ready"` after the first successful clip-path application.
+
+Use these to mask any first-frame flicker without sprinkling component-specific class names throughout your CSS:
+
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
+[data-slot="smooth-corners"][data-state="ready"]   { opacity: 1; transition: opacity 100ms; }
+```
+
+## Migrating from `0.1.x`
+
+The `0.2.0` release consolidates the corner options into a single `corners` prop / config field across React, Vue, and Svelte:
+
+```diff
+- <SmoothCorners radius={20} smoothing={0.6} />
++ <SmoothCorners corners={{ radius: 20, smoothing: 0.6 }} />
+
+- <SmoothCorners topLeft={20} topRight={30} />
++ <SmoothCorners corners={{ topLeft: 20, topRight: 30 }} />
+
+- use:smoothCorners={{ radius: 20, smoothing: 0.6 }}
++ use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }}
+```
+
+The Svelte action no longer accepts the bare `SmoothCornerOptions` shape; pass a `SmoothCornersConfig` (`{ corners, effects?, autoEffects? }`) instead.
+
+`SmoothCornersProps` in React is now generic over the element type passed via `as`, so external callers extending the type need to thread the element parameter (`SmoothCornersProps<"a">`).
 
 ## SSR / Path-Only Import
 

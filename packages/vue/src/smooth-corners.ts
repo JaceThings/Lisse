@@ -5,20 +5,16 @@ import {
   computed,
   type PropType,
   type SlotsType,
+  type VNode,
 } from "vue";
 import { useSmoothCorners } from "./use-smooth-corners.js";
+import { Slot } from "./slot.js";
 import { hasEffects } from "@lisse/core";
 import type {
   SmoothCornerOptions,
   BorderConfig,
   ShadowConfig,
-  CornerConfig,
 } from "@lisse/core";
-
-const cornerProp = {
-  type: [Number, Object] as PropType<number | CornerConfig>,
-  default: undefined,
-} as const;
 
 /**
  * Render-function component that applies smooth corners to a wrapper element.
@@ -36,25 +32,13 @@ export const SmoothCorners = defineComponent({
   name: "SmoothCorners",
   props: {
     as: {
-      type: String as PropType<string>,
+      type: String as PropType<keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap>,
       default: "div",
     },
-    radius: {
-      type: Number,
+    corners: {
+      type: Object as PropType<SmoothCornerOptions>,
       default: undefined,
     },
-    smoothing: {
-      type: Number,
-      default: undefined,
-    },
-    preserveSmoothing: {
-      type: Boolean,
-      default: undefined,
-    },
-    topLeft: cornerProp,
-    topRight: cornerProp,
-    bottomRight: cornerProp,
-    bottomLeft: cornerProp,
     innerBorder: {
       type: Object as PropType<BorderConfig>,
       default: undefined,
@@ -79,27 +63,19 @@ export const SmoothCorners = defineComponent({
       type: Boolean as PropType<boolean>,
       default: undefined,
     },
+    asChild: {
+      type: Boolean as PropType<boolean>,
+      default: false,
+    },
   },
-  slots: Object as SlotsType<{ default: () => any }>,
-  setup(props, { slots }) {
+  slots: Object as SlotsType<{ default: () => VNode[] }>,
+  setup(props, { slots, expose }) {
     const elRef = ref<HTMLElement | null>(null);
     const wrapperRef = ref<HTMLElement | null>(null);
 
-    const options = computed((): SmoothCornerOptions => {
-      if (props.radius !== undefined) {
-        return {
-          radius: props.radius,
-          smoothing: props.smoothing,
-          preserveSmoothing: props.preserveSmoothing,
-        };
-      }
-      return {
-        topLeft: props.topLeft,
-        topRight: props.topRight,
-        bottomRight: props.bottomRight,
-        bottomLeft: props.bottomLeft,
-      };
-    });
+    expose({ el: elRef, wrapper: wrapperRef });
+
+    const options = computed((): SmoothCornerOptions => props.corners ?? { radius: 0 });
 
     const effectsConfig = computed(() => ({
       innerBorder: props.innerBorder,
@@ -120,14 +96,18 @@ export const SmoothCorners = defineComponent({
     });
 
     return () => {
+      const inner = props.asChild
+        ? h(Slot, { ref: elRef }, slots.default)
+        : h(props.as, { ref: elRef }, slots.default?.());
+
       if (needsWrapper.value) {
         return h(
           "div",
           { ref: wrapperRef, style: { position: "relative" } },
-          h(props.as, { ref: elRef }, slots.default?.()),
+          inner,
         );
       }
-      return h(props.as, { ref: elRef }, slots.default?.());
+      return inner;
     };
   },
 });
