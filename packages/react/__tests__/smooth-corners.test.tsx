@@ -227,6 +227,70 @@ describe("<Slot /> - error messages are reachable", () => {
   });
 });
 
+describe("<Slot /> - generic element typing", () => {
+  it("accepts anchor attributes when parameterised over 'a'", () => {
+    act(() => {
+      root.render(
+        <Slot<"a"> href="/x">
+          <a>link</a>
+        </Slot>,
+      );
+    });
+    const a = container.querySelector("a");
+    expect(a?.getAttribute("href")).toBe("/x");
+  });
+
+  it("accepts button attributes when parameterised over 'button'", () => {
+    act(() => {
+      root.render(
+        <Slot<"button"> type="submit">
+          <button>submit</button>
+        </Slot>,
+      );
+    });
+    const button = container.querySelector("button");
+    expect(button?.getAttribute("type")).toBe("submit");
+  });
+});
+
+describe("<SmoothCorners /> - effects toggle stability", () => {
+  it("does not recreate SVG handles when effects toggle on and off", () => {
+    function Tester({ withBorder }: { withBorder: boolean }) {
+      return (
+        <SmoothCorners
+          corners={{ radius: 8 }}
+          innerBorder={
+            withBorder ? { width: 2, color: "#000", opacity: 1 } : undefined
+          }
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => {
+      root.render(<Tester withBorder={true} />);
+    });
+
+    const wrapper = container.querySelector("[data-slot='smooth-corners']")
+      ?.parentElement;
+    expect(wrapper).not.toBeNull();
+    const svgsAfterMount = Array.from(wrapper!.querySelectorAll("svg"));
+    expect(svgsAfterMount.length).toBeGreaterThan(0);
+
+    act(() => {
+      root.render(<Tester withBorder={false} />);
+    });
+    act(() => {
+      root.render(<Tester withBorder={true} />);
+    });
+
+    const svgsAfterToggle = Array.from(wrapper!.querySelectorAll("svg"));
+    // Same SVG element references — no teardown/recreate cycle.
+    expect(svgsAfterToggle).toEqual(svgsAfterMount);
+  });
+});
+
 describe("<SmoothCorners /> - ref forwarding", () => {
   it("forwards the external ref to the inner element", () => {
     const ref = { current: null as HTMLElement | null };

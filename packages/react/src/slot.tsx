@@ -3,6 +3,9 @@ import {
   cloneElement,
   forwardRef,
   isValidElement,
+  type ComponentPropsWithoutRef,
+  type ElementType,
+  type ForwardedRef,
   type HTMLAttributes,
   type ReactElement,
   type ReactNode,
@@ -38,20 +41,40 @@ function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
   return merged;
 }
 
+/**
+ * Default props shape for `Slot`. Uses `HTMLAttributes<HTMLElement>` for
+ * backwards compatibility -- consumers who need element-specific attributes
+ * (`href`, `type`, `name`, ...) should use `SlotPropsFor<E>` instead.
+ */
 export type SlotProps = HTMLAttributes<HTMLElement> & {
   children?: ReactNode;
 };
 
 /**
- * Minimal Radix-style Slot: clones its single child element, merging the
- * Slot's own props onto the child and composing event handlers and refs.
+ * Element-specific props shape for `Slot`. Use to opt into attributes of a
+ * particular element type when merging onto it:
  *
- * Used internally to back the `asChild` prop on <SmoothCorners />.
+ * ```tsx
+ * <Slot<"a"> href="/x"><a>link</a></Slot>
+ * <Slot<"button"> type="submit"><button>submit</button></Slot>
+ * ```
+ *
+ * The runtime forwards every prop to the cloned child regardless of type.
+ * The generic parameter only tightens what TypeScript accepts at the call
+ * site; there is no runtime difference.
  */
-export const Slot = forwardRef<HTMLElement, SlotProps>(function Slot(
-  { children, ...props },
-  forwardedRef,
-) {
+export type SlotPropsFor<E extends ElementType> = Omit<
+  ComponentPropsWithoutRef<E>,
+  "children"
+> & {
+  children?: ReactNode;
+};
+
+function SlotImpl<E extends ElementType = ElementType>(
+  props: SlotPropsFor<E>,
+  forwardedRef: ForwardedRef<HTMLElement>,
+): ReactElement | null {
+  const { children, ...rest } = props as SlotPropsFor<ElementType>;
   const array = Children.toArray(children);
   if (array.length !== 1) {
     throw new Error("Slot: `asChild` expects exactly one child.");
@@ -62,9 +85,19 @@ export const Slot = forwardRef<HTMLElement, SlotProps>(function Slot(
   }
 
   const childElement = child as ReactElement<AnyProps> & { ref?: Ref<HTMLElement> };
-  const merged = mergeProps(props as AnyProps, (childElement.props ?? {}) as AnyProps);
+  const merged = mergeProps(rest as AnyProps, (childElement.props ?? {}) as AnyProps);
   return cloneElement(childElement, {
     ...merged,
     ref: composeRefs(forwardedRef, childElement.ref),
   } as AnyProps);
-});
+}
+
+/**
+ * Minimal Radix-style Slot: clones its single child element, merging the
+ * Slot's own props onto the child and composing event handlers and refs.
+ *
+ * Used internally to back the `asChild` prop on <SmoothCorners />.
+ */
+export const Slot = forwardRef(SlotImpl) as <E extends ElementType = ElementType>(
+  props: SlotPropsFor<E> & { ref?: Ref<HTMLElement> },
+) => ReactElement | null;
