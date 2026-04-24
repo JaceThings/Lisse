@@ -1,6 +1,6 @@
 {
   "name": "@lisse/core",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Framework-agnostic squircle path generation based on Figma's smoothing algorithm",
   "license": "MIT",
   "type": "module",
@@ -29,7 +29,9 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
@@ -41,7 +43,15 @@
     "url": "https://github.com/JaceThings/Lisse",
     "directory": "packages/core"
   },
-  "keywords": ["squircle", "smooth-corners", "border-radius", "figma", "svg-path", "clip-path", "superellipse"],
+  "keywords": [
+    "squircle",
+    "smooth-corners",
+    "border-radius",
+    "figma",
+    "svg-path",
+    "clip-path",
+    "superellipse"
+  ],
   "homepage": "https://github.com/JaceThings/Lisse#readme",
   "bugs": "https://github.com/JaceThings/Lisse/issues",
   "engines": {
