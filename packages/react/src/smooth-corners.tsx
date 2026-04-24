@@ -1,6 +1,6 @@
 import {
   forwardRef,
-  useCallback,
+  useMemo,
   useRef,
   createElement,
   type ElementType,
@@ -70,8 +70,8 @@ function SmoothCornersImpl<E extends ElementType = "div">(
 
   const internalRef = useRef<HTMLElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const setInnerRef = useCallback(
-    composeRefs<HTMLElement>(internalRef, externalRef as ForwardedRef<HTMLElement>),
+  const setInnerRef = useMemo(
+    () => composeRefs<HTMLElement>(internalRef, externalRef as ForwardedRef<HTMLElement>),
     [externalRef],
   );
 
