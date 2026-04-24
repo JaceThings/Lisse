@@ -114,7 +114,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
  *
  * @example
  * ```tsx
- * <SmoothCorners radius={20} smoothing={0.6} as="section">
+ * <SmoothCorners as="section" corners={{ radius: 20, smoothing: 0.6 }}>
  *   <p>Content</p>
  * </SmoothCorners>
  * ```
