@@ -562,7 +562,7 @@ The `extractAndStripEffects` and `restoreStyles` functions power the "auto effec
 3. Strip those CSS properties from the element's inline style (so they don't get clipped by `clip-path`)
 4. Return the extracted effects and saved original styles for later restoration
 
-This is used internally by `@lisse/react`, `@lisse/vue`, and `@lisse/svelte` to make existing CSS borders and shadows "just work" without manual conversion. If you're using the core package directly, you can use these functions to implement the same behavior:
+This is used internally by `@lisse/react`, `@lisse/vue`, and `@lisse/svelte` to make existing CSS borders and shadows "just work" without manual conversion. If you're using the core package directly, you can use these functions to implement the same behaviour:
 
 ```ts
 import { extractAndStripEffects, restoreStyles, createSvgEffects, createDropShadow } from "@lisse/core";

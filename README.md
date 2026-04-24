@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-Lisse *(rhymes with lease)* — Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
+Lisse *(rhymes with lease)* is Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
 
 [![npm: @lisse/core](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![npm: @lisse/react](https://img.shields.io/npm/v/%40lisse%2Freact?label=%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
@@ -198,7 +198,7 @@ All framework bindings support five effects rendered as SVG overlays:
 |--------|-------------|
 | `innerBorder` | Border drawn inside the squircle path (clipped to the shape) |
 | `outerBorder` | Border drawn outside the squircle path (masked to the exterior) |
-| `middleBorder` | Border centered on the squircle path (half inside, half outside) |
+| `middleBorder` | Border centred on the squircle path (half inside, half outside) |
 | `innerShadow` | Inset shadow inside the squircle |
 | `shadow` | Drop shadow behind the squircle |
 
@@ -536,7 +536,7 @@ See individual package READMEs for full API details.
 
 ## Documentation
 
-Contributor and release docs live in [`docs/`](./docs/) — start with [`docs/publishing.md`](./docs/publishing.md) for the release process and known quirks.
+Contributor and release docs live in [`docs/`](./docs/). Start with [`docs/publishing.md`](./docs/publishing.md) for the release process and known quirks.
 
 ## License
 
