@@ -142,7 +142,9 @@ export function smoothCorners(
       node.removeAttribute("data-slot");
       node.removeAttribute("data-state");
       effectsHandle?.destroy();
+      effectsHandle = undefined;
       shadowHandle?.destroy();
+      shadowHandle = undefined;
       if (extractedResult) {
         restoreStyles(node, extractedResult.savedStyles);
         extractedResult = undefined;

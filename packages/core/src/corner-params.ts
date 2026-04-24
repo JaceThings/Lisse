@@ -14,11 +14,7 @@ export function getPathParamsForCorner({
   preserveSmoothing,
   roundingAndSmoothingBudget,
 }: CornerParams): CornerPathParams {
-  // Zero-radius short-circuit. Without this, `preserveSmoothing: false`
-  // divides `roundingAndSmoothingBudget / cornerRadius`, producing NaN
-  // fields on the returned struct. Draw-side code already guards with
-  // `if (cornerRadius)`, so paths were safe; this keeps the intermediate
-  // struct clean too.
+  // Short-circuit at zero radius: otherwise the `!preserveSmoothing` branch divides by `cornerRadius` and returns NaN fields.
   if (cornerRadius <= 0) {
     return { a: 0, b: 0, c: 0, d: 0, p: 0, arcSectionLength: 0, cornerRadius: 0 };
   }
