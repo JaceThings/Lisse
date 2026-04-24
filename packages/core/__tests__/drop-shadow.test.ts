@@ -35,6 +35,26 @@ describe("createDropShadow", () => {
     expect(anchor.style.isolation).toBe("isolate");
   });
 
+  it("saves and restores the prior anchor.style.isolation across create/destroy", () => {
+    anchor.style.isolation = "auto";
+    const handle = createDropShadow(anchor);
+    expect(anchor.style.isolation).toBe("isolate");
+
+    handle.destroy();
+    expect(anchor.style.isolation).toBe("auto");
+  });
+
+  it("restores to empty string when the anchor had no prior inline isolation", () => {
+    // No pre-set inline value -- destroy should leave the slot empty,
+    // not leak "isolate" onto the anchor.
+    expect(anchor.style.isolation).toBe("");
+    const handle = createDropShadow(anchor);
+    expect(anchor.style.isolation).toBe("isolate");
+
+    handle.destroy();
+    expect(anchor.style.isolation).toBe("");
+  });
+
   it("SVG has correct z-index:-1 positioning", () => {
     createDropShadow(anchor);
     const svg = anchor.querySelector("svg")!;

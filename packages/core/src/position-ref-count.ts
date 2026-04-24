@@ -32,7 +32,10 @@ export function acquirePosition(anchor: HTMLElement): boolean {
  * `acquirePosition` is cleared.
  */
 export function releasePosition(anchor: HTMLElement): void {
-  const count = refCounts.get(anchor) ?? 0;
+  const count = refCounts.get(anchor);
+  // No prior acquire: nothing to release. Do not touch `anchor.style.position`
+  // -- it may be a user-set inline style we would otherwise stomp.
+  if (count === undefined) return;
   if (count <= 1) {
     refCounts.delete(anchor);
     anchor.style.position = "";

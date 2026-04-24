@@ -243,6 +243,8 @@ describe("extractAndStripEffects", () => {
 
   it("extracts border and strips CSS", () => {
     el.style.border = "2px solid rgb(255, 0, 0)";
+    // Use a parseable (rgb) shadow so the guarded strip clears boxShadow too.
+    el.style.boxShadow = "rgb(0, 0, 0) 2px 4px 8px 0px";
     const result = extractAndStripEffects(el);
 
     expect(result.effects.innerBorder).toBeDefined();
@@ -275,6 +277,59 @@ describe("extractAndStripEffects", () => {
     expect(result.effects.innerBorder).toBeUndefined();
     expect(result.effects.shadow).toBeUndefined();
     expect(result.effects.innerShadow).toBeUndefined();
+  });
+
+  it("does not strip an unparseable border (currentcolor)", () => {
+    // `currentcolor` is not an rgb/rgba value, so parseBorder bails. The
+    // inline border must survive -- we would otherwise wipe a visible
+    // border with no SVG replacement.
+    el.style.border = "2px solid currentcolor";
+    const before = el.style.border;
+
+    const result = extractAndStripEffects(el);
+
+    expect(result.effects.innerBorder).toBeUndefined();
+    expect(el.style.border).toBe(before);
+  });
+
+  it("strips a parseable border (rgb) as before", () => {
+    // happy-dom returns named colours verbatim from getComputedStyle, so
+    // we use rgb() to exercise the successful parse path in tests.
+    el.style.border = "2px solid rgb(255, 0, 0)";
+
+    const result = extractAndStripEffects(el);
+
+    expect(result.effects.innerBorder).toBeDefined();
+    expect(result.effects.innerBorder!.width).toBe(2);
+    // happy-dom normalises "0" to "0px" on read.
+    expect(el.style.border).toMatch(/^0(px)?$/);
+  });
+
+  it("does not strip box-shadow when parsing yields no shadows", () => {
+    // An invalid shadow string (no rgb/rgba colour) parses to no shadows;
+    // we should leave the inline box-shadow untouched.
+    el.style.boxShadow = "0 0 10px #abc";
+    const before = el.style.boxShadow;
+
+    const result = extractAndStripEffects(el);
+
+    expect(result.effects.shadow).toBeUndefined();
+    expect(result.effects.innerShadow).toBeUndefined();
+    expect(el.style.boxShadow).toBe(before);
+  });
+
+  it("does not compensate padding when the border could not be parsed", () => {
+    el.style.boxSizing = "content-box";
+    el.style.border = "2px solid currentcolor";
+    el.style.padding = "5px";
+
+    extractAndStripEffects(el);
+
+    // Padding must not shift when the border was not actually stripped.
+    expect(el.style.paddingTop).toBe("5px");
+    expect(el.style.paddingRight).toBe("5px");
+    expect(el.style.paddingBottom).toBe("5px");
+    expect(el.style.paddingLeft).toBe("5px");
   });
 });
 
