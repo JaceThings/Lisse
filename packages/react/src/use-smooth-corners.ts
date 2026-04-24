@@ -82,6 +82,11 @@ export function useSmoothCorners(
   const effectsKey = useMemo(() => JSON.stringify(effects ?? null), [effects]);
   const autoEffectsKey = autoEffects ?? true;
 
+  // Single resize subscription drives both clip-path and effects-overlay
+  // updates. The effects-overlay setup effect below only manages SVG
+  // handle lifecycle (create on mount with effects, destroy on unmount);
+  // it does not subscribe to resize, avoiding duplicate callbacks in the
+  // shared observer's rAF batcher.
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -92,9 +97,14 @@ export function useSmoothCorners(
 
     const unobserve = observeResize(el, () => {
       const { width, height } = el.getBoundingClientRect();
-      if (width > 0 && height > 0) {
-        el.style.clipPath = generateClipPath(width, height, optionsRef.current);
-        el.setAttribute("data-state", "ready");
+      if (width <= 0 || height <= 0) return;
+      el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+      el.setAttribute("data-state", "ready");
+
+      const handles = handlesRef.current;
+      if (handles) {
+        const merged = mergeEffects(handles.extracted, effectsRef.current?.effects);
+        syncEffects(optionsRef.current, merged, handles.effectsHandle, handles.shadowHandle, width, height);
       }
     });
 
@@ -160,15 +170,15 @@ export function useSmoothCorners(
 
     handlesRef.current = { effectsHandle, shadowHandle, extracted, el };
 
-    const unobserve = observeResize(el, () => {
-      const { width, height } = el.getBoundingClientRect();
-      if (width <= 0 || height <= 0) return;
+    // Initial sync. The observer in the sibling effect drives subsequent
+    // syncs via handlesRef.
+    const { width, height } = el.getBoundingClientRect();
+    if (width > 0 && height > 0) {
       const currentMerged = mergeEffects(extracted, effectsRef.current?.effects);
       syncEffects(optionsRef.current, currentMerged, effectsHandle, shadowHandle, width, height);
-    });
+    }
 
     return () => {
-      unobserve();
       effectsHandle.destroy();
       shadowHandle.destroy();
       handlesRef.current = null;
