@@ -77,5 +77,11 @@ jobs:
             Use `gh api` to resolve outdated comment threads.
             Only post GitHub comments. Do not submit review text as messages.
 
+            ## Attribution
+            Do not include any "Generated with Claude Code" footer, robot emoji
+            "🤖", or similar tool attribution in the top-level summary or any
+            inline comment. End every comment on its last substantive line of
+            review content.
+
           claude_args: |
             --model claude-opus-4-6 --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(gh pr review:*)"
