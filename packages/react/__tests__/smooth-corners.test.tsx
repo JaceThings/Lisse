@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { useRef, forwardRef } from "react";
 import { SmoothCorners } from "../src/smooth-corners.js";
+import { Slot } from "../src/slot.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -157,6 +158,48 @@ describe("<SmoothCorners /> - asChild", () => {
     // Event handler composed onto child.
     button?.click();
     expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("<Slot /> - error messages are reachable", () => {
+  // React logs errors to console.error before rethrowing; suppress to
+  // keep vitest output clean while still asserting the thrown message.
+  let originalError: typeof console.error;
+  beforeEach(() => {
+    originalError = console.error;
+    console.error = vi.fn();
+  });
+  afterEach(() => {
+    console.error = originalError;
+  });
+
+  it("throws the library's own error when given zero children", () => {
+    expect(() => {
+      act(() => {
+        root.render(<Slot>{null}</Slot>);
+      });
+    }).toThrow("Slot: `asChild` expects exactly one child.");
+  });
+
+  it("throws the library's own error when given multiple children", () => {
+    expect(() => {
+      act(() => {
+        root.render(
+          <Slot>
+            <span>a</span>
+            <span>b</span>
+          </Slot>,
+        );
+      });
+    }).toThrow("Slot: `asChild` expects exactly one child.");
+  });
+
+  it("throws the library's own error when the child is not a valid element", () => {
+    expect(() => {
+      act(() => {
+        root.render(<Slot>plain text</Slot>);
+      });
+    }).toThrow("Slot: child must be a valid React element.");
   });
 });
 

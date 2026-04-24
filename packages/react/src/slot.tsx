@@ -52,9 +52,13 @@ export const Slot = forwardRef<HTMLElement, SlotProps>(function Slot(
   { children, ...props },
   forwardedRef,
 ) {
-  const child = Children.only(children);
+  const array = Children.toArray(children);
+  if (array.length !== 1) {
+    throw new Error("Slot: `asChild` expects exactly one child.");
+  }
+  const child = array[0];
   if (!isValidElement(child)) {
-    throw new Error("Slot: `asChild` expects a single valid React element child.");
+    throw new Error("Slot: child must be a valid React element.");
   }
 
   const childElement = child as ReactElement<AnyProps> & { ref?: Ref<HTMLElement> };
