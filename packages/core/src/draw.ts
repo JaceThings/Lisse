@@ -10,6 +10,13 @@ export interface SVGPathInput {
   topLeftPathParams: CornerPathParams;
 }
 
+/**
+ * Build an SVG path string for a smooth-cornered rectangle from the four
+ * per-corner parameter sets produced by `generatePathParamsForCorner`.
+ * The path starts at the top-left corner and traverses clockwise,
+ * inserting a piecewise Bézier + arc segment at each corner and straight
+ * lines along the sides.
+ */
 export function getSVGPathFromPathParams({
   width,
   height,

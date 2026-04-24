@@ -534,6 +534,18 @@ The SVG overlays (borders, shadows) are absolutely positioned inside an anchor e
 
 See individual package READMEs for full API details.
 
+## Browser Support
+
+Lisse targets evergreen browsers. The runtime uses `clip-path`, `ResizeObserver`, `getComputedStyle`, and standard SVG APIs. Concretely:
+
+| Browser | Minimum version |
+|---|---|
+| Chrome / Edge | 79 |
+| Firefox | 69 |
+| Safari | 13.1 |
+
+Older browsers miss `ResizeObserver`; Lisse falls back to a no-op observer there, so elements render with their initial size but do not re-sync on resize. Drop-shadow filters and SVG mask features require the listed versions. If you need broader coverage, polyfill `ResizeObserver` yourself.
+
 ## Documentation
 
 Contributor and release docs live in [`docs/`](./docs/). Start with [`docs/publishing.md`](./docs/publishing.md) for the release process and known quirks.
