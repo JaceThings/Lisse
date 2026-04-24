@@ -53,6 +53,10 @@ export function useSmoothCorners(
   effectsOptions?: UseEffectsOptions,
 ): void {
   let unobserve: (() => void) | undefined;
+  // Captured at setup so cleanup restores onto the exact element we
+  // mutated, even if target.value was reassigned to a different element
+  // between setup and cleanup.
+  let attachedEl: HTMLElement | null = null;
   let savedClipPath: string | undefined;
 
   function update() {
@@ -70,6 +74,7 @@ export function useSmoothCorners(
     const el = unref(target);
     if (!el) return;
 
+    attachedEl = el;
     savedClipPath = el.style.clipPath;
     el.setAttribute("data-slot", "smooth-corners");
     el.setAttribute("data-state", "pending");
@@ -80,12 +85,12 @@ export function useSmoothCorners(
   function cleanup() {
     unobserve?.();
     unobserve = undefined;
-    const el = unref(target);
-    if (el) {
-      el.style.clipPath = savedClipPath ?? "";
-      el.removeAttribute("data-slot");
-      el.removeAttribute("data-state");
+    if (attachedEl) {
+      attachedEl.style.clipPath = savedClipPath ?? "";
+      attachedEl.removeAttribute("data-slot");
+      attachedEl.removeAttribute("data-state");
     }
+    attachedEl = null;
     savedClipPath = undefined;
   }
 
