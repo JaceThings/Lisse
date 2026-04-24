@@ -1,5 +1,40 @@
 # @lisse/react
 
+## 0.3.0
+
+### Minor Changes
+
+- 4868d3a: Add `SlotPropsFor<E>` and make `Slot` generic over the element type it will merge onto. Consumers who need element-specific attributes (`href`, `type`, `name`, ...) can now opt into them via a type parameter:
+
+  ```tsx
+  <Slot<"a"> href="/x">
+    <a>link</a>
+  </Slot>;
+
+  <Slot<"button"> type="submit">
+    <button>submit</button>
+  </Slot>;
+  ```
+
+  The existing `SlotProps` type is unchanged, so non-parameterised usage continues to work. Runtime behaviour is unchanged -- every prop is forwarded to the cloned child regardless of type. The generic parameter is a type-level hint only.
+
+- c94438f: `Slot` now respects `event.preventDefault()` when composing event handlers: the parent handler is skipped if the child handler called `preventDefault()` on the event. Matches Radix's Slot semantics and gives a child a way to opt out of the composed behaviour. Existing usages where the child does not call `preventDefault()` are unchanged -- both handlers still fire in order (child first, parent second).
+
+### Patch Changes
+
+- 4868d3a: Perf: toggling an effect prop (`innerBorder`, `outerBorder`, `middleBorder`, `innerShadow`, `shadow`) on and off no longer tears down and rebuilds the SVG overlay. Handles are created lazily on first use and destroyed only when the component unmounts, matching the Vue composable's behaviour. This eliminates a round trip through `createSvgEffects`, `createDropShadow`, `acquirePosition`, `releasePosition`, and `extractAndStripEffects` for consumers that flip effects dynamically.
+- c94438f: `Slot` error messages are now specific to the actual failure:
+
+  - Zero children: `"received none"`.
+  - Multiple children: includes the received count.
+  - Non-element child: includes the received `typeof` (string, number, ...).
+  - Fragment child: tells the user to unwrap the Fragment so Slot can merge props onto a real element.
+
+  The previous single message (`"expects exactly one child"`) covered all four cases without distinguishing them. Behaviour is otherwise unchanged.
+
+- Updated dependencies [6d8cd18]
+  - @lisse/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
