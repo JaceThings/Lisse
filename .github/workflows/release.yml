@@ -34,7 +34,8 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-      - uses: changesets/action@v1
+      - id: changesets
+        uses: changesets/action@v1
         with:
           publish: pnpm changeset publish
           version: pnpm changeset version
@@ -43,3 +44,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+
+      # Regenerate the aggregate root CHANGELOG.md from per-package changelogs
+      # and, if anything changed, push the update to the open version-packages
+      # PR branch (which changesets/action has just created or updated). Runs
+      # only when a version PR exists; skipped on publish-only runs.
+      - name: Update root CHANGELOG
+        if: steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.published != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_BRANCH="changeset-release/${GITHUB_REF_NAME}"
+          git fetch origin "$PR_BRANCH"
+          git checkout "$PR_BRANCH"
+          pnpm tsx scripts/update-root-changelog.ts
+          if [[ -n "$(git status --porcelain CHANGELOG.md)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "docs(changelog): regenerate root CHANGELOG"
+            git push origin "$PR_BRANCH"
+          fi
