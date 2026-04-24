@@ -65,15 +65,11 @@ export function useSmoothCorners(
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const effectsRef = useRef({ wrapperRef, effects, autoEffects });
-  effectsRef.current = { wrapperRef, effects, autoEffects };
+  const effectsPropRef = useRef(effects);
+  effectsPropRef.current = effects;
 
-  const handlesRef = useRef<{
-    effectsHandle: ReturnType<typeof createSvgEffects>;
-    shadowHandle: ReturnType<typeof createDropShadow>;
-    extracted: ReturnType<typeof extractAndStripEffects> | undefined;
-    el: HTMLElement;
-  } | null>(null);
+  const wrapperRefRef = useRef(wrapperRef);
+  wrapperRefRef.current = wrapperRef;
 
   // Stable signature of the corner options. Bounded object size makes
   // JSON.stringify safe and cheap, and lets us avoid re-running effects
@@ -82,119 +78,146 @@ export function useSmoothCorners(
   const effectsKey = useMemo(() => JSON.stringify(effects ?? null), [effects]);
   const autoEffectsKey = autoEffects ?? true;
 
-  // Single resize subscription drives both clip-path and effects-overlay
-  // updates. The effects-overlay setup effect below only manages SVG
-  // handle lifecycle (create on mount with effects, destroy on unmount);
-  // it does not subscribe to resize, avoiding duplicate callbacks in the
-  // shared observer's rAF batcher.
+  // Per-mount state. SVG handles are created lazily on first sync that
+  // sees effects and destroyed only on unmount. Toggling a border or
+  // shadow prop on and off no longer tears down and rebuilds the overlay.
+  const stateRef = useRef<{
+    el: HTMLElement;
+    savedClipPath: string;
+    extracted: ReturnType<typeof extractAndStripEffects> | undefined;
+    effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
+    shadowHandle: ReturnType<typeof createDropShadow> | undefined;
+    anchor: HTMLElement | null;
+    didAcquire: boolean;
+  } | null>(null);
+
+  // Main setup. Re-runs only when the target element ref changes.
+  // Captures `autoEffectsKey` at mount for initial extraction; subsequent
+  // toggles are handled by the sibling effect below.
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    const previousClipPath = el.style.clipPath;
+    const savedClipPath = el.style.clipPath;
     el.setAttribute("data-slot", "smooth-corners");
     el.setAttribute("data-state", "pending");
 
-    const unobserve = observeResize(el, () => {
-      const { width, height } = el.getBoundingClientRect();
-      if (width <= 0 || height <= 0) return;
-      el.style.clipPath = generateClipPath(width, height, optionsRef.current);
-      el.setAttribute("data-state", "ready");
+    const initialAuto = autoEffectsKey;
+    const initialExtracted = initialAuto ? extractAndStripEffects(el) : undefined;
 
-      const handles = handlesRef.current;
-      if (handles) {
-        const merged = mergeEffects(handles.extracted, effectsRef.current?.effects);
-        syncEffects(optionsRef.current, merged, handles.effectsHandle, handles.shadowHandle, width, height);
+    const s = {
+      el,
+      savedClipPath,
+      extracted: initialExtracted,
+      effectsHandle: undefined as ReturnType<typeof createSvgEffects> | undefined,
+      shadowHandle: undefined as ReturnType<typeof createDropShadow> | undefined,
+      anchor: null as HTMLElement | null,
+      didAcquire: false,
+    };
+    stateRef.current = s;
+
+    function ensureHandles(): void {
+      if (s.effectsHandle) return;
+      const anchor = wrapperRefRef.current?.current ?? s.el.parentElement;
+      if (!anchor) return;
+      s.anchor = anchor;
+      s.didAcquire = acquirePosition(anchor);
+      s.effectsHandle = createSvgEffects(anchor);
+      s.shadowHandle = createDropShadow(anchor);
+    }
+
+    function sync(): void {
+      const { width, height } = s.el.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+
+      s.el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+      s.el.setAttribute("data-state", "ready");
+
+      const merged = mergeEffects(s.extracted, effectsPropRef.current);
+      if (hasEffects(merged)) ensureHandles();
+      if (s.effectsHandle && s.shadowHandle) {
+        syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
       }
-    });
+    }
+
+    // Eager path: create handles immediately when effects are present at
+    // mount. Mirrors the Vue `setupEffects` behaviour so the overlay exists
+    // before the resize observer's first callback, avoiding a frame where
+    // it's missing.
+    const initialMerged = mergeEffects(s.extracted, effectsPropRef.current);
+    if (hasEffects(initialMerged)) ensureHandles();
+
+    const unobserve = observeResize(el, sync);
 
     return () => {
       unobserve();
-      el.style.clipPath = previousClipPath;
+      s.effectsHandle?.destroy();
+      s.shadowHandle?.destroy();
+      if (s.extracted) restoreStyles(el, s.extracted.savedStyles);
+      if (s.didAcquire && s.anchor) releasePosition(s.anchor);
+      stateRef.current = null;
+
+      el.style.clipPath = savedClipPath;
       el.removeAttribute("data-slot");
       el.removeAttribute("data-state");
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref]);
 
-  // Re-apply clip-path when corner options change.
+  // Re-sync on corner-option or explicit-effect change. Reaches into the
+  // per-mount state; no setup/teardown.
   useIsoLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    if (width > 0 && height > 0) {
-      el.style.clipPath = generateClipPath(width, height, optionsRef.current);
-      el.setAttribute("data-state", "ready");
+    const s = stateRef.current;
+    if (!s) return;
+    const { width, height } = s.el.getBoundingClientRect();
+    if (width <= 0 || height <= 0) return;
+
+    s.el.style.clipPath = generateClipPath(width, height, optionsRef.current);
+    s.el.setAttribute("data-state", "ready");
+
+    const merged = mergeEffects(s.extracted, effectsPropRef.current);
+    if (hasEffects(merged) && !s.effectsHandle) {
+      const anchor = wrapperRefRef.current?.current ?? s.el.parentElement;
+      if (anchor) {
+        s.anchor = anchor;
+        s.didAcquire = acquirePosition(anchor);
+        s.effectsHandle = createSvgEffects(anchor);
+        s.shadowHandle = createDropShadow(anchor);
+      }
     }
-  }, [ref, optionsKey]);
+    if (s.effectsHandle && s.shadowHandle) {
+      syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
+    }
+  }, [optionsKey, effectsKey]);
 
-  // Track whether explicit effects are present so the setup/teardown effect
-  // re-runs when the wrapper div mounts or unmounts (needsWrapper toggles).
-  const hasExplicitEffects = hasEffects(effects);
-
-  // Effects overlay (SVG effects + drop shadow)
+  // Handle autoEffects toggling. Starts or stops CSS extraction and
+  // restores the original inline styles when turned off.
   useIsoLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const autoEffects = effectsRef.current?.autoEffects ?? true;
-    const explicitEffects = effectsRef.current?.effects;
-    let explicitWrapper = effectsRef.current?.wrapperRef?.current;
-
-    // Auto-extract CSS effects
-    let extracted: ReturnType<typeof extractAndStripEffects> | undefined;
-    if (autoEffects) {
-      extracted = extractAndStripEffects(el);
-    }
-
-    // Merge: explicit effects override auto-extracted
-    const mergedEffects = mergeEffects(extracted, explicitEffects);
-
-    if (!hasEffects(mergedEffects)) {
-      return () => {
-        if (extracted) restoreStyles(el, extracted.savedStyles);
-      };
-    }
-
-    // Determine anchor element
-    const anchor = explicitWrapper ?? el.parentElement;
-    if (!anchor) {
-      if (extracted) restoreStyles(el, extracted.savedStyles);
+    const s = stateRef.current;
+    if (!s) return;
+    const hadExtraction = s.extracted !== undefined;
+    if (autoEffectsKey && !hadExtraction) {
+      s.extracted = extractAndStripEffects(s.el);
+    } else if (!autoEffectsKey && hadExtraction) {
+      restoreStyles(s.el, s.extracted!.savedStyles);
+      s.extracted = undefined;
+    } else {
       return;
     }
-
-    // Ensure anchor has positioning (ref-counted)
-    const didAcquire = acquirePosition(anchor);
-
-    const effectsHandle = createSvgEffects(anchor);
-    const shadowHandle = createDropShadow(anchor);
-
-    handlesRef.current = { effectsHandle, shadowHandle, extracted, el };
-
-    // Initial sync. The observer in the sibling effect drives subsequent
-    // syncs via handlesRef.
-    const { width, height } = el.getBoundingClientRect();
-    if (width > 0 && height > 0) {
-      const currentMerged = mergeEffects(extracted, effectsRef.current?.effects);
-      syncEffects(optionsRef.current, currentMerged, effectsHandle, shadowHandle, width, height);
-    }
-
-    return () => {
-      effectsHandle.destroy();
-      shadowHandle.destroy();
-      handlesRef.current = null;
-      if (extracted) restoreStyles(el, extracted.savedStyles);
-      if (didAcquire) releasePosition(anchor);
-    };
-  }, [ref, wrapperRef, hasExplicitEffects, autoEffectsKey]);
-
-  // Sync SVG effects when corner options or explicit effects change.
-  useIsoLayoutEffect(() => {
-    const handles = handlesRef.current;
-    if (!handles) return;
-    const { effectsHandle, shadowHandle, extracted, el } = handles;
-    const currentMerged = mergeEffects(extracted, effectsRef.current?.effects);
-    const { width, height } = el.getBoundingClientRect();
+    const { width, height } = s.el.getBoundingClientRect();
     if (width <= 0 || height <= 0) return;
-    syncEffects(optionsRef.current, currentMerged, effectsHandle, shadowHandle, width, height);
-  }, [optionsKey, effectsKey]);
+    const merged = mergeEffects(s.extracted, effectsPropRef.current);
+    if (hasEffects(merged) && !s.effectsHandle) {
+      const anchor = wrapperRefRef.current?.current ?? s.el.parentElement;
+      if (anchor) {
+        s.anchor = anchor;
+        s.didAcquire = acquirePosition(anchor);
+        s.effectsHandle = createSvgEffects(anchor);
+        s.shadowHandle = createDropShadow(anchor);
+      }
+    }
+    if (s.effectsHandle && s.shadowHandle) {
+      syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
+    }
+  }, [autoEffectsKey]);
 }

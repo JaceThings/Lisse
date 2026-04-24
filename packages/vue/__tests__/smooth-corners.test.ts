@@ -105,6 +105,30 @@ describe("<SmoothCorners /> Vue - asChild", () => {
     unmount();
   });
 
+  it("skips the parent handler when the child calls event.preventDefault()", () => {
+    const parentClick = vi.fn();
+    const childClick = vi.fn((e: Event) => {
+      e.preventDefault();
+    });
+    const unmount = mount(() =>
+      h(
+        SmoothCorners,
+        {
+          asChild: true,
+          autoEffects: false,
+          corners: { radius: 8 },
+          onClick: parentClick,
+        },
+        () => h("button", { onClick: childClick, type: "button" }, "click"),
+      ),
+    );
+    const button = container.querySelector<HTMLButtonElement>("button");
+    button!.click();
+    expect(childClick).toHaveBeenCalledTimes(1);
+    expect(parentClick).not.toHaveBeenCalled();
+    unmount();
+  });
+
   it("wraps the cloned child in a wrapper div when effects are present", () => {
     const unmount = mount(() =>
       h(

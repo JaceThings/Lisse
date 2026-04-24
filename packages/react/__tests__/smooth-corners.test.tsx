@@ -131,6 +131,92 @@ describe("useSmoothCorners - clip-path save/restore", () => {
   });
 });
 
+describe("useSmoothCorners - detach before unmount", () => {
+  it("cleans up without throwing when the element is detached between mount and unmount", () => {
+    const parent = document.createElement("div");
+    parent.style.position = "relative";
+    document.body.appendChild(parent);
+
+    const el = document.createElement("div");
+    parent.appendChild(el);
+
+    const ref = { current: el } as React.RefObject<HTMLElement>;
+    const localContainer = document.createElement("div");
+    document.body.appendChild(localContainer);
+    const localRoot = createRoot(localContainer);
+
+    function Tester() {
+      useSmoothCorners(
+        ref,
+        { radius: 8 },
+        {
+          autoEffects: false,
+          effects: { innerBorder: { width: 2, color: "#000", opacity: 1 } },
+        },
+      );
+      return null;
+    }
+
+    act(() => {
+      localRoot.render(<Tester />);
+    });
+
+    parent.removeChild(el);
+
+    expect(() => {
+      act(() => {
+        localRoot.unmount();
+      });
+    }).not.toThrow();
+
+    localContainer.remove();
+    parent.remove();
+  });
+});
+
+describe("useSmoothCorners - autoEffects toggle cycle", () => {
+  it("strips CSS effects on extraction and restores them when autoEffects flips off", () => {
+    const el = document.createElement("div");
+    el.style.border = "2px solid red";
+    document.body.appendChild(el);
+
+    const ref = { current: el } as React.RefObject<HTMLElement>;
+    const localContainer = document.createElement("div");
+    document.body.appendChild(localContainer);
+    const localRoot = createRoot(localContainer);
+
+    function Tester({ autoEffects }: { autoEffects: boolean }) {
+      useSmoothCorners(ref, { radius: 8 }, { autoEffects });
+      return null;
+    }
+
+    act(() => {
+      localRoot.render(<Tester autoEffects={true} />);
+    });
+    // `extractAndStripEffects` writes `border = "0"`, which user agents
+    // normalise back to `"0px"` on read.
+    expect(el.style.border).toBe("0px");
+
+    act(() => {
+      localRoot.render(<Tester autoEffects={false} />);
+    });
+    expect(el.style.border).toBe("2px solid red");
+
+    act(() => {
+      localRoot.render(<Tester autoEffects={true} />);
+    });
+    expect(el.style.border).toBe("0px");
+
+    act(() => {
+      localRoot.unmount();
+    });
+    expect(el.style.border).toBe("2px solid red");
+
+    localContainer.remove();
+    el.remove();
+  });
+});
+
 describe("<SmoothCorners /> - asChild", () => {
   it("merges props onto the child element instead of wrapping", () => {
     const handleClick = vi.fn();
@@ -197,15 +283,15 @@ describe("<Slot /> - error messages are reachable", () => {
     console.error = originalError;
   });
 
-  it("throws the library's own error when given zero children", () => {
+  it("throws when given zero children", () => {
     expect(() => {
       act(() => {
         root.render(<Slot>{null}</Slot>);
       });
-    }).toThrow("Slot: `asChild` expects exactly one child.");
+    }).toThrow("received none");
   });
 
-  it("throws the library's own error when given multiple children", () => {
+  it("throws with a count when given multiple children", () => {
     expect(() => {
       act(() => {
         root.render(
@@ -215,15 +301,132 @@ describe("<Slot /> - error messages are reachable", () => {
           </Slot>,
         );
       });
-    }).toThrow("Slot: `asChild` expects exactly one child.");
+    }).toThrow("received 2");
   });
 
-  it("throws the library's own error when the child is not a valid element", () => {
+  it("throws with Fragment hint when the child is a Fragment", () => {
+    expect(() => {
+      act(() => {
+        root.render(
+          <Slot>
+            <>
+              <span>a</span>
+              <span>b</span>
+            </>
+          </Slot>,
+        );
+      });
+    }).toThrow("not a Fragment");
+  });
+
+  it("throws when the child is plain text", () => {
     expect(() => {
       act(() => {
         root.render(<Slot>plain text</Slot>);
       });
-    }).toThrow("Slot: child must be a valid React element.");
+    }).toThrow("not a string");
+  });
+});
+
+describe("<Slot /> - preventDefault gating", () => {
+  it("skips the parent handler when the child calls event.preventDefault()", () => {
+    const parent = vi.fn();
+    const child = vi.fn((e: React.MouseEvent) => {
+      e.preventDefault();
+    });
+    act(() => {
+      root.render(
+        <Slot onClick={parent}>
+          <button type="button" onClick={child}>
+            x
+          </button>
+        </Slot>,
+      );
+    });
+    container.querySelector("button")?.click();
+    expect(child).toHaveBeenCalledTimes(1);
+    expect(parent).not.toHaveBeenCalled();
+  });
+
+  it("still calls the parent handler when the child does not preventDefault", () => {
+    const parent = vi.fn();
+    const child = vi.fn();
+    act(() => {
+      root.render(
+        <Slot onClick={parent}>
+          <button type="button" onClick={child}>
+            x
+          </button>
+        </Slot>,
+      );
+    });
+    container.querySelector("button")?.click();
+    expect(child).toHaveBeenCalledTimes(1);
+    expect(parent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("<Slot /> - generic element typing", () => {
+  it("accepts anchor attributes when parameterised over 'a'", () => {
+    act(() => {
+      root.render(
+        <Slot<"a"> href="/x">
+          <a>link</a>
+        </Slot>,
+      );
+    });
+    const a = container.querySelector("a");
+    expect(a?.getAttribute("href")).toBe("/x");
+  });
+
+  it("accepts button attributes when parameterised over 'button'", () => {
+    act(() => {
+      root.render(
+        <Slot<"button"> type="submit">
+          <button>submit</button>
+        </Slot>,
+      );
+    });
+    const button = container.querySelector("button");
+    expect(button?.getAttribute("type")).toBe("submit");
+  });
+});
+
+describe("<SmoothCorners /> - effects toggle stability", () => {
+  it("does not recreate SVG handles when effects toggle on and off", () => {
+    function Tester({ withBorder }: { withBorder: boolean }) {
+      return (
+        <SmoothCorners
+          corners={{ radius: 8 }}
+          innerBorder={
+            withBorder ? { width: 2, color: "#000", opacity: 1 } : undefined
+          }
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => {
+      root.render(<Tester withBorder={true} />);
+    });
+
+    const wrapper = container.querySelector("[data-slot='smooth-corners']")
+      ?.parentElement;
+    expect(wrapper).not.toBeNull();
+    const svgsAfterMount = Array.from(wrapper!.querySelectorAll("svg"));
+    expect(svgsAfterMount.length).toBeGreaterThan(0);
+
+    act(() => {
+      root.render(<Tester withBorder={false} />);
+    });
+    act(() => {
+      root.render(<Tester withBorder={true} />);
+    });
+
+    const svgsAfterToggle = Array.from(wrapper!.querySelectorAll("svg"));
+    // Same SVG element references — no teardown/recreate cycle.
+    expect(svgsAfterToggle).toEqual(svgsAfterMount);
   });
 });
 

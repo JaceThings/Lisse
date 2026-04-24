@@ -1,5 +1,16 @@
 const refCounts = new WeakMap<HTMLElement, number>();
 
+/**
+ * Ensure an anchor element is positioned so the SVG effects overlay can
+ * sit on top of it. Ref-counted: if the anchor already has non-static
+ * positioning (user-set or from a previous acquire), this returns true
+ * without touching it. If the anchor is static, `position: relative` is
+ * applied and the count is incremented. Returns false when the anchor is
+ * non-static but not managed by this library -- caller should bail out
+ * rather than stomp on user styles.
+ *
+ * Always pair with `releasePosition` on the same anchor.
+ */
 export function acquirePosition(anchor: HTMLElement): boolean {
   const count = refCounts.get(anchor) ?? 0;
   if (count > 0) {
@@ -15,6 +26,11 @@ export function acquirePosition(anchor: HTMLElement): boolean {
   return true;
 }
 
+/**
+ * Counterpart to `acquirePosition`. Decrements the ref count; when the
+ * last acquirer releases, the inline `position` style applied by
+ * `acquirePosition` is cleared.
+ */
 export function releasePosition(anchor: HTMLElement): void {
   const count = refCounts.get(anchor) ?? 0;
   if (count <= 1) {

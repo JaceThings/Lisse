@@ -162,7 +162,27 @@ function Cta({ children }: { children: React.ReactNode }) {
 }
 ```
 
-The child receives the internal ref. Class names merge (parent first, child second). Event handlers compose (child handler runs first, then parent's). When using `asChild`, the `as` prop is ignored.
+The child receives the internal ref. Class names merge (parent first, child second). Event handlers compose: the child handler runs first, and the parent handler runs next unless the child called `event.preventDefault()`. When using `asChild`, the `as` prop is ignored.
+
+#### Standalone `Slot`
+
+`Slot` is exported for advanced composition. It is generic over the element type it will merge onto, so you can opt into element-specific attributes by passing a type parameter:
+
+```tsx
+import { Slot } from "@lisse/react";
+
+<Slot<"a"> href="/x" className="underline">
+  <a>link</a>
+</Slot>;
+
+<Slot<"button"> type="submit" onClick={handleClick}>
+  <button>submit</button>
+</Slot>;
+```
+
+Without a type parameter, `Slot` accepts the common `HTMLAttributes<HTMLElement>` surface via the `SlotProps` type. Use `SlotPropsFor<E>` (re-exported alongside `SlotProps`) to compose element-specific shapes yourself.
+
+At runtime every prop is forwarded to the cloned child regardless of type. The generic parameter is a type-level hint only.
 
 ### Basic Usage
 
