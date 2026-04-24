@@ -14,6 +14,16 @@ Lisse *(rhymes with lease)* is Figma-quality squircle smoothing for the web. Gen
 [![CI](https://img.shields.io/github/actions/workflow/status/JaceThings/Lisse/ci.yml?branch=main&label=CI)](https://github.com/JaceThings/Lisse/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
+[![bundle: @lisse/core](https://deno.bundlejs.com/badge?q=%40lisse%2Fcore&label=%40lisse%2Fcore)](https://bundlejs.com/?q=%40lisse%2Fcore)
+[![bundle: @lisse/react](https://deno.bundlejs.com/badge?q=%40lisse%2Freact&label=%40lisse%2Freact)](https://bundlejs.com/?q=%40lisse%2Freact)
+[![bundle: @lisse/vue](https://deno.bundlejs.com/badge?q=%40lisse%2Fvue&label=%40lisse%2Fvue)](https://bundlejs.com/?q=%40lisse%2Fvue)
+[![bundle: @lisse/svelte](https://deno.bundlejs.com/badge?q=%40lisse%2Fsvelte&label=%40lisse%2Fsvelte)](https://bundlejs.com/?q=%40lisse%2Fsvelte)
+
+[![downloads: @lisse/core](https://img.shields.io/npm/dw/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
+[![downloads: @lisse/react](https://img.shields.io/npm/dw/%40lisse%2Freact?label=%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
+[![downloads: @lisse/vue](https://img.shields.io/npm/dw/%40lisse%2Fvue?label=%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
+[![downloads: @lisse/svelte](https://img.shields.io/npm/dw/%40lisse%2Fsvelte?label=%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
+
 </div>
 
 <!-- Visual: Hero image - side-by-side comparison of standard CSS border-radius vs Lisse squircle applied to a card. Show the difference clearly. Recommended ~800px wide. Place at /assets/hero.png -->
@@ -545,6 +555,14 @@ Lisse targets evergreen browsers. The runtime uses `clip-path`, `ResizeObserver`
 | Safari | 13.1 |
 
 Older browsers miss `ResizeObserver`; Lisse falls back to a no-op observer there, so elements render with their initial size but do not re-sync on resize. Drop-shadow filters and SVG mask features require the listed versions. If you need broader coverage, polyfill `ResizeObserver` yourself.
+
+## Gotchas
+
+Lisse applies `clip-path` at the DOM level to carve the squircle shape. Because the clip is enforced by the browser on the clipped element and every descendant, there are three interaction quirks worth knowing before you wire it into an existing design system.
+
+- **Focus outlines are clipped.** `clip-path` crops focus rings at the squircle edge, so the outline you get on `:focus-visible` disappears around the corners. Either push the outline outside the clip with `outline-offset`, replace the outline with a `box-shadow` ring on a parent element, or use the auto-extracted `innerBorder` as the focus indicator so it follows the squircle. See the [wiki Limitations page](https://github.com/JaceThings/Lisse/wiki/Limitations#focus-outlines).
+- **Overflowing descendants are clipped.** Children that paint outside the clipped bounds -- a tooltip popping out of a card, a dropdown menu, a hover lift -- are cropped at the squircle edge. If you need overflow, render the overflowing child in a portal or a sibling that is NOT a descendant of the clipped container. See the [wiki Limitations page](https://github.com/JaceThings/Lisse/wiki/Limitations#overflowing-descendants).
+- **Scrollbars on scrollable children are clipped.** A `<div style="overflow: auto">` inside a Lisse-clipped container has its scrollbar cropped at the corners, which makes the scroll thumb look chopped. Move the scroll container outside the clipped element, or wrap the scroll container itself with Lisse rather than a parent. See the [wiki Limitations page](https://github.com/JaceThings/Lisse/wiki/Limitations#scrollbar-clipping).
 
 ## Documentation
 

@@ -2,6 +2,8 @@
 
 React hook and component for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
 
+> See [Gotchas](https://github.com/JaceThings/Lisse#gotchas) in the root README for `clip-path` interaction notes (focus outlines, overflow, scrollbars).
+
 [![npm](https://img.shields.io/npm/v/%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
 
