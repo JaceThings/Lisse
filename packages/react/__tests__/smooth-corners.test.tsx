@@ -131,6 +131,92 @@ describe("useSmoothCorners - clip-path save/restore", () => {
   });
 });
 
+describe("useSmoothCorners - detach before unmount", () => {
+  it("cleans up without throwing when the element is detached between mount and unmount", () => {
+    const parent = document.createElement("div");
+    parent.style.position = "relative";
+    document.body.appendChild(parent);
+
+    const el = document.createElement("div");
+    parent.appendChild(el);
+
+    const ref = { current: el } as React.RefObject<HTMLElement>;
+    const localContainer = document.createElement("div");
+    document.body.appendChild(localContainer);
+    const localRoot = createRoot(localContainer);
+
+    function Tester() {
+      useSmoothCorners(
+        ref,
+        { radius: 8 },
+        {
+          autoEffects: false,
+          effects: { innerBorder: { width: 2, color: "#000", opacity: 1 } },
+        },
+      );
+      return null;
+    }
+
+    act(() => {
+      localRoot.render(<Tester />);
+    });
+
+    parent.removeChild(el);
+
+    expect(() => {
+      act(() => {
+        localRoot.unmount();
+      });
+    }).not.toThrow();
+
+    localContainer.remove();
+    parent.remove();
+  });
+});
+
+describe("useSmoothCorners - autoEffects toggle cycle", () => {
+  it("strips CSS effects on extraction and restores them when autoEffects flips off", () => {
+    const el = document.createElement("div");
+    el.style.border = "2px solid red";
+    document.body.appendChild(el);
+
+    const ref = { current: el } as React.RefObject<HTMLElement>;
+    const localContainer = document.createElement("div");
+    document.body.appendChild(localContainer);
+    const localRoot = createRoot(localContainer);
+
+    function Tester({ autoEffects }: { autoEffects: boolean }) {
+      useSmoothCorners(ref, { radius: 8 }, { autoEffects });
+      return null;
+    }
+
+    act(() => {
+      localRoot.render(<Tester autoEffects={true} />);
+    });
+    // `extractAndStripEffects` writes `border = "0"`, which user agents
+    // normalise back to `"0px"` on read.
+    expect(el.style.border).toBe("0px");
+
+    act(() => {
+      localRoot.render(<Tester autoEffects={false} />);
+    });
+    expect(el.style.border).toBe("2px solid red");
+
+    act(() => {
+      localRoot.render(<Tester autoEffects={true} />);
+    });
+    expect(el.style.border).toBe("0px");
+
+    act(() => {
+      localRoot.unmount();
+    });
+    expect(el.style.border).toBe("2px solid red");
+
+    localContainer.remove();
+    el.remove();
+  });
+});
+
 describe("<SmoothCorners /> - asChild", () => {
   it("merges props onto the child element instead of wrapping", () => {
     const handleClick = vi.fn();
