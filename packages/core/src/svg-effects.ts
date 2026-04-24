@@ -368,9 +368,8 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         h: number,
         opts: SmoothCornerOptions,
         spread: number,
-        key: string,
       ): string => {
-        const cacheKey = `${w}:${h}:${spread}:${key}`;
+        const cacheKey = `${w}:${h}:${spread}:${optionsKey}`;
         let cached = pathCache.get(cacheKey);
         if (cached === undefined) {
           cached = generatePath(w, h, opts);
@@ -379,7 +378,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         return cached;
       };
 
-      const d = getPath(width, height, options, 0, optionsKey);
+      const d = getPath(width, height, options, 0);
 
       // Update clip and mask paths
       clipShape.setAttribute("d", d);
@@ -435,7 +434,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         const cutW = Math.max(1, width - spread * 2);
         const cutH = Math.max(1, height - spread * 2);
         const cutOpts = spread !== 0 ? adjustOptions(options, -spread) : options;
-        entry.maskCutout.setAttribute("d", getPath(cutW, cutH, cutOpts, -spread, optionsKey));
+        entry.maskCutout.setAttribute("d", getPath(cutW, cutH, cutOpts, -spread));
         entry.maskCutout.setAttribute("transform",
           `translate(${is.offsetX + spread},${is.offsetY + spread})`);
 
