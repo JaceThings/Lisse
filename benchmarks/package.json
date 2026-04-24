@@ -1,6 +1,6 @@
 {
   "name": "@lisse/benchmarks",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "JS-only benchmarks for the @lisse/react adapter",
   "type": "module",
