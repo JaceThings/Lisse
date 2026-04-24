@@ -68,15 +68,24 @@ export function useSmoothCorners(
   let attachedAnchor: HTMLElement | null = null;
   let didAcquire = false;
 
-  function ensureHandles(el: HTMLElement): boolean {
-    if (effectsHandle && shadowHandle) return true;
-    const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
-    if (!anchor) return false;
-    attachedAnchor = anchor;
-    didAcquire = acquirePosition(anchor);
-    effectsHandle = createSvgEffects(anchor);
-    shadowHandle = createDropShadow(anchor);
-    return true;
+  // Attach or top-up the effects overlay. Anchor is captured on first
+  // attach and reused, so a late-arriving shadow piggy-backs on the same
+  // ref-counted position. Drop-shadow DOM nodes are created only when a
+  // shadow config is actually present.
+  function ensureHandles(el: HTMLElement, merged: EffectsConfig): boolean {
+    if (!attachedAnchor) {
+      const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
+      if (!anchor) return false;
+      attachedAnchor = anchor;
+      didAcquire = acquirePosition(anchor);
+    }
+    if (!effectsHandle) {
+      effectsHandle = createSvgEffects(attachedAnchor);
+    }
+    if (!shadowHandle && merged.shadow) {
+      shadowHandle = createDropShadow(attachedAnchor);
+    }
+    return !!effectsHandle;
   }
 
   // Single resize-synchronised callback. Mirrors the React hook's sync()
@@ -93,11 +102,11 @@ export function useSmoothCorners(
     el.setAttribute("data-state", "ready");
 
     const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
-    if (hasEffects(merged) && !effectsHandle) {
-      if (!ensureHandles(el)) return;
-    }
-    if (effectsHandle && shadowHandle) {
+    if (hasEffects(merged)) ensureHandles(el, merged);
+    if (effectsHandle) {
       effectsHandle.update(unref(options), merged, width, height);
+    }
+    if (shadowHandle) {
       shadowHandle.update(
         unref(options),
         merged.shadow ?? DEFAULT_SHADOW,
@@ -126,7 +135,7 @@ export function useSmoothCorners(
     // Eager handle creation when effects are present at setup so the overlay
     // exists before the resize observer's first callback fires.
     const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
-    if (hasEffects(merged)) ensureHandles(el);
+    if (hasEffects(merged)) ensureHandles(el, merged);
 
     unobserve = observeResize(el, syncAll);
   }

@@ -25,11 +25,13 @@ function syncEffects(
   options: SmoothCornerOptions,
   merged: EffectsConfig,
   effectsHandle: ReturnType<typeof createSvgEffects>,
-  shadowHandle: ReturnType<typeof createDropShadow>,
+  shadowHandle: ReturnType<typeof createDropShadow> | undefined,
   width: number, height: number,
 ): void {
   effectsHandle.update(options, merged, width, height);
-  shadowHandle.update(options, merged.shadow ?? DEFAULT_SHADOW, width, height);
+  // shadowHandle is lazy: only created when a shadow first appears, so
+  // consumers using only border effects skip the drop-shadow SVG entirely.
+  shadowHandle?.update(options, merged.shadow ?? DEFAULT_SHADOW, width, height);
 }
 
 interface State {
@@ -43,22 +45,30 @@ interface State {
 }
 
 /**
- * Acquire the anchor (wrapper ref or element parent) and create SVG + drop
- * shadow handles on it. Idempotent: returns early if handles already exist.
- * Shared across the three `useIsoLayoutEffect` blocks so no pathway can
- * accidentally skip a step and double-acquire the anchor.
+ * Ensure the effects overlay exists for the current merged config. The
+ * anchor is captured on first attach and reused so a late-arriving shadow
+ * can piggy-back on the same ref-counted position. Drop-shadow nodes
+ * (and the `isolation:isolate` mutation on the anchor) are skipped when
+ * only border effects are present. Idempotent across all three effect
+ * sites so no pathway can accidentally double-acquire the anchor.
  */
 function ensureHandles(
   s: State,
+  merged: EffectsConfig,
   wrapperRef: React.RefObject<HTMLElement | null> | undefined,
 ): void {
-  if (s.effectsHandle) return;
-  const anchor = wrapperRef?.current ?? s.el.parentElement;
-  if (!anchor) return;
-  s.anchor = anchor;
-  s.didAcquire = acquirePosition(anchor);
-  s.effectsHandle = createSvgEffects(anchor);
-  s.shadowHandle = createDropShadow(anchor);
+  if (!s.anchor) {
+    const anchor = wrapperRef?.current ?? s.el.parentElement;
+    if (!anchor) return;
+    s.anchor = anchor;
+    s.didAcquire = acquirePosition(anchor);
+  }
+  if (!s.effectsHandle) {
+    s.effectsHandle = createSvgEffects(s.anchor);
+  }
+  if (!s.shadowHandle && merged.shadow) {
+    s.shadowHandle = createDropShadow(s.anchor);
+  }
 }
 
 export interface UseEffectsOptions {
@@ -146,8 +156,8 @@ export function useSmoothCorners(
       s.el.setAttribute("data-state", "ready");
 
       const merged = mergeEffects(s.extracted, effectsPropRef.current);
-      if (hasEffects(merged)) ensureHandles(s, wrapperRefRef.current);
-      if (s.effectsHandle && s.shadowHandle) {
+      if (hasEffects(merged)) ensureHandles(s, merged, wrapperRefRef.current);
+      if (s.effectsHandle) {
         syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
       }
     }
@@ -157,7 +167,7 @@ export function useSmoothCorners(
     // before the resize observer's first callback, avoiding a frame where
     // it's missing.
     const initialMerged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(initialMerged)) ensureHandles(s, wrapperRefRef.current);
+    if (hasEffects(initialMerged)) ensureHandles(s, initialMerged, wrapperRefRef.current);
 
     const unobserve = observeResize(el, sync);
 
@@ -181,15 +191,21 @@ export function useSmoothCorners(
   useIsoLayoutEffect(() => {
     const s = stateRef.current;
     if (!s) return;
+
+    // Attach handles eagerly when effects appear, even before the first
+    // layout. This matters for a later-appearing `shadow` prop: the
+    // drop-shadow SVG must exist by the next resize callback so the
+    // overlay doesn't lag by a frame.
+    const merged = mergeEffects(s.extracted, effectsPropRef.current);
+    if (hasEffects(merged)) ensureHandles(s, merged, wrapperRefRef.current);
+
     const { width, height } = s.el.getBoundingClientRect();
     if (width <= 0 || height <= 0) return;
 
     s.el.style.clipPath = generateClipPath(width, height, optionsRef.current);
     s.el.setAttribute("data-state", "ready");
 
-    const merged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(merged)) ensureHandles(s, wrapperRefRef.current);
-    if (s.effectsHandle && s.shadowHandle) {
+    if (s.effectsHandle) {
       syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
     }
   }, [optionsKey, effectsKey]);
@@ -211,8 +227,8 @@ export function useSmoothCorners(
     const { width, height } = s.el.getBoundingClientRect();
     if (width <= 0 || height <= 0) return;
     const merged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(merged)) ensureHandles(s, wrapperRefRef.current);
-    if (s.effectsHandle && s.shadowHandle) {
+    if (hasEffects(merged)) ensureHandles(s, merged, wrapperRefRef.current);
+    if (s.effectsHandle) {
       syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
     }
   }, [autoEffectsKey]);

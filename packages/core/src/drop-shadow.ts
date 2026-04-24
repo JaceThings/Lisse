@@ -23,6 +23,9 @@ function createShadowEntry(defs: Element, svg: Element): ShadowEntry {
   filterEl.setAttribute("y", "-200%");
   filterEl.setAttribute("width", "500%");
   filterEl.setAttribute("height", "500%");
+  // Match svg-effects.ts's inner-shadow blur filter. Without this, some
+  // user agents pick linearRGB and the blur tint drifts.
+  filterEl.setAttribute("color-interpolation-filters", "sRGB");
 
   const feBlur = document.createElementNS(SVG_NS, "feGaussianBlur") as SVGFEGaussianBlurElement;
   feBlur.setAttribute("stdDeviation", "0");
