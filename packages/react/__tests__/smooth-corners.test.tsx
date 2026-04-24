@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { useRef, forwardRef } from "react";
 import { SmoothCorners } from "../src/smooth-corners.js";
+import { useSmoothCorners } from "../src/use-smooth-corners.js";
 import { Slot } from "../src/slot.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -88,43 +89,45 @@ describe("<SmoothCorners /> - data attributes", () => {
   });
 });
 
-describe("<SmoothCorners /> - clip-path save/restore", () => {
-  it("restores the prior inline clip-path on unmount", () => {
-    // Mount a stable child that already has an inline clip-path.
-    function ChildWithClip(_: unknown) {
-      const ref = useRef<HTMLDivElement>(null);
-      return (
-        <div ref={ref} style={{ clipPath: "circle(10px)" }} id="target" />
-      );
+describe("useSmoothCorners - clip-path save/restore", () => {
+  it("restores the prior inline clip-path and removes data attributes on unmount", () => {
+    // Drive the hook directly against an element we own. That way the
+    // element survives React's unmount and we can inspect style.clipPath
+    // and the data attributes after cleanup has run.
+    const el = document.createElement("div");
+    el.style.clipPath = "circle(10px)";
+    document.body.appendChild(el);
+
+    const ref = { current: el } as React.RefObject<HTMLElement>;
+
+    const localContainer = document.createElement("div");
+    document.body.appendChild(localContainer);
+    const localRoot = createRoot(localContainer);
+
+    function Tester() {
+      useSmoothCorners(ref, { radius: 8 }, { autoEffects: false });
+      return null;
     }
-    // Start without SmoothCorners so the user's clip-path is set first.
-    act(() => {
-      root.render(<ChildWithClip />);
-    });
-    const target = container.querySelector<HTMLDivElement>("#target");
-    expect(target?.style.clipPath).toBe("circle(10px)");
 
-    // Mount SmoothCorners onto a new child that already has a clip-path
-    // by using asChild — Slot will merge SmoothCorners onto the child div.
     act(() => {
-      root.render(
-        <SmoothCorners asChild autoEffects={false} corners={{ radius: 8 }}>
-          <div style={{ clipPath: "circle(10px)" }} id="target2" />
-        </SmoothCorners>,
-      );
+      localRoot.render(<Tester />);
     });
-    const t2 = container.querySelector<HTMLDivElement>("#target2");
-    expect(t2).not.toBeNull();
-    // While mounted, data-slot should be present.
-    expect(t2?.getAttribute("data-slot")).toBe("smooth-corners");
 
-    // Unmount and the consumer's original inline clipPath should remain.
+    // While mounted, the hook attaches the data attributes.
+    expect(el.getAttribute("data-slot")).toBe("smooth-corners");
+
     act(() => {
-      root.unmount();
+      localRoot.unmount();
     });
-    // After unmount, the element is detached but its style was restored
-    // before detach. We can't easily inspect detached node, so we verify
-    // the unmount path doesn't throw.
+
+    // After unmount, the hook's cleanup has run: the original clip-path
+    // is restored and the data attributes are gone.
+    expect(el.style.clipPath).toBe("circle(10px)");
+    expect(el.getAttribute("data-slot")).toBeNull();
+    expect(el.getAttribute("data-state")).toBeNull();
+
+    localContainer.remove();
+    el.remove();
   });
 });
 
