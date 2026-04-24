@@ -1,9 +1,4 @@
-import type {
-  SmoothCornerOptions,
-  CornerConfig,
-  UniformCornerOptions,
-  PerCornerConfig,
-} from "./types.js";
+import type { SmoothCornerOptions, CornerConfig } from "./types.js";
 import { distributeAndNormalize } from "./distribute.js";
 import { getPathParamsForCorner } from "./corner-params.js";
 import { getSVGPathFromPathParams } from "./draw.js";
@@ -11,27 +6,16 @@ import { getSVGPathFromPathParams } from "./draw.js";
 export const DEFAULT_SMOOTHING = 0.6;
 export const DEFAULT_PRESERVE_SMOOTHING = true;
 
-function isUniform(options: SmoothCornerOptions): options is UniformCornerOptions {
-  return "radius" in options;
-}
-
-function resolveCorner(
-  value: CornerConfig | number | undefined,
-  fallback: CornerConfig
-): CornerConfig {
-  if (value === undefined) return fallback;
-  if (typeof value === "number") return { radius: value };
-  return value;
-}
+type Resolved = Required<CornerConfig>;
 
 interface ResolvedCorners {
-  topLeft: Required<CornerConfig>;
-  topRight: Required<CornerConfig>;
-  bottomRight: Required<CornerConfig>;
-  bottomLeft: Required<CornerConfig>;
+  topLeft: Resolved;
+  topRight: Resolved;
+  bottomRight: Resolved;
+  bottomLeft: Resolved;
 }
 
-function fillDefaults(c: CornerConfig): Required<CornerConfig> {
+function withDefaults(c: CornerConfig): Resolved {
   return {
     radius: c.radius,
     smoothing: c.smoothing ?? DEFAULT_SMOOTHING,
@@ -39,23 +23,21 @@ function fillDefaults(c: CornerConfig): Required<CornerConfig> {
   };
 }
 
-function resolveOptions(options: SmoothCornerOptions): ResolvedCorners {
-  if (isUniform(options)) {
-    const corner = fillDefaults(options);
-    return {
-      topLeft: corner,
-      topRight: corner,
-      bottomRight: corner,
-      bottomLeft: corner,
-    };
-  }
+function resolve(v: CornerConfig | number | undefined): Resolved {
+  const c = typeof v === "number" ? { radius: v } : v ?? { radius: 0 };
+  return withDefaults(c);
+}
 
-  const defaults: CornerConfig = { radius: 0 };
+function resolveOptions(options: SmoothCornerOptions): ResolvedCorners {
+  if ("radius" in options) {
+    const c = withDefaults(options);
+    return { topLeft: c, topRight: c, bottomRight: c, bottomLeft: c };
+  }
   return {
-    topLeft: fillDefaults(resolveCorner(options.topLeft, defaults)),
-    topRight: fillDefaults(resolveCorner(options.topRight, defaults)),
-    bottomRight: fillDefaults(resolveCorner(options.bottomRight, defaults)),
-    bottomLeft: fillDefaults(resolveCorner(options.bottomLeft, defaults)),
+    topLeft: resolve(options.topLeft),
+    topRight: resolve(options.topRight),
+    bottomRight: resolve(options.bottomRight),
+    bottomLeft: resolve(options.bottomLeft),
   };
 }
 

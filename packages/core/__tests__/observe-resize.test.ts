@@ -192,4 +192,24 @@ describe("observeResize", () => {
     unsub();
     expect(rafCallbacks.size).toBe(0);
   });
+
+  it("snapshots the callback set during flush so sibling unsubscribe mid-tick is safe", () => {
+    // Regression: if a callback synchronously unsubscribes a sibling on the
+    // same element, iterating the live Set would skip the sibling and — in
+    // the worst case, when both are the only observers — disconnect the
+    // shared observer mid-flush. Snapshotting the Set before iteration
+    // guarantees the sibling still fires exactly once for this tick.
+    const el = document.createElement("div");
+    const cb2 = vi.fn();
+    let unsub2: () => void;
+    const cb1 = vi.fn(() => {
+      unsub2();
+    });
+    observeResize(el, cb1);
+    unsub2 = observeResize(el, cb2);
+
+    flushRaf();
+    expect(cb1).toHaveBeenCalledOnce();
+    expect(cb2).toHaveBeenCalledOnce();
+  });
 });

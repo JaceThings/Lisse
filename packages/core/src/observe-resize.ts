@@ -11,7 +11,11 @@ function flush() {
   pendingElements.clear();
   for (const el of elements) {
     const cbs = callbackMap.get(el);
-    if (cbs) for (const cb of cbs) cb();
+    // Snapshot the callback set: a callback may synchronously unsubscribe
+    // a sibling (e.g. an unmount triggered by the first sync's layout),
+    // which would skip the sibling's dispatch and, in the worst case,
+    // disconnect the shared observer mid-flush.
+    if (cbs) for (const cb of [...cbs]) cb();
   }
 }
 
