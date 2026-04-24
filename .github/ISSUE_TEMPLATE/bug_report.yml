@@ -1,0 +1,75 @@
+name: "Bug report"
+description: "Report a defect in Lisse"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in the fields below so we can reproduce and fix the issue quickly.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the behaviour you observed.
+    validations:
+      required: true
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What you expected
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimum reproduction
+      description: A minimal code sample, StackBlitz, or repo that reproduces the issue. The smaller the better.
+      placeholder: |
+        Paste code or a link here.
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which Lisse package is affected?
+      options:
+        - "@lisse/core"
+        - "@lisse/react"
+        - "@lisse/vue"
+        - "@lisse/svelte"
+    validations:
+      required: true
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      description: The version of the package you're using (from `package.json` or `pnpm list`).
+      placeholder: "e.g. 0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser + version
+      description: Browser and version where you observed the bug.
+      placeholder: "e.g. Chrome 130, Safari 18, Firefox 131"
+    validations:
+      required: false
+  - type: input
+    id: framework-version
+    attributes:
+      label: Framework version
+      description: For React, Vue, or Svelte bindings, the framework version in use.
+      placeholder: "e.g. React 19.0.0, Vue 3.5.0, Svelte 5.0.0"
+    validations:
+      required: false
+  - type: checkboxes
+    id: coc
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue you agree to follow our [Code of Conduct](../../CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct.
+          required: true

@@ -1,0 +1,49 @@
+name: "Feature request"
+description: "Suggest an enhancement or new capability for Lisse"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe the problem you're trying to solve before jumping to a solution -- it helps us find the right design.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what's blocking you with Lisse today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work? API sketches welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you've thought about and why they weren't enough.
+    validations:
+      required: false
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Willingness to contribute
+      description: Let us know how you'd like to help move this forward.
+      options:
+        - label: I'm willing to open a PR for this.
+          required: false
+        - label: I'm willing to help test a proposed implementation.
+          required: false
+        - label: I'm just sharing the idea.
+          required: false
+  - type: checkboxes
+    id: coc
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue you agree to follow our [Code of Conduct](../../CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct.
+          required: true
