@@ -1,0 +1,22 @@
+{
+  "name": "@lisse/benchmarks",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JS-only benchmarks for the @lisse/react adapter",
+  "type": "module",
+  "scripts": {
+    "bench": "vitest bench --config vitest.config.ts --run"
+  },
+  "dependencies": {
+    "@lisse/core": "workspace:*",
+    "@lisse/react": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "happy-dom": "^20.6.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "vitest": "^3.0.0"
+  }
+}
