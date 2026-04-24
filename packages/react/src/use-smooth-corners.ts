@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   generateClipPath,
   createSvgEffects,
@@ -30,6 +30,35 @@ function syncEffects(
 ): void {
   effectsHandle.update(options, merged, width, height);
   shadowHandle.update(options, merged.shadow ?? DEFAULT_SHADOW, width, height);
+}
+
+interface State {
+  el: HTMLElement;
+  savedClipPath: string;
+  extracted: ReturnType<typeof extractAndStripEffects> | undefined;
+  effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
+  shadowHandle: ReturnType<typeof createDropShadow> | undefined;
+  anchor: HTMLElement | null;
+  didAcquire: boolean;
+}
+
+/**
+ * Acquire the anchor (wrapper ref or element parent) and create SVG + drop
+ * shadow handles on it. Idempotent: returns early if handles already exist.
+ * Shared across the three `useIsoLayoutEffect` blocks so no pathway can
+ * accidentally skip a step and double-acquire the anchor.
+ */
+function ensureHandles(
+  s: State,
+  wrapperRef: React.RefObject<HTMLElement | null> | undefined,
+): void {
+  if (s.effectsHandle) return;
+  const anchor = wrapperRef?.current ?? s.el.parentElement;
+  if (!anchor) return;
+  s.anchor = anchor;
+  s.didAcquire = acquirePosition(anchor);
+  s.effectsHandle = createSvgEffects(anchor);
+  s.shadowHandle = createDropShadow(anchor);
 }
 
 export interface UseEffectsOptions {
@@ -72,24 +101,17 @@ export function useSmoothCorners(
   wrapperRefRef.current = wrapperRef;
 
   // Stable signature of the corner options. Bounded object size makes
-  // JSON.stringify safe and cheap, and lets us avoid re-running effects
-  // on every parent render when prop identity changes but values don't.
-  const optionsKey = useMemo(() => JSON.stringify(options), [options]);
-  const effectsKey = useMemo(() => JSON.stringify(effects ?? null), [effects]);
+  // JSON.stringify safe and cheap. A useMemo here would never hit —
+  // callers typically pass fresh object literals each render — so we
+  // build the strings directly and save a memo cell.
+  const optionsKey = JSON.stringify(options);
+  const effectsKey = JSON.stringify(effects ?? null);
   const autoEffectsKey = autoEffects ?? true;
 
   // Per-mount state. SVG handles are created lazily on first sync that
   // sees effects and destroyed only on unmount. Toggling a border or
   // shadow prop on and off no longer tears down and rebuilds the overlay.
-  const stateRef = useRef<{
-    el: HTMLElement;
-    savedClipPath: string;
-    extracted: ReturnType<typeof extractAndStripEffects> | undefined;
-    effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
-    shadowHandle: ReturnType<typeof createDropShadow> | undefined;
-    anchor: HTMLElement | null;
-    didAcquire: boolean;
-  } | null>(null);
+  const stateRef = useRef<State | null>(null);
 
   // Main setup. Re-runs only when the target element ref changes.
   // Captures `autoEffectsKey` at mount for initial extraction; subsequent
@@ -105,26 +127,16 @@ export function useSmoothCorners(
     const initialAuto = autoEffectsKey;
     const initialExtracted = initialAuto ? extractAndStripEffects(el) : undefined;
 
-    const s = {
+    const s: State = {
       el,
       savedClipPath,
       extracted: initialExtracted,
-      effectsHandle: undefined as ReturnType<typeof createSvgEffects> | undefined,
-      shadowHandle: undefined as ReturnType<typeof createDropShadow> | undefined,
-      anchor: null as HTMLElement | null,
+      effectsHandle: undefined,
+      shadowHandle: undefined,
+      anchor: null,
       didAcquire: false,
     };
     stateRef.current = s;
-
-    function ensureHandles(): void {
-      if (s.effectsHandle) return;
-      const anchor = wrapperRefRef.current?.current ?? s.el.parentElement;
-      if (!anchor) return;
-      s.anchor = anchor;
-      s.didAcquire = acquirePosition(anchor);
-      s.effectsHandle = createSvgEffects(anchor);
-      s.shadowHandle = createDropShadow(anchor);
-    }
 
     function sync(): void {
       const { width, height } = s.el.getBoundingClientRect();
@@ -134,7 +146,7 @@ export function useSmoothCorners(
       s.el.setAttribute("data-state", "ready");
 
       const merged = mergeEffects(s.extracted, effectsPropRef.current);
-      if (hasEffects(merged)) ensureHandles();
+      if (hasEffects(merged)) ensureHandles(s, wrapperRefRef.current);
       if (s.effectsHandle && s.shadowHandle) {
         syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
       }
@@ -145,7 +157,7 @@ export function useSmoothCorners(
     // before the resize observer's first callback, avoiding a frame where
     // it's missing.
     const initialMerged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(initialMerged)) ensureHandles();
+    if (hasEffects(initialMerged)) ensureHandles(s, wrapperRefRef.current);
 
     const unobserve = observeResize(el, sync);
 
@@ -176,15 +188,7 @@ export function useSmoothCorners(
     s.el.setAttribute("data-state", "ready");
 
     const merged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(merged) && !s.effectsHandle) {
-      const anchor = wrapperRefRef.current?.current ?? s.el.parentElement;
-      if (anchor) {
-        s.anchor = anchor;
-        s.didAcquire = acquirePosition(anchor);
-        s.effectsHandle = createSvgEffects(anchor);
-        s.shadowHandle = createDropShadow(anchor);
-      }
-    }
+    if (hasEffects(merged)) ensureHandles(s, wrapperRefRef.current);
     if (s.effectsHandle && s.shadowHandle) {
       syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
     }
@@ -207,15 +211,7 @@ export function useSmoothCorners(
     const { width, height } = s.el.getBoundingClientRect();
     if (width <= 0 || height <= 0) return;
     const merged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(merged) && !s.effectsHandle) {
-      const anchor = wrapperRefRef.current?.current ?? s.el.parentElement;
-      if (anchor) {
-        s.anchor = anchor;
-        s.didAcquire = acquirePosition(anchor);
-        s.effectsHandle = createSvgEffects(anchor);
-        s.shadowHandle = createDropShadow(anchor);
-      }
-    }
+    if (hasEffects(merged)) ensureHandles(s, wrapperRefRef.current);
     if (s.effectsHandle && s.shadowHandle) {
       syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
     }
