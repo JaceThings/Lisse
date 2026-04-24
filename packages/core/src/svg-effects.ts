@@ -74,7 +74,8 @@ interface BorderElements {
 
 /** Remove a gradient def from the DOM and null out the reference. */
 function removeGradient(els: BorderElements, which: "main" | "overlay"): void {
-  const key = which === "main" ? "gradientEl" : "overlayGradientEl" as const;
+  const key: "gradientEl" | "overlayGradientEl" =
+    which === "main" ? "gradientEl" : "overlayGradientEl";
   els[key]?.remove();
   els[key] = null;
 }
@@ -89,7 +90,8 @@ function resolveStroke(
     removeGradient(els, which);
     return color;
   }
-  const elKey = which === "main" ? "gradientEl" : "overlayGradientEl" as const;
+  const elKey: "gradientEl" | "overlayGradientEl" =
+    which === "main" ? "gradientEl" : "overlayGradientEl";
   const id = which === "main" ? els.gradientId : els.overlayGradientId;
   if (els[elKey]) {
     updateGradientDef(els[elKey], color);
@@ -355,7 +357,29 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
       svg.setAttribute("height", String(height));
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-      const d = generatePath(width, height, options);
+      // Per-dispatch memo for generatePath. Inner-shadow pools frequently
+      // share (w, h, options) with the main path and only differ by spread,
+      // so a local cache keyed on all four avoids redundant distribute +
+      // per-corner math for each shadow.
+      const pathCache = new Map<string, string>();
+      const optionsKey = JSON.stringify(options);
+      const getPath = (
+        w: number,
+        h: number,
+        opts: SmoothCornerOptions,
+        spread: number,
+        key: string,
+      ): string => {
+        const cacheKey = `${w}:${h}:${spread}:${key}`;
+        let cached = pathCache.get(cacheKey);
+        if (cached === undefined) {
+          cached = generatePath(w, h, opts);
+          pathCache.set(cacheKey, cached);
+        }
+        return cached;
+      };
+
+      const d = getPath(width, height, options, 0, optionsKey);
 
       // Update clip and mask paths
       clipShape.setAttribute("d", d);
@@ -411,7 +435,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         const cutW = Math.max(1, width - spread * 2);
         const cutH = Math.max(1, height - spread * 2);
         const cutOpts = spread !== 0 ? adjustOptions(options, -spread) : options;
-        entry.maskCutout.setAttribute("d", generatePath(cutW, cutH, cutOpts));
+        entry.maskCutout.setAttribute("d", getPath(cutW, cutH, cutOpts, -spread, optionsKey));
         entry.maskCutout.setAttribute("transform",
           `translate(${is.offsetX + spread},${is.offsetY + spread})`);
 

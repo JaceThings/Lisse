@@ -270,3 +270,73 @@ describe("<SmoothCorners /> Vue - anchor capture", () => {
     expect(newParent.style.position).toBe("");
   });
 });
+
+describe("<SmoothCorners /> Vue - single observeResize subscription", () => {
+  it("registers observeResize once per element even with an innerBorder effect", async () => {
+    // With the old implementation, mounting a SmoothCorners with effects
+    // would install two callbacks on the same element (one for clip-path,
+    // one for effects). After the fix, we expect exactly one registration
+    // per element.
+    //
+    // observeResize uses a shared singleton ResizeObserver, so counting
+    // ResizeObserver.observe() alone can't distinguish one-vs-two
+    // subscriptions. Instead, we hijack requestAnimationFrame + fake the
+    // observer to directly invoke the registered callbacks, then count
+    // getBoundingClientRect reads on the inner element during a single
+    // resize flush.
+    const instances: Array<{ cb: (entries: unknown[]) => void; targets: Set<Element> }> = [];
+    (globalThis as { ResizeObserver: unknown }).ResizeObserver = class {
+      targets = new Set<Element>();
+      constructor(private cb: (entries: unknown[]) => void) {
+        instances.push({ cb, targets: this.targets });
+      }
+      observe(target: Element): void {
+        this.targets.add(target);
+      }
+      unobserve(target: Element): void {
+        this.targets.delete(target);
+      }
+      disconnect(): void {
+        this.targets.clear();
+      }
+    };
+
+    const unmount = mount(() =>
+      h(
+        SmoothCorners,
+        {
+          corners: { radius: 12 },
+          innerBorder: { width: 2, color: "#000", opacity: 1 },
+        },
+        () => "hi",
+      ),
+    );
+
+    const inner = container.querySelector<HTMLElement>(
+      "[data-slot='smooth-corners']",
+    );
+    expect(inner).not.toBeNull();
+
+    // happy-dom's bounding-rect always returns 0×0; stub it so syncAll
+    // executes both clip-path and effects paths.
+    inner!.getBoundingClientRect = () =>
+      ({ width: 100, height: 50, x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 50, toJSON: () => ({}) }) as DOMRect;
+
+    const rectSpy = vi.spyOn(inner!, "getBoundingClientRect");
+
+    // Flush all pending rAFs so the initial observeResize schedule runs.
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Trigger a synthetic resize via the shared observer. If two callbacks
+    // were registered for `inner`, we'd see two getBoundingClientRect reads
+    // per flush. The fix collapses them into one.
+    rectSpy.mockClear();
+    const obs = instances[0];
+    obs.cb([{ target: inner } as unknown]);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(rectSpy).toHaveBeenCalledTimes(1);
+
+    unmount();
+  });
+});

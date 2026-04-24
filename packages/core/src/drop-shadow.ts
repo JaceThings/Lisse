@@ -86,6 +86,26 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
         removeShadowEntry(pool.pop()!);
       }
 
+      // Per-dispatch memo for generatePath. Multiple shadows frequently share
+      // (width, height, options) and only differ by spread, so we key on all
+      // four to skip redundant distribute + per-corner math.
+      const pathCache = new Map<string, string>();
+      const optionsKey = JSON.stringify(options);
+      const getPath = (
+        w: number,
+        h: number,
+        opts: SmoothCornerOptions,
+        spread: number,
+      ): string => {
+        const cacheKey = `${w}:${h}:${spread}:${optionsKey}`;
+        let cached = pathCache.get(cacheKey);
+        if (cached === undefined) {
+          cached = generatePath(w, h, opts);
+          pathCache.set(cacheKey, cached);
+        }
+        return cached;
+      };
+
       // First shadow in array = topmost = rendered last in SVG (reverse index)
       let anyVisible = false;
       for (let i = 0; i < arr.length; i++) {
@@ -110,7 +130,7 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
         entry.pathEl.style.display = "";
 
         const adjusted = adjustOptions(options, spread);
-        entry.pathEl.setAttribute("d", generatePath(sw, sh, adjusted));
+        entry.pathEl.setAttribute("d", getPath(sw, sh, adjusted, spread));
         entry.pathEl.setAttribute("transform", `translate(${s.offsetX - spread},${s.offsetY - spread})`);
         entry.pathEl.setAttribute("fill", hexToRgb(s.color));
         entry.pathEl.setAttribute("fill-opacity", String(s.opacity));
