@@ -1,6 +1,6 @@
 {
   "name": "@lisse/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Framework-agnostic squircle path generation based on Figma's smoothing algorithm",
   "license": "MIT",
   "type": "module",
