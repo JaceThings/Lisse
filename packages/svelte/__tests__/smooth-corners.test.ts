@@ -56,6 +56,33 @@ describe("smoothCorners action - lifecycle", () => {
   });
 });
 
+describe("smoothCorners action - reactive autoEffects", () => {
+  it("re-extracts and restores when autoEffects toggles via update()", () => {
+    const node = document.createElement("div");
+    node.style.border = "2px solid rgb(255, 0, 0)";
+    container.appendChild(node);
+
+    const action = smoothCorners(node, {
+      corners: { radius: 8 },
+      autoEffects: true,
+    });
+    // With autoEffects: true, the inline border should have been stripped.
+    expect(node.style.border).not.toBe("2px solid rgb(255, 0, 0)");
+
+    // Toggling off should restore the original inline border.
+    action.update({ corners: { radius: 8 }, autoEffects: false });
+    expect(node.style.border).toBe("2px solid rgb(255, 0, 0)");
+
+    // Toggling back on should strip it again.
+    action.update({ corners: { radius: 8 }, autoEffects: true });
+    expect(node.style.border).not.toBe("2px solid rgb(255, 0, 0)");
+
+    action.destroy();
+    // Destroy restores to the original.
+    expect(node.style.border).toBe("2px solid rgb(255, 0, 0)");
+  });
+});
+
 describe("smoothCorners action - anchor capture", () => {
   it("does not throw when destroyed after being detached", () => {
     const parent = document.createElement("div");
