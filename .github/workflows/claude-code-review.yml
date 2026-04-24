@@ -1,0 +1,81 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude-review:
+    if: github.event.label.name == 'review'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request. The PR branch is already checked out.
+
+            ## Review categories
+
+            ### 1. Security (label: 🔒)
+            Dangerous patterns. Hardcoded secrets, auth bypasses, injection vectors,
+            command injection, path traversal, SSRF, unvalidated input at system
+            boundaries. If it could be exploited, flag it. These are blocking.
+
+            ### 2. Performance (label: ⚡)
+            Patterns that will hurt at scale. Unnecessary allocations, N+1 queries,
+            unbounded collections, blocking async, missing indexes. Only flag things
+            that have measurable impact, not theoretical micro-optimizations.
+
+            ### 3. Safety (label: 🛡️)
+            Unwraps that can panic in production, missing error propagation, silent
+            error swallowing, race conditions, resource leaks (file handles, connections,
+            listeners). If it can crash or leak, flag it.
+
+            ### 4. Format (label: ✂️ Nit)
+            This is the distill pass. Be aggressive. If something takes 10 lines when
+            3 would do, say so and show the shorter version. Unnecessary intermediate
+            variables, verbose match arms that could be combinators, redundant clones,
+            over-nested control flow that could be guard clauses. Show the tighter
+            version inline. These are non-blocking nits.
+
+            ## Comment format
+            Every inline comment MUST start with its label (e.g. "🔒 **Security:**"
+            or "✂️ **Nit:**"). Use code suggestions where possible.
+
+            Security and Safety comments are blocking. Performance is case-by-case.
+            Format nits are never blocking.
+
+            ## Housekeeping
+            Before posting new comments, check for existing review comments from
+            previous runs. For each old comment:
+            - If the issue was fixed in the current diff, reply "Resolved." and
+              use `gh api` to minimize/resolve the comment thread.
+            - If the issue still exists, do not duplicate it. Reply on the existing
+              thread instead.
+
+            Use `gh pr comment` for the top-level summary.
+            Use `mcp__github_inline_comment__create_inline_comment` for inline code comments.
+            Use `gh api` to resolve outdated comment threads.
+            Only post GitHub comments. Do not submit review text as messages.
+
+          claude_args: |
+            --model claude-opus-4-6 --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(gh pr review:*)"
