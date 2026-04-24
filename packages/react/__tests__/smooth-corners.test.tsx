@@ -162,6 +162,27 @@ describe("<SmoothCorners /> - asChild", () => {
     button?.click();
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
+
+  it("wraps the cloned child in a wrapper div when effects are present", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          asChild
+          corners={{ radius: 8 }}
+          innerBorder={{ width: 2, color: "#000", opacity: 1 }}
+        >
+          <button type="button">click</button>
+        </SmoothCorners>,
+      );
+    });
+    const button = container.querySelector("button");
+    expect(button).not.toBeNull();
+    // Effects require a wrapper div with position: relative for the SVG overlay.
+    const wrapper = button?.parentElement;
+    expect(wrapper?.tagName).toBe("DIV");
+    expect(wrapper?.style.position).toBe("relative");
+    expect(button?.getAttribute("data-slot")).toBe("smooth-corners");
+  });
 });
 
 describe("<Slot /> - error messages are reachable", () => {

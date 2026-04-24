@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createApp, h, ref } from "vue";
 import { SmoothCorners } from "../src/smooth-corners.js";
 
@@ -79,6 +79,52 @@ describe("<SmoothCorners /> Vue - asChild", () => {
     expect(button?.parentElement).toBe(container);
     // Vue cloneVNode merges classes; both should be present (order is impl-defined).
     expect(button?.className.split(" ").sort()).toEqual(["inner", "outer"]);
+    unmount();
+  });
+
+  it("composes event handlers between parent and cloned child", () => {
+    const parentClick = vi.fn();
+    const childClick = vi.fn();
+    const unmount = mount(() =>
+      h(
+        SmoothCorners,
+        {
+          asChild: true,
+          autoEffects: false,
+          corners: { radius: 8 },
+          onClick: parentClick,
+        },
+        () => h("button", { onClick: childClick, type: "button" }, "click"),
+      ),
+    );
+    const button = container.querySelector<HTMLButtonElement>("button");
+    expect(button).not.toBeNull();
+    button!.click();
+    expect(childClick).toHaveBeenCalledTimes(1);
+    expect(parentClick).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it("wraps the cloned child in a wrapper div when effects are present", () => {
+    const unmount = mount(() =>
+      h(
+        SmoothCorners,
+        {
+          asChild: true,
+          corners: { radius: 8 },
+          innerBorder: { width: 2, color: "#000", opacity: 1 },
+        },
+        () => h("button", { type: "button" }, "click"),
+      ),
+    );
+    const button = container.querySelector("button");
+    expect(button).not.toBeNull();
+    // Effects require a wrapper div with position: relative for the SVG overlay.
+    const wrapper = button?.parentElement;
+    expect(wrapper?.tagName).toBe("DIV");
+    expect(wrapper?.style.position).toBe("relative");
+    // The button still carries the data-slot attribute from the hook.
+    expect(button?.getAttribute("data-slot")).toBe("smooth-corners");
     unmount();
   });
 });
