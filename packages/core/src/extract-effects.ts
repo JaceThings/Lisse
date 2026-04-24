@@ -160,11 +160,17 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   const paddingBottom = parseFloat(cs.paddingBottom) || 0;
   const paddingLeft = parseFloat(cs.paddingLeft) || 0;
 
-  el.style.border = "0";
-  el.style.boxShadow = "none";
+  // Only strip properties we successfully parsed. Leaving unparseable values
+  // (currentcolor, oklch(), named colours, border-image, ...) in place is
+  // safer than wiping them with no SVG replacement.
+  if (innerBorder) el.style.border = "0";
+  if (shadow || innerShadow) el.style.boxShadow = "none";
 
-  // Compensate padding for content-box elements to prevent layout shift
+  // Compensate padding for content-box elements to prevent layout shift.
+  // Key off `innerBorder` so padding only shifts when the border was actually
+  // stripped, not when the CSS widths were non-zero but parsing failed.
   if (
+    innerBorder &&
     boxSizing === "content-box" &&
     (borderTopW > 0 || borderRightW > 0 || borderBottomW > 0 || borderLeftW > 0)
   ) {

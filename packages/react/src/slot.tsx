@@ -104,10 +104,18 @@ function SlotImpl<E extends ElementType = ElementType>(
   }
 
   const childElement = child as ReactElement<AnyProps> & { ref?: Ref<HTMLElement> };
-  const merged = mergeProps(rest as AnyProps, (childElement.props ?? {}) as AnyProps);
+  const childProps = (childElement.props ?? {}) as AnyProps;
+  // React 19 moves refs onto `element.props.ref`; React 18 keeps them on the
+  // element's own `.ref` slot and emits a deprecation `console.error` in dev
+  // when read from there. Prefer `props.ref` with a fallback so we work on
+  // both versions without warning.
+  const existingRef =
+    (childProps as { ref?: Ref<HTMLElement> }).ref ??
+    (childElement as unknown as { ref?: Ref<HTMLElement> }).ref;
+  const merged = mergeProps(rest as AnyProps, childProps);
   return cloneElement(childElement, {
     ...merged,
-    ref: composeRefs(forwardedRef, childElement.ref),
+    ref: composeRefs(forwardedRef, existingRef),
   } as AnyProps);
 }
 

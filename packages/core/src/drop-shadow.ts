@@ -54,6 +54,10 @@ function removeShadowEntry(entry: ShadowEntry): void {
  * stacking context (isolation:isolate).
  */
 export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
+  // Save the prior inline value so destroy() can put it back. Setting
+  // `isolation: isolate` unconditionally without restoring would leak the
+  // inline style onto every anchor the library ever touches.
+  const savedIsolation = anchor.style.isolation;
   anchor.style.isolation = "isolate";
 
   const svg = document.createElementNS(SVG_NS, "svg");
@@ -147,6 +151,7 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
     },
     destroy() {
       svg.remove();
+      anchor.style.isolation = savedIsolation;
     },
   };
 }

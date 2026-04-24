@@ -177,7 +177,10 @@ describe("useSmoothCorners - detach before unmount", () => {
 describe("useSmoothCorners - autoEffects toggle cycle", () => {
   it("strips CSS effects on extraction and restores them when autoEffects flips off", () => {
     const el = document.createElement("div");
-    el.style.border = "2px solid red";
+    // happy-dom does not resolve named colours via getComputedStyle, so the
+    // guarded `extractAndStripEffects` treats "red" as unparseable. Use an
+    // rgb() colour to exercise the successful-parse path.
+    el.style.border = "2px solid rgb(255, 0, 0)";
     document.body.appendChild(el);
 
     const ref = { current: el } as React.RefObject<HTMLElement>;
@@ -200,7 +203,7 @@ describe("useSmoothCorners - autoEffects toggle cycle", () => {
     act(() => {
       localRoot.render(<Tester autoEffects={false} />);
     });
-    expect(el.style.border).toBe("2px solid red");
+    expect(el.style.border).toBe("2px solid rgb(255, 0, 0)");
 
     act(() => {
       localRoot.render(<Tester autoEffects={true} />);
@@ -210,7 +213,7 @@ describe("useSmoothCorners - autoEffects toggle cycle", () => {
     act(() => {
       localRoot.unmount();
     });
-    expect(el.style.border).toBe("2px solid red");
+    expect(el.style.border).toBe("2px solid rgb(255, 0, 0)");
 
     localContainer.remove();
     el.remove();
@@ -363,6 +366,37 @@ describe("<Slot /> - preventDefault gating", () => {
     container.querySelector("button")?.click();
     expect(child).toHaveBeenCalledTimes(1);
     expect(parent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("<Slot /> - child ref composition", () => {
+  it("composes the Slot's forwarded ref with the child's own ref (React 19 props.ref and React 18 element.ref)", () => {
+    const outerRef = { current: null as HTMLElement | null };
+    const childRef = { current: null as HTMLButtonElement | null };
+
+    const Child = forwardRef<HTMLButtonElement, { children?: React.ReactNode }>(
+      function Child(props, ref) {
+        return (
+          <button ref={ref} type="button">
+            {props.children}
+          </button>
+        );
+      },
+    );
+
+    act(() => {
+      root.render(
+        <Slot ref={outerRef}>
+          <Child ref={childRef}>x</Child>
+        </Slot>,
+      );
+    });
+
+    const button = container.querySelector("button");
+    expect(button).not.toBeNull();
+    // Both refs resolve to the same rendered DOM element.
+    expect(outerRef.current).toBe(button);
+    expect(childRef.current).toBe(button);
   });
 });
 
