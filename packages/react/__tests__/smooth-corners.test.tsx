@@ -283,15 +283,15 @@ describe("<Slot /> - error messages are reachable", () => {
     console.error = originalError;
   });
 
-  it("throws the library's own error when given zero children", () => {
+  it("throws when given zero children", () => {
     expect(() => {
       act(() => {
         root.render(<Slot>{null}</Slot>);
       });
-    }).toThrow("Slot: `asChild` expects exactly one child.");
+    }).toThrow("received none");
   });
 
-  it("throws the library's own error when given multiple children", () => {
+  it("throws with a count when given multiple children", () => {
     expect(() => {
       act(() => {
         root.render(
@@ -301,15 +301,68 @@ describe("<Slot /> - error messages are reachable", () => {
           </Slot>,
         );
       });
-    }).toThrow("Slot: `asChild` expects exactly one child.");
+    }).toThrow("received 2");
   });
 
-  it("throws the library's own error when the child is not a valid element", () => {
+  it("throws with Fragment hint when the child is a Fragment", () => {
+    expect(() => {
+      act(() => {
+        root.render(
+          <Slot>
+            <>
+              <span>a</span>
+              <span>b</span>
+            </>
+          </Slot>,
+        );
+      });
+    }).toThrow("not a Fragment");
+  });
+
+  it("throws when the child is plain text", () => {
     expect(() => {
       act(() => {
         root.render(<Slot>plain text</Slot>);
       });
-    }).toThrow("Slot: child must be a valid React element.");
+    }).toThrow("not a string");
+  });
+});
+
+describe("<Slot /> - preventDefault gating", () => {
+  it("skips the parent handler when the child calls event.preventDefault()", () => {
+    const parent = vi.fn();
+    const child = vi.fn((e: React.MouseEvent) => {
+      e.preventDefault();
+    });
+    act(() => {
+      root.render(
+        <Slot onClick={parent}>
+          <button type="button" onClick={child}>
+            x
+          </button>
+        </Slot>,
+      );
+    });
+    container.querySelector("button")?.click();
+    expect(child).toHaveBeenCalledTimes(1);
+    expect(parent).not.toHaveBeenCalled();
+  });
+
+  it("still calls the parent handler when the child does not preventDefault", () => {
+    const parent = vi.fn();
+    const child = vi.fn();
+    act(() => {
+      root.render(
+        <Slot onClick={parent}>
+          <button type="button" onClick={child}>
+            x
+          </button>
+        </Slot>,
+      );
+    });
+    container.querySelector("button")?.click();
+    expect(child).toHaveBeenCalledTimes(1);
+    expect(parent).toHaveBeenCalledTimes(1);
   });
 });
 

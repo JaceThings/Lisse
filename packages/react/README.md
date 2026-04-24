@@ -162,7 +162,7 @@ function Cta({ children }: { children: React.ReactNode }) {
 }
 ```
 
-The child receives the internal ref. Class names merge (parent first, child second). Event handlers compose (child handler runs first, then parent's). When using `asChild`, the `as` prop is ignored.
+The child receives the internal ref. Class names merge (parent first, child second). Event handlers compose: the child handler runs first, and the parent handler runs next unless the child called `event.preventDefault()`. When using `asChild`, the `as` prop is ignored.
 
 #### Standalone `Slot`
 

@@ -2,6 +2,7 @@ import {
   Children,
   cloneElement,
   forwardRef,
+  Fragment,
   isValidElement,
   type ComponentPropsWithoutRef,
   type ElementType,
@@ -25,6 +26,11 @@ function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
       if (typeof parentValue === "function") {
         merged[key] = (...args: unknown[]) => {
           (childValue as (...a: unknown[]) => unknown)(...args);
+          // Skip the parent handler when the child has called
+          // `event.preventDefault()`. Matches Radix's Slot semantics and
+          // gives the child a way to opt out of the composed behaviour.
+          const first = args[0] as { defaultPrevented?: boolean } | undefined;
+          if (first && first.defaultPrevented) return;
           (parentValue as (...a: unknown[]) => unknown)(...args);
         };
       } else {
@@ -76,12 +82,25 @@ function SlotImpl<E extends ElementType = ElementType>(
 ): ReactElement | null {
   const { children, ...rest } = props as SlotPropsFor<ElementType>;
   const array = Children.toArray(children);
-  if (array.length !== 1) {
-    throw new Error("Slot: `asChild` expects exactly one child.");
+  if (array.length === 0) {
+    throw new Error("Slot: `asChild` expects a single child element, received none.");
+  }
+  if (array.length > 1) {
+    throw new Error(
+      "Slot: `asChild` expects a single child element, received " + array.length + ".",
+    );
   }
   const child = array[0];
   if (!isValidElement(child)) {
-    throw new Error("Slot: child must be a valid React element.");
+    throw new Error(
+      "Slot: `asChild` expects a React element as its child (e.g. <button>), not a " +
+        (typeof child === "string" ? "string." : typeof child + "."),
+    );
+  }
+  if (child.type === Fragment) {
+    throw new Error(
+      "Slot: `asChild` expects a single element as its child, not a Fragment. Unwrap the Fragment so Slot can merge props onto a real element.",
+    );
   }
 
   const childElement = child as ReactElement<AnyProps> & { ref?: Ref<HTMLElement> };
