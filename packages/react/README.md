@@ -136,6 +136,7 @@ A ready-to-use component that handles clip-path, resize observation, ref forward
 | `innerShadow` | `ShadowConfig \| ShadowConfig[]` | -- | Inner shadow effect (single or multiple) |
 | `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or multiple) |
 | `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
+| `shadowStrategy` | `"svg" \| "box-shadow"` | `"svg"` | How the `shadow` prop is rendered. `"svg"` follows the squircle silhouette; `"box-shadow"` bypasses the SVG filter pipeline and renders a CSS `box-shadow` instead. See [Shadow Strategy](#shadow-strategy). |
 
 All other HTML attributes (e.g. `className`, `style`, `onClick`, `href` when `as="a"`) are forwarded to the rendered element and typed against the chosen element.
 
@@ -244,6 +245,55 @@ function Card() {
   <p style={{ color: "#fff" }}>Card with all effects</p>
 </SmoothCorners>
 ```
+
+### Shadow Strategy
+
+The `shadow` prop is rendered as an SVG filter by default. The filter draws a squircle path, fills it with the shadow color, offsets it, and blurs it -- so the shadow silhouette matches the smooth corners exactly.
+
+WebKit has a long-standing rasterisation bug where SVG filter output is biased toward heavier or lighter rendering depending on the filtered element's device-pixel Y position. The library tightens the filter region to reduce one source of drift, but **the consumer is responsible for placing the shadowed element on integer device pixels**. The bug only manifests in Safari, only on the `shadow` prop (not `clip-path`, not `innerShadow`, not borders), and only when the element happens to sit at a fractional device-pixel position. See [docs/safari-shadow-rendering.md](../../docs/safari-shadow-rendering.md) for the worked-example walkthrough and the manual layout recipe.
+
+If you can't reliably control the layout or you don't need the shadow to trace the squircle silhouette exactly, pass `shadowStrategy="box-shadow"` and the component renders the shadow as a native CSS `box-shadow` on a sibling `<div>`, side-stepping the WebKit filter pipeline entirely.
+
+| Strategy | Shadow silhouette | Render path | When to use |
+|---|---|---|---|
+| `"svg"` (default) | Squircle, matches the element | SVG `<filter>` over a path | Default. Use unless you have a specific Safari artefact you can't resolve. |
+| `"box-shadow"` | Rounded rectangle, follows ordinary `border-radius` | Native CSS `box-shadow` on a sibling div | Use to bypass the WebKit filter bug when exact silhouette matching isn't required. |
+
+The trade-off is silhouette: `"svg"` gives you a squircle shadow but goes through the filter pipeline; `"box-shadow"` is unaffected by the filter bug but the shadow halo is a rounded rectangle rather than a squircle. The element's clip-path, content, and any border effects remain squircle-shaped either way. `innerShadow` is unaffected by this prop -- it lives inside the clipped element and is not subject to the WebKit bug.
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  shadow={{ offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 }}
+  shadowStrategy="box-shadow"
+  style={{ background: "#fff", padding: 32 }}
+>
+  Card with CSS box-shadow
+</SmoothCorners>
+```
+
+When `shadowStrategy="box-shadow"`, the SVG drop-shadow handle is skipped entirely -- no extra `<svg>` element. Multiple shadows in an array compose into a single CSS `box-shadow` chain in CSS order (first listed is topmost).
+
+> **Affected by the Safari shadow bug?** The diagnostic is one line in
+> the Safari console:
+>
+> ```js
+> document.querySelector('YOUR_CARD_SELECTOR').getBoundingClientRect().top * window.devicePixelRatio
+> ```
+>
+> If the result is fractional, your element will exhibit the bias.
+> Add a small `padding-top` or `top` offset to nudge it to the
+> nearest integer. The full walkthrough is in
+> [docs/safari-shadow-rendering.md](../../docs/safari-shadow-rendering.md).
+
+> **Scaling a `SmoothCorners` element via an ancestor `transform: scale()`?**
+> Safari caches the clip-path raster at the element's layout size and
+> upsamples it when the ancestor scales up, producing visibly
+> pixelated corners under zoom. Invert the scale baseline: render at
+> the largest size your animation reaches and CSS-scale *down* by
+> default. Not Lisse-specific; affects any SVG-backed shape rendered
+> through a CSS scale. See
+> [docs/safari-svg-scale-rendering.md](../../docs/safari-svg-scale-rendering.md).
 
 ### Ref Forwarding
 

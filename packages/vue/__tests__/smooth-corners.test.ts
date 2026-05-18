@@ -282,8 +282,8 @@ describe("<SmoothCorners /> Vue - single observeResize subscription", () => {
     // ResizeObserver.observe() alone can't distinguish one-vs-two
     // subscriptions. Instead, we hijack requestAnimationFrame + fake the
     // observer to directly invoke the registered callbacks, then count
-    // getBoundingClientRect reads on the inner element during a single
-    // resize flush.
+    // offsetWidth reads on the inner element during a single resize flush
+    // (offsetWidth is the layout-size read inside syncAll).
     const instances: Array<{ cb: (entries: unknown[]) => void; targets: Set<Element> }> = [];
     (globalThis as { ResizeObserver: unknown }).ResizeObserver = class {
       targets = new Set<Element>();
@@ -317,25 +317,31 @@ describe("<SmoothCorners /> Vue - single observeResize subscription", () => {
     );
     expect(inner).not.toBeNull();
 
-    // happy-dom's bounding-rect always returns 0×0; stub it so syncAll
-    // executes both clip-path and effects paths.
-    inner!.getBoundingClientRect = () =>
-      ({ width: 100, height: 50, x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 50, toJSON: () => ({}) }) as DOMRect;
-
-    const rectSpy = vi.spyOn(inner!, "getBoundingClientRect");
+    // happy-dom's offsetWidth/offsetHeight return 0; stub them via a
+    // getter we can count so syncAll executes both clip-path and effects
+    // paths and we can tally reads per flush.
+    let widthReads = 0;
+    Object.defineProperty(inner!, "offsetWidth", {
+      configurable: true,
+      get: () => { widthReads++; return 100; },
+    });
+    Object.defineProperty(inner!, "offsetHeight", {
+      configurable: true,
+      get: () => 50,
+    });
 
     // Flush all pending rAFs so the initial observeResize schedule runs.
     await new Promise((r) => setTimeout(r, 20));
 
     // Trigger a synthetic resize via the shared observer. If two callbacks
-    // were registered for `inner`, we'd see two getBoundingClientRect reads
-    // per flush. The fix collapses them into one.
-    rectSpy.mockClear();
+    // were registered for `inner`, we'd see two offsetWidth reads per
+    // flush. The fix collapses them into one.
+    widthReads = 0;
     const obs = instances[0];
     obs.cb([{ target: inner } as unknown]);
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(rectSpy).toHaveBeenCalledTimes(1);
+    expect(widthReads).toBe(1);
 
     unmount();
   });

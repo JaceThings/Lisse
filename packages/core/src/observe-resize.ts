@@ -11,10 +11,9 @@ function flush() {
   pendingElements.clear();
   for (const el of elements) {
     const cbs = callbackMap.get(el);
-    // Snapshot the callback set: a callback may synchronously unsubscribe
-    // a sibling (e.g. an unmount triggered by the first sync's layout),
-    // which would skip the sibling's dispatch and, in the worst case,
-    // disconnect the shared observer mid-flush.
+    // Snapshot: a callback may sync-unsubscribe a sibling (e.g. an unmount
+    // triggered by the first sync's layout) and could otherwise disconnect
+    // the shared observer mid-flush.
     if (cbs) for (const cb of [...cbs]) cb();
   }
 }
@@ -34,14 +33,10 @@ function getObserver(): ResizeObserver {
 }
 
 /**
- * Observe an element for resize using a single shared ResizeObserver.
- * Callbacks are rAF-batched: one requestAnimationFrame per frame for all
- * observed elements. An initial callback is scheduled immediately.
- *
- * @returns Unsubscribe function. Calling it stops observation for this
- *          callback. When the last callback for an element is removed,
- *          the element is unobserved. When no elements remain, the
- *          shared observer is disconnected.
+ * Observe `el` for resize via a shared ResizeObserver; callbacks are
+ * rAF-batched (one frame per tick, across all observed elements) with an
+ * immediate initial dispatch. The returned function unsubscribes; the
+ * observer disconnects once the last element is released.
  */
 export function observeResize(el: Element, callback: Callback): () => void {
   if (typeof ResizeObserver === "undefined") return () => {};
@@ -55,7 +50,6 @@ export function observeResize(el: Element, callback: Callback): () => void {
   }
   set.add(callback);
 
-  // Schedule initial callback in the current rAF batch
   pendingElements.add(el);
   if (rafId === undefined) {
     rafId = requestAnimationFrame(flush);

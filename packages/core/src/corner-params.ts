@@ -14,7 +14,7 @@ export function getPathParamsForCorner({
   preserveSmoothing,
   roundingAndSmoothingBudget,
 }: CornerParams): CornerPathParams {
-  // Short-circuit at zero radius: otherwise the `!preserveSmoothing` branch divides by `cornerRadius` and returns NaN fields.
+  // Short-circuit: the `!preserveSmoothing` branch divides by cornerRadius.
   if (cornerRadius <= 0) {
     return { a: 0, b: 0, c: 0, d: 0, p: 0, arcSectionLength: 0, cornerRadius: 0 };
   }

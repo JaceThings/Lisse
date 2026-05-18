@@ -13,12 +13,11 @@ export interface ExtractedEffects {
 }
 
 /**
- * Parse an rgb/rgba color string (as returned by getComputedStyle) into hex + opacity.
- * Returns undefined for unrecognized formats.
+ * Parse an rgb/rgba color (as returned by getComputedStyle) to hex + opacity.
+ * Accepts legacy comma form `rgb(255, 0, 0)` and CSS Color L4 space form
+ * `rgb(255 0 0 / 0.5)`. Returns undefined for unrecognised input.
  */
 export function parseColor(raw: string): { hex: string; opacity: number } | undefined {
-  // Support both legacy comma-separated (rgb(255, 0, 0)) and
-  // CSS Color Level 4 space-separated (rgb(255 0 0 / 0.5)) formats
   const match = raw.match(
     /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)\s*(?:[,/]\s*([\d.]+))?\s*\)$/,
   );
@@ -27,15 +26,14 @@ export function parseColor(raw: string): { hex: string; opacity: number } | unde
   const g = Number(match[2]);
   const b = Number(match[3]);
   const a = match[4] !== undefined ? Number(match[4]) : 1;
-  const hex =
-    "#" +
-    ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  const hex = "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
   return { hex, opacity: a };
 }
 
 /**
- * Read the computed border from an element and convert it to a BorderConfig.
- * Returns undefined if the border is effectively invisible (none/hidden, width 0, or transparent).
+ * Read the computed border from an element as a BorderConfig.
+ * Returns undefined when the border is effectively invisible (none/hidden,
+ * width 0, or transparent).
  */
 export function parseBorder(el: HTMLElement): BorderConfig | undefined {
   const cs = getComputedStyle(el);
@@ -49,12 +47,8 @@ export function parseBorder(el: HTMLElement): BorderConfig | undefined {
   if (!color || color.opacity <= 0) return undefined;
 
   const supportedStyles: Record<string, BorderStyle> = {
-    solid: "solid",
-    dashed: "dashed",
-    dotted: "dotted",
-    double: "double",
-    groove: "groove",
-    ridge: "ridge",
+    solid: "solid", dashed: "dashed", dotted: "dotted",
+    double: "double", groove: "groove", ridge: "ridge",
   };
   const borderStyle = supportedStyles[style];
 
@@ -67,8 +61,8 @@ export function parseBorder(el: HTMLElement): BorderConfig | undefined {
 }
 
 /**
- * Parse a computed box-shadow string into arrays of outer and inset shadow configs.
- * All shadows of each type are returned, preserving CSS order.
+ * Parse a computed box-shadow string into outer and inset shadow arrays,
+ * preserving CSS order within each group.
  */
 export function parseBoxShadow(raw: string): {
   shadow?: ShadowConfig[];
@@ -76,7 +70,7 @@ export function parseBoxShadow(raw: string): {
 } {
   if (!raw || raw === "none") return {};
 
-  // Split on commas that are not inside parentheses (rgb/rgba)
+  // Split on commas outside parentheses (rgb/rgba contain commas).
   const parts: string[] = [];
   let depth = 0;
   let start = 0;
@@ -97,14 +91,11 @@ export function parseBoxShadow(raw: string): {
     const isInset = part.includes("inset");
     const cleaned = part.replace("inset", "").trim();
 
-    // Extract color (rgb/rgba) and numeric values
     const colorMatch = cleaned.match(/rgba?\([^)]+\)/);
     if (!colorMatch) continue;
-
     const color = parseColor(colorMatch[0]);
     if (!color || color.opacity <= 0) continue;
 
-    // Extract px values from the remainder
     const rest = cleaned.replace(colorMatch[0], "").trim();
     const values = rest.split(/\s+/).map(parseFloat).filter((v) => !isNaN(v));
     if (values.length < 2) continue;
@@ -117,12 +108,7 @@ export function parseBoxShadow(raw: string): {
       color: color.hex,
       opacity: color.opacity,
     };
-
-    if (isInset) {
-      innerShadows.push(config);
-    } else {
-      shadows.push(config);
-    }
+    (isInset ? innerShadows : shadows).push(config);
   }
 
   return {
@@ -132,8 +118,9 @@ export function parseBoxShadow(raw: string): {
 }
 
 /**
- * Extract CSS border and box-shadow from an element, strip them from inline styles,
- * and return equivalent EffectsConfig values along with saved styles for restoration.
+ * Extract CSS border and box-shadow from an element, strip them inline, and
+ * return equivalent EffectsConfig values plus the saved styles needed to
+ * restore the original inline state.
  */
 export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   const savedStyles = {
@@ -149,7 +136,7 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   const cs = getComputedStyle(el);
   const { shadow, innerShadow } = parseBoxShadow(cs.boxShadow);
 
-  // Read all computed values BEFORE stripping (getComputedStyle returns a live object)
+  // Snapshot computed values BEFORE stripping — getComputedStyle is live.
   const boxSizing = cs.boxSizing;
   const borderTopW = parseFloat(cs.borderTopWidth) || 0;
   const borderRightW = parseFloat(cs.borderRightWidth) || 0;
@@ -160,15 +147,15 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   const paddingBottom = parseFloat(cs.paddingBottom) || 0;
   const paddingLeft = parseFloat(cs.paddingLeft) || 0;
 
-  // Only strip properties we successfully parsed. Leaving unparseable values
-  // (currentcolor, oklch(), named colours, border-image, ...) in place is
-  // safer than wiping them with no SVG replacement.
+  // Only strip what we successfully parsed. Wiping unparseable values
+  // (currentcolor, oklch(), border-image, ...) without an SVG replacement
+  // would silently lose them.
   if (innerBorder) el.style.border = "0";
   if (shadow || innerShadow) el.style.boxShadow = "none";
 
-  // Compensate padding for content-box elements to prevent layout shift.
-  // Key off `innerBorder` so padding only shifts when the border was actually
-  // stripped, not when the CSS widths were non-zero but parsing failed.
+  // Compensate content-box padding so stripping the border doesn't shift
+  // layout. Keyed on `innerBorder` so we only shift when the border was
+  // actually parsed and stripped.
   if (
     innerBorder &&
     boxSizing === "content-box" &&
@@ -188,9 +175,7 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   return { effects, savedStyles };
 }
 
-/**
- * Returns true if the config defines any renderable effect.
- */
+/** True when `config` defines any renderable effect. */
 export function hasEffects(config: EffectsConfig | undefined | null): boolean {
   if (!config) return false;
   return !!(
@@ -202,9 +187,7 @@ export function hasEffects(config: EffectsConfig | undefined | null): boolean {
   );
 }
 
-/**
- * Merge auto-extracted effects with explicit effects. Explicit values win per key.
- */
+/** Merge auto-extracted and explicit effects; explicit wins per key. */
 export function mergeEffects(
   extracted: ExtractedEffects | undefined,
   explicit: EffectsConfig | undefined,
@@ -213,9 +196,8 @@ export function mergeEffects(
 }
 
 /**
- * Restore previously saved inline border and boxShadow styles.
- * If the saved value was empty string, this removes the inline override
- * and lets stylesheet rules reassert.
+ * Restore previously saved inline border/boxShadow/padding styles. An empty
+ * saved value clears the inline override so stylesheet rules can reassert.
  */
 export function restoreStyles(
   el: HTMLElement,
