@@ -1,0 +1,141 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Inter v4 ships an `opsz` axis; pair with the `standard` variant in main.tsx. */
+  font-optical-sizing: auto;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  /*
+   * `font-feature-settings` overrides the browser default, so we re-list
+   * the always-on features (kern/liga/calt) alongside Inter's `cv05`
+   * alt 'l' with curved tail. Verified against Figma file f6JlgIPQFMFIJSpiJbviOG.
+   */
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1,
+    "calt" 1,
+    "cv05" 1;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: -0.25px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+p {
+  text-wrap: pretty;
+  /* Justified body text relies on hyphenation to avoid huge word-spacing
+     gaps in narrow columns. Harmless on non-justified text — the browser
+     only inserts hyphens at line-break points where they would otherwise
+     overflow. Monospace contexts (install commands) don't use <p>, so
+     they're unaffected. */
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* Native `::selection` styling is owned by <SelectionHighlight>: it
+ * injects a `html.selection-highlight-ready ::selection { background:
+ * transparent }` rule so the marker overlay paints in place of the
+ * browser default. If JS fails to hydrate, the browser default still
+ * paints because the class is never added. */
+
+/* macOS-only flourish: hovering "lisse" swaps the cursor for the SF
+ * speaker glyph, hinting that the pronunciation gloss is meant to be
+ * said aloud. Touch devices ignore `cursor` outright; non-Mac desktops
+ * fall back to the default arrow so the speaker icon doesn't look
+ * out of place against the system cursor set.
+ *
+ * Last-wins cascade. We want Safari (and Chromium) to land on the
+ * pre-rasterised PNGs, NOT the SVG. The SVG goes first as a Firefox
+ * fallback. Why not SVG on Safari:
+ *
+ *   - WebKit rasterises the SVG into the NSCursor bitmap once, with
+ *     supersampling at devicePixelRatio. In theory that's crisp.
+ *   - In practice our SVG carries a `<feGaussianBlur>` drop-shadow
+ *     filter and the path coordinates are fractional (Figma export
+ *     precision). Safari's single rasterisation pass bakes both into
+ *     the cursor bitmap as blur and sub-pixel AA, producing the
+ *     visible softness.
+ *   - The PNGs are pre-rendered at exact 1×/2×/3× pixel sizes with the
+ *     drop-shadow already baked in cleanly — they don't go through
+ *     any filter pipeline on the client.
+ *
+ * Order (last wins):
+ *   1. `url(svg)` — Firefox (and last-resort fallback for engines
+ *      without `image-set` cursor support).
+ *   2. `image-set(png …)` — Chromium picks the right density by DPR.
+ *   3. `-webkit-image-set(png …)` — Safari resolves to this and renders
+ *      the cursor crisply at every DPR.
+ *
+ * `?v=5` busts the prior cursor-image cache so reloads pick up the
+ * new resolution choice. */
+[data-platform="mac"] #lisse-heading {
+  cursor: url("/SpeakerCursor.svg?v=5") 16 15, default;
+  cursor: image-set(
+    url("/SpeakerCursor.png?v=5") 1x,
+    url("/SpeakerCursor@2x.png?v=5") 2x,
+    url("/SpeakerCursor@3x.png?v=5") 3x
+  ) 16 15, default;
+  cursor: -webkit-image-set(
+    url("/SpeakerCursor.png?v=5") 1x,
+    url("/SpeakerCursor@2x.png?v=5") 2x,
+    url("/SpeakerCursor@3x.png?v=5") 3x
+  ) 16 15, default;
+}
+
+/* The focus ring is rendered globally by <FocusRingOverlay> — it springs
+ * between any element marked with [data-focus-ring]. Suppress the browser's
+ * default outline on those targets so it doesn't double up with the overlay. */
+[data-focus-ring]:focus,
+[data-focus-ring]:focus-visible {
+  outline: none;
+}
+
+/* Lets `width: auto` participate in CSS transitions, so a pill button
+   that sizes to its content can smoothly resize when its label changes
+   without any JS measurement. Chrome 129+, Safari 26+; falls back to
+   snapping in older browsers. */
+:root {
+  interpolate-size: allow-keywords;
+}
+
+/* sr-only content is for assistive tech only — exclude it from text
+ * selection so Cmd+A + Cmd+C doesn't paste screen-reader headings,
+ * pronunciation glosses, or live-region descriptions into user
+ * clipboards. Screen readers still announce this content; they
+ * ignore `user-select`. */
+.sr-only {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

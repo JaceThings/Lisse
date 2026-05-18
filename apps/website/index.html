@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lisse — Figma-quality squircle corners for the web</title>
+    <meta
+      name="description"
+      content="Lisse makes the corners on a web page look like the corners in Figma. A small JavaScript library that draws Figma-grade squircles, with bindings for React, Vue, and Svelte."
+    />
+    <meta name="theme-color" content="#f7f6f2" />
+    <script>
+      // Set `data-platform="mac"` on <html> for macOS desktop browsers so
+      // CSS can opt into Mac-specific affordances (e.g. SVG cursors on
+      // the lisse title). `Macintosh` in the UA is the canonical marker
+      // for macOS browsers and excludes iOS, which reports `iPhone`/
+      // `iPad`/`iPod` instead.
+      if (/Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.setAttribute("data-platform", "mac");
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

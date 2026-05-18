@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 570 339" preserveAspectRatio="none">
+  <defs>
+    <filter id="b" x="0" y="0" width="570" height="339" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10" />
+    </filter>
+  </defs>
+  <rect x="20" y="20" width="530" height="299" fill="#fff" filter="url(#b)" />
+</svg>

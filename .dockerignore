@@ -1,0 +1,33 @@
+# Excludes from the docker build context for the website's Dockerfile
+# (Railway runs `dockerfilePath: apps/website/Dockerfile` with the repo
+# root as the build context).
+
+node_modules
+**/node_modules
+
+# Build artefacts
+**/dist
+**/.vite
+**/*.tsbuildinfo
+**/.turbo
+
+# Editor / OS noise
+.git
+.github
+.changeset
+.claude
+.cursor
+.DS_Store
+
+# Workspaces the website doesn't need at build time
+benchmarks
+# …except its package.json — pnpm install needs it because benchmarks
+# is a workspace member in pnpm-workspace.yaml.
+!benchmarks/package.json
+docs
+scripts
+assets
+blueprint.md
+
+# Keep package-level READMEs out unless explicitly needed by the build
+**/CHANGELOG.md

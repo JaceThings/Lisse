@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/*
+ * License note: Apple's SF font EULA restricts use to Apple-platform UI
+ * and mockups. Self-hosting for a public website is a grey area. The
+ * fallback chain on `--font-mono` keeps the page rendering correctly if
+ * this file is ever pulled.
+ */
+@font-face {
+  font-family: "SF Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/sf-mono-medium.woff2") format("woff2");
+  unicode-range: U+0020-007E, U+00A0-00FF, U+2000-206F;
+}
+
+/* Tokens lifted from Figma file f6JlgIPQFMFIJSpiJbviOG. */
+
+@theme {
+  /* Surface + text */
+  --color-bg: #f7f6f2;
+  --color-surface: #f7f6f2;
+  --color-text-primary: #73574a;
+  /* RGB triplet of `--color-text-primary` for `rgba(var(--primary-rgb), α)`
+     compositing — read by `SelectionHighlight`. */
+  --primary-rgb: 115, 87, 74;
+  --color-text-secondary: rgba(154, 145, 138, 0.75);
+  --color-text-input: #7e756c;
+
+  /* Smoothing-toggle accents */
+  --color-accent-green: #5b793f;
+  --color-accent-red: #a45c5c;
+
+  /* Demo square fill */
+  --color-demo-fill: #7e756c;
+  /* Front-square fill in compare mode (Figma 8:1440 `Smooth`). Solid
+     sage-cream so the red back only shows through at the four corner
+     gaps where the squircle pulls in past the CSS-rounded back. */
+  --color-compare-front: #d6dbcd;
+
+  /* Hairline gradient stops */
+  --color-divider-from: rgba(115, 87, 74, 0.08);
+  --color-divider-to: rgba(115, 87, 74, 0);
+
+  /* Spacing scale (matches Figma --p-* variables) */
+  --spacing-figma-2: 8px;
+  --spacing-figma-3: 12px;
+  --spacing-figma-4: 16px;
+  --spacing-figma-5: 20px;
+  --spacing-figma-6: 24px;
+  --spacing-figma-9: 36px;
+  --spacing-figma-20: 80px;
+
+  /* Type */
+  --font-sans: "Inter Variable", system-ui, -apple-system, BlinkMacSystemFont,
+    sans-serif;
+  --font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Shared easing for every short UI transition on the page (toggle pill
+     width/colour, icon-row colour, demo back-overlay opacity, demo front
+     fill, demo scale). Quint ease-out — slow finish, no overshoot.
+     Tailwind v4 maps `--ease-*` to `ease-*` utilities, so this is also
+     reachable as `ease-out-quint` on a className. */
+  --ease-out-quint: cubic-bezier(0.2, 0, 0, 1);
+}
+
+:root {
+  --grid-height: 299px;
+}

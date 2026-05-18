@@ -19,6 +19,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
+      # Build packages first so consumers (apps/website, downstream
+      # typechecks) can resolve the library `dist/` exports.
       - run: pnpm build
+      - run: pnpm typecheck
       - run: pnpm test
