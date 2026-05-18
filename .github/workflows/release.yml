@@ -30,9 +30,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Build packages first so consumers (apps/website, downstream
+      # typechecks) can resolve the library `dist/` exports.
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm build
 
       - id: changesets
         uses: changesets/action@v1
