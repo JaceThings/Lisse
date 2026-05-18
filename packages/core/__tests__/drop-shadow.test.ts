@@ -79,6 +79,18 @@ describe("createDropShadow", () => {
     expect(svg.style.pointerEvents).toBe("none");
   });
 
+  it("SVG carries width/height='100%' so it doesn't fall back to the 300x150 intrinsic default", () => {
+    // Without explicit width/height attributes the SVG renders at its
+    // 300×150 replaced-element default, overflowing narrow anchors
+    // (e.g. ~110 px toggle pills on mobile) and forcing horizontal
+    // scroll. CSS `inset: 0` is not enough to override the intrinsic
+    // size on an SVG.
+    createDropShadow(anchor);
+    const svg = anchor.querySelector("svg")!;
+    expect(svg.getAttribute("width")).toBe("100%");
+    expect(svg.getAttribute("height")).toBe("100%");
+  });
+
   it("update() with visible shadow — path has correct fill, fill-opacity, transform", () => {
     const handle = createDropShadow(anchor);
     const shadow: ShadowConfig = {

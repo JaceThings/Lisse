@@ -81,6 +81,12 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
 
   const svg = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
   svg.style.cssText = "position:absolute;inset:0;overflow:visible;pointer-events:none;z-index:-1";
+  // SVG is a replaced element; without explicit width/height attributes
+  // it falls back to the 300×150 intrinsic default, which overflows
+  // narrower anchors (e.g. ~110 px toggle pills on mobile) and forces
+  // horizontal scroll. `100%` stretches the canvas to fill the anchor.
+  svg.setAttribute("width", "100%");
+  svg.setAttribute("height", "100%");
   svg.setAttribute("aria-hidden", "true");
 
   const defs = document.createElementNS(SVG_NS, "defs");
