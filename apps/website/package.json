@@ -16,14 +16,12 @@
     "@lisse/react": "workspace:*",
     "@numeric-text/react": "^0.1.4",
     "@tailwindcss/vite": "^4.3.0",
-    "@tanstack/react-router": "^1.95.0",
     "framer-motion": "^12.38.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
-    "@tanstack/router-plugin": "^1.95.0",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",

@@ -492,13 +492,16 @@ export function SelectionHighlight() {
     // No scroll listener — anchor-relative positioning means scroll moves
     // overlays natively at compositor speed.
     const { schedule: scheduleMeasure, cancel: cancelScheduled } = createRafCoalescer(measure);
-    document.addEventListener("selectionchange", measure);
+    // `selectionchange` fires multiple times per frame during drag-select;
+    // route it through the same rAF coalescer as resize so we only re-walk
+    // the tree once per frame.
+    document.addEventListener("selectionchange", scheduleMeasure);
     window.addEventListener("resize", scheduleMeasure);
     window.addEventListener(SELECTION_HIGHLIGHT_HIDE_EVENT, hideAll);
 
     return () => {
       cancelScheduled();
-      document.removeEventListener("selectionchange", measure);
+      document.removeEventListener("selectionchange", scheduleMeasure);
       window.removeEventListener("resize", scheduleMeasure);
       window.removeEventListener(SELECTION_HIGHLIGHT_HIDE_EVENT, hideAll);
       for (const d of overlays.values()) d.remove();
