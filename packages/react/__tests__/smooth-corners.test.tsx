@@ -752,6 +752,54 @@ describe("<SmoothCorners /> - shadowStrategy='box-shadow'", () => {
       wrapper.querySelector("[data-slot='smooth-corners-box-shadow']"),
     ).toBeNull();
   });
+
+  it("routes auto-extracted CSS box-shadow into the sibling div", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          corners={{ radius: 12 }}
+          shadowStrategy="box-shadow"
+          style={{ boxShadow: "rgb(0, 0, 0) 0px 4px 8px 0px" }}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+
+    // The hook strips the inline box-shadow on the consumer element so
+    // clip-path doesn't crop it; the extracted chain must reappear on
+    // the sibling div instead of vanishing silently.
+    const inner = container.querySelector(
+      "[data-slot='smooth-corners']",
+    ) as HTMLElement;
+    expect(inner.style.boxShadow).toBe("none");
+
+    const sibling = container.querySelector(
+      "[data-slot='smooth-corners-box-shadow']",
+    ) as HTMLElement | null;
+    expect(sibling).not.toBeNull();
+    expect(sibling!.style.boxShadow).toBe("0px 4px 8px 0px rgba(0,0,0,1)");
+  });
+
+  it("explicit shadow prop wins over auto-extracted CSS box-shadow", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          corners={{ radius: 12 }}
+          shadowStrategy="box-shadow"
+          shadow={{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#ff0000", opacity: 0.5 }}
+          style={{ boxShadow: "rgb(0, 0, 0) 0px 8px 16px 0px" }}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+
+    const sibling = container.querySelector(
+      "[data-slot='smooth-corners-box-shadow']",
+    ) as HTMLElement;
+    expect(sibling.style.boxShadow).toBe("0px 2px 4px 0px rgba(255,0,0,0.5)");
+  });
 });
 
 describe("<SmoothCorners /> - ref forwarding", () => {
