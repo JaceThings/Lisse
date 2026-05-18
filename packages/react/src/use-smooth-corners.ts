@@ -4,6 +4,7 @@ import {
   createSvgEffects,
   createDropShadow,
   observeResize,
+  getLayoutSize,
   DEFAULT_SHADOW,
   extractAndStripEffects,
   restoreStyles,
@@ -15,9 +16,9 @@ import {
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 /**
- * useLayoutEffect on the client, useEffect during SSR. Lets us mutate the
- * DOM synchronously after layout (avoiding a flash of un-clipped corners
- * or un-stripped CSS borders) without warning under server rendering.
+ * `useLayoutEffect` on the client, `useEffect` during SSR — mutate the DOM
+ * synchronously after layout (no flash of un-clipped corners or un-stripped
+ * borders) without triggering React's SSR warning.
  */
 const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
@@ -29,8 +30,7 @@ function syncEffects(
   width: number, height: number,
 ): void {
   effectsHandle.update(options, merged, width, height);
-  // shadowHandle is lazy: only created when a shadow first appears, so
-  // consumers using only border effects skip the drop-shadow SVG entirely.
+  // shadowHandle is lazy — border-only consumers never mount the drop-shadow SVG.
   shadowHandle?.update(options, merged.shadow ?? DEFAULT_SHADOW, width, height);
 }
 
@@ -44,18 +44,46 @@ interface State {
   didAcquire: boolean;
 }
 
+interface SyncRefs {
+  optionsRef: React.MutableRefObject<SmoothCornerOptions>;
+  effectsPropRef: React.MutableRefObject<EffectsConfig | undefined>;
+  wrapperRefRef: React.MutableRefObject<React.RefObject<HTMLElement | null> | undefined>;
+  skipShadowHandleRef: React.MutableRefObject<boolean>;
+}
+
 /**
- * Ensure the effects overlay exists for the current merged config. The
- * anchor is captured on first attach and reused so a late-arriving shadow
- * can piggy-back on the same ref-counted position. Drop-shadow nodes
- * (and the `isolation:isolate` mutation on the anchor) are skipped when
- * only border effects are present. Idempotent across all three effect
- * sites so no pathway can accidentally double-acquire the anchor.
+ * Apply the latest corner options and effects. Idempotent and lazy:
+ * handles are created on first sight of effects, reused thereafter, and a
+ * zero-size element bails out (the next resize tick picks it up).
+ */
+function runSync(s: State, refs: SyncRefs): void {
+  const merged = mergeEffects(s.extracted, refs.effectsPropRef.current);
+  if (hasEffects(merged))
+    ensureHandles(s, merged, refs.wrapperRefRef.current, refs.skipShadowHandleRef.current);
+
+  const { width, height } = getLayoutSize(s.el);
+  if (width <= 0 || height <= 0) return;
+
+  s.el.style.clipPath = generateClipPath(width, height, refs.optionsRef.current);
+  s.el.setAttribute("data-state", "ready");
+
+  if (s.effectsHandle) {
+    syncEffects(refs.optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
+  }
+}
+
+/**
+ * Ensure the overlay handles exist for `merged`. The anchor is captured
+ * once so a late-arriving shadow piggy-backs on the same ref-counted
+ * position. Drop-shadow setup (and the `isolation:isolate` anchor
+ * mutation) is skipped for border-only configs. Idempotent at every
+ * call-site so no path can double-acquire.
  */
 function ensureHandles(
   s: State,
   merged: EffectsConfig,
   wrapperRef: React.RefObject<HTMLElement | null> | undefined,
+  skipShadowHandle: boolean,
 ): void {
   if (!s.anchor) {
     const anchor = wrapperRef?.current ?? s.el.parentElement;
@@ -66,7 +94,7 @@ function ensureHandles(
   if (!s.effectsHandle) {
     s.effectsHandle = createSvgEffects(s.anchor);
   }
-  if (!s.shadowHandle && merged.shadow) {
+  if (!s.shadowHandle && merged.shadow && !skipShadowHandle) {
     s.shadowHandle = createDropShadow(s.anchor);
   }
 }
@@ -75,17 +103,28 @@ export interface UseEffectsOptions {
   wrapperRef?: React.RefObject<HTMLElement | null>;
   effects?: EffectsConfig;
   autoEffects?: boolean;
+  /**
+   * Opt out of the SVG drop-shadow handle. Set this when you're rendering
+   * the shadow yourself — e.g. a CSS `box-shadow` on a sibling element, or
+   * any other non-SVG drop-shadow technique — so the hook doesn't also
+   * mount an SVG filter or set `isolation:isolate` on the anchor. Border
+   * effects and inner shadows are unaffected; any `effects.shadow` config
+   * you pass is ignored while this is true.
+   *
+   * `<SmoothCorners shadowStrategy="box-shadow">` toggles this internally.
+   * Default: `false` (SVG drop-shadow active).
+   */
+  skipShadowHandle?: boolean;
 }
 
 /**
- * React hook that applies a smooth-cornered clip-path to a referenced element.
- * Automatically updates on resize via a shared ResizeObserver.
+ * React hook that applies a smooth-cornered clip-path to a referenced
+ * element, kept in sync on resize via a shared ResizeObserver.
  *
  * @remarks
- * `effectsOptions.wrapperRef` should be a stable ref (created via
- * `useRef`). Each rendered call to the hook reads `effects` and
- * `autoEffects` via their values, so passing a freshly-allocated object
- * each render is fine.
+ * `effectsOptions.wrapperRef` must be a stable ref (created with
+ * `useRef`). `effects` and `autoEffects` are read by value, so passing a
+ * freshly-allocated object each render is fine.
  *
  * @example
  * ```tsx
@@ -99,7 +138,7 @@ export function useSmoothCorners(
   options: SmoothCornerOptions,
   effectsOptions?: UseEffectsOptions,
 ): void {
-  const { wrapperRef, effects, autoEffects } = effectsOptions ?? {};
+  const { wrapperRef, effects, autoEffects, skipShadowHandle } = effectsOptions ?? {};
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -110,22 +149,28 @@ export function useSmoothCorners(
   const wrapperRefRef = useRef(wrapperRef);
   wrapperRefRef.current = wrapperRef;
 
-  // Stable signature of the corner options. Bounded object size makes
-  // JSON.stringify safe and cheap. A useMemo here would never hit —
-  // callers typically pass fresh object literals each render — so we
-  // build the strings directly and save a memo cell.
+  // Read via ref so the resize callback sees current value without re-subscribing.
+  const skipShadowHandleRef = useRef(skipShadowHandle ?? false);
+  skipShadowHandleRef.current = skipShadowHandle ?? false;
+
+  const refsRef = useRef<SyncRefs>({
+    optionsRef, effectsPropRef, wrapperRefRef, skipShadowHandleRef,
+  });
+
+  // Stable signatures for the effect deps. JSON.stringify is safe on these
+  // bounded objects; useMemo would never hit since callers pass fresh literals.
   const optionsKey = JSON.stringify(options);
   const effectsKey = JSON.stringify(effects ?? null);
   const autoEffectsKey = autoEffects ?? true;
+  const skipShadowHandleKey = skipShadowHandle ?? false;
 
   // Per-mount state. SVG handles are created lazily on first sync that
-  // sees effects and destroyed only on unmount. Toggling a border or
-  // shadow prop on and off no longer tears down and rebuilds the overlay.
+  // sees effects and destroyed only on unmount — toggling props on/off
+  // doesn't rebuild the overlay.
   const stateRef = useRef<State | null>(null);
 
-  // Main setup. Re-runs only when the target element ref changes.
-  // Captures `autoEffectsKey` at mount for initial extraction; subsequent
-  // toggles are handled by the sibling effect below.
+  // Main setup. Re-runs only when the element ref changes. `autoEffectsKey`
+  // is captured at mount; subsequent toggles are handled below.
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -134,8 +179,7 @@ export function useSmoothCorners(
     el.setAttribute("data-slot", "smooth-corners");
     el.setAttribute("data-state", "pending");
 
-    const initialAuto = autoEffectsKey;
-    const initialExtracted = initialAuto ? extractAndStripEffects(el) : undefined;
+    const initialExtracted = autoEffectsKey ? extractAndStripEffects(el) : undefined;
 
     const s: State = {
       el,
@@ -148,28 +192,13 @@ export function useSmoothCorners(
     };
     stateRef.current = s;
 
-    function sync(): void {
-      const { width, height } = s.el.getBoundingClientRect();
-      if (width <= 0 || height <= 0) return;
-
-      s.el.style.clipPath = generateClipPath(width, height, optionsRef.current);
-      s.el.setAttribute("data-state", "ready");
-
-      const merged = mergeEffects(s.extracted, effectsPropRef.current);
-      if (hasEffects(merged)) ensureHandles(s, merged, wrapperRefRef.current);
-      if (s.effectsHandle) {
-        syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
-      }
-    }
-
-    // Eager path: create handles immediately when effects are present at
-    // mount. Mirrors the Vue `setupEffects` behaviour so the overlay exists
-    // before the resize observer's first callback, avoiding a frame where
-    // it's missing.
+    // Eager handle creation so the overlay exists before the first resize
+    // callback fires, avoiding a frame where it's missing.
     const initialMerged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(initialMerged)) ensureHandles(s, initialMerged, wrapperRefRef.current);
+    if (hasEffects(initialMerged))
+      ensureHandles(s, initialMerged, wrapperRefRef.current, skipShadowHandleRef.current);
 
-    const unobserve = observeResize(el, sync);
+    const unobserve = observeResize(el, () => runSync(s, refsRef.current));
 
     return () => {
       unobserve();
@@ -186,32 +215,26 @@ export function useSmoothCorners(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref]);
 
-  // Re-sync on corner-option or explicit-effect change. Reaches into the
-  // per-mount state; no setup/teardown.
+  // Re-sync on prop change. `runSync` attaches handles eagerly before
+  // measuring, so a later-appearing `shadow` is ready next callback.
   useIsoLayoutEffect(() => {
     const s = stateRef.current;
     if (!s) return;
-
-    // Attach handles eagerly when effects appear, even before the first
-    // layout. This matters for a later-appearing `shadow` prop: the
-    // drop-shadow SVG must exist by the next resize callback so the
-    // overlay doesn't lag by a frame.
-    const merged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(merged)) ensureHandles(s, merged, wrapperRefRef.current);
-
-    const { width, height } = s.el.getBoundingClientRect();
-    if (width <= 0 || height <= 0) return;
-
-    s.el.style.clipPath = generateClipPath(width, height, optionsRef.current);
-    s.el.setAttribute("data-state", "ready");
-
-    if (s.effectsHandle) {
-      syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
-    }
+    runSync(s, refsRef.current);
   }, [optionsKey, effectsKey]);
 
-  // Handle autoEffects toggling. Starts or stops CSS extraction and
-  // restores the original inline styles when turned off.
+  // Tear down the SVG drop-shadow handle when the consumer opts out at
+  // runtime (e.g. shadowStrategy "svg" → "box-shadow"). Re-creation in the
+  // other direction is handled by `ensureHandles` on the next sync.
+  useIsoLayoutEffect(() => {
+    if (!skipShadowHandleKey) return;
+    const s = stateRef.current;
+    if (!s || !s.shadowHandle) return;
+    s.shadowHandle.destroy();
+    s.shadowHandle = undefined;
+  }, [skipShadowHandleKey]);
+
+  // Start/stop CSS extraction when `autoEffects` toggles.
   useIsoLayoutEffect(() => {
     const s = stateRef.current;
     if (!s) return;
@@ -224,12 +247,6 @@ export function useSmoothCorners(
     } else {
       return;
     }
-    const { width, height } = s.el.getBoundingClientRect();
-    if (width <= 0 || height <= 0) return;
-    const merged = mergeEffects(s.extracted, effectsPropRef.current);
-    if (hasEffects(merged)) ensureHandles(s, merged, wrapperRefRef.current);
-    if (s.effectsHandle) {
-      syncEffects(optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
-    }
+    runSync(s, refsRef.current);
   }, [autoEffectsKey]);
 }

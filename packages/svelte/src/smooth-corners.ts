@@ -1,4 +1,4 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, getLayoutSize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 export interface SmoothCornersAction {
@@ -99,7 +99,7 @@ export function smoothCorners(
   node.setAttribute("data-state", "pending");
 
   function apply() {
-    const { width, height } = node.getBoundingClientRect();
+    const { width, height } = getLayoutSize(node);
     if (width > 0 && height > 0) {
       node.style.clipPath = generateClipPath(width, height, currentOptions);
       node.setAttribute("data-state", "ready");

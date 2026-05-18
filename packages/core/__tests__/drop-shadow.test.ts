@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createDropShadow } from "../src/drop-shadow.js";
 import { DEFAULT_SHADOW } from "../src/svg-shared.js";
 import type { SmoothCornerOptions, ShadowConfig } from "../src/types.js";
@@ -7,9 +7,25 @@ import type { SmoothCornerOptions, ShadowConfig } from "../src/types.js";
 let anchor: HTMLElement;
 const opts: SmoothCornerOptions = { radius: 16 };
 
+// happy-dom's default UA contains "AppleWebKit" (and lacks "Chrome"), so
+// `IS_WEBKIT` evaluates to true when the module is first loaded under test.
+// That means every `createDropShadow` call schedules a rAF loop. Without
+// the no-op stub below, the loops accumulate across tests and bleed
+// device-pixel-snap writes into later assertions. The UA-stub tests near
+// the bottom of this file install their own rAF behaviour and re-import
+// the module via `vi.resetModules()`, so this stub is the safe default.
 beforeEach(() => {
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 0);
+  vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
   anchor = document.createElement("div");
   document.body.appendChild(anchor);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  // Clear DOM between tests so previous test's anchor children don't
+  // confuse document-wide queries.
+  document.body.innerHTML = "";
 });
 
 describe("createDropShadow", () => {
@@ -114,7 +130,7 @@ describe("createDropShadow", () => {
     expect(svg.style.display).toBe("none");
   });
 
-  it("update() with spread > 0 — path generated at expanded dimensions, transform offset includes spread", () => {
+  it("update() with blur=0 & spread > 0 — rendered as a stroked ring on the original silhouette", () => {
     const handle = createDropShadow(anchor);
     const shadow: ShadowConfig = {
       offsetX: 0,
@@ -128,9 +144,16 @@ describe("createDropShadow", () => {
 
     const svg = anchor.querySelector("svg")!;
     const path = svg.querySelector("path")!;
-    // Transform should offset by -spread
-    expect(path.getAttribute("transform")).toBe("translate(-10,-10)");
-    // Path d should exist (generated at expanded dimensions 220x120)
+    // Ring layer: stroke on the original silhouette (no spread expansion in
+    // the transform), stroke-width = spread * 2 (half outside = visible
+    // ring of width `spread`, half inside hidden by content). Bypasses the
+    // filter entirely.
+    expect(path.getAttribute("transform")).toBe("translate(0,0)");
+    expect(path.getAttribute("fill")).toBe("none");
+    expect(path.getAttribute("stroke")).toBeTruthy();
+    expect(path.getAttribute("stroke-width")).toBe("20");
+    expect(path.getAttribute("stroke-opacity")).toBe("1");
+    expect(path.getAttribute("filter")).toBeNull();
     expect(path.getAttribute("d")).toBeTruthy();
   });
 
@@ -225,6 +248,48 @@ describe("createDropShadow", () => {
     const filters = svg.querySelectorAll("filter");
     expect(filters).toHaveLength(2);
     expect(filters[0].getAttribute("id")).not.toBe(filters[1].getAttribute("id"));
+  });
+
+  it("filter uses userSpaceOnUse units (Safari rasterisation defence)", () => {
+    const handle = createDropShadow(anchor);
+    handle.update(opts, { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 }, 200, 100);
+
+    const filter = anchor.querySelector("filter")!;
+    expect(filter.getAttribute("filterUnits")).toBe("userSpaceOnUse");
+  });
+
+  it("filter region pad = ceil(3*blur + |spread| + 1) on every side", () => {
+    const handle = createDropShadow(anchor);
+    // blur=8, spread=3 => pad = ceil(24 + 3 + 1) = 28
+    handle.update(
+      opts,
+      { offsetX: 0, offsetY: 0, blur: 8, spread: 3, color: "#000", opacity: 1 },
+      200,
+      100,
+    );
+
+    const filter = anchor.querySelector("filter")!;
+    const pad = 28;
+    const shadowWidth = 200 + 2 * 3;
+    const shadowHeight = 100 + 2 * 3;
+    expect(filter.getAttribute("x")).toBe(String(-pad));
+    expect(filter.getAttribute("y")).toBe(String(-pad));
+    expect(filter.getAttribute("width")).toBe(String(shadowWidth + 2 * pad));
+    expect(filter.getAttribute("height")).toBe(String(shadowHeight + 2 * pad));
+  });
+
+  it("filter region pad handles negative spread via absolute value", () => {
+    const handle = createDropShadow(anchor);
+    // blur=2, spread=-4 => pad = ceil(6 + 4 + 1) = 11
+    handle.update(
+      opts,
+      { offsetX: 0, offsetY: 0, blur: 2, spread: -4, color: "#000", opacity: 1 },
+      200,
+      100,
+    );
+    const filter = anchor.querySelector("filter")!;
+    expect(filter.getAttribute("x")).toBe("-11");
+    expect(filter.getAttribute("y")).toBe("-11");
   });
 
   it("reducing shadow count removes DOM elements", () => {

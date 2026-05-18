@@ -1,24 +1,18 @@
 const refCounts = new WeakMap<HTMLElement, number>();
 
 /**
- * Ensure an anchor element is positioned so the SVG effects overlay can
- * sit on top of it. Ref-counted: if the anchor already has non-static
- * positioning (user-set or from a previous acquire), this returns true
- * without touching it. If the anchor is static, `position: relative` is
- * applied and the count is incremented. Returns false when the anchor is
- * non-static but not managed by this library -- caller should bail out
- * rather than stomp on user styles.
- *
- * Always pair with `releasePosition` on the same anchor.
+ * Ensure an anchor is positioned so the SVG effects overlay can sit on it.
+ * Ref-counted: already-acquired anchors just increment. A static anchor
+ * gets `position: relative` and counts as the first acquire. Returns false
+ * when the anchor is non-static but not ours — caller bails out rather
+ * than stomp on a user-set style. Pair with `releasePosition`.
  */
 export function acquirePosition(anchor: HTMLElement): boolean {
   const count = refCounts.get(anchor) ?? 0;
   if (count > 0) {
-    // Already managed by us -- just increment
     refCounts.set(anchor, count + 1);
     return true;
   }
-  // First acquire: only proceed if position is static (not user-set)
   const pos = getComputedStyle(anchor).position;
   if (pos !== "static" && pos !== "") return false;
   refCounts.set(anchor, 1);
@@ -27,14 +21,12 @@ export function acquirePosition(anchor: HTMLElement): boolean {
 }
 
 /**
- * Counterpart to `acquirePosition`. Decrements the ref count; when the
- * last acquirer releases, the inline `position` style applied by
- * `acquirePosition` is cleared.
+ * Decrement the ref count; the last release clears the inline `position`
+ * applied by `acquirePosition`. A no-op when the anchor was never acquired
+ * (we mustn't stomp a user-set inline style).
  */
 export function releasePosition(anchor: HTMLElement): void {
   const count = refCounts.get(anchor);
-  // No prior acquire: nothing to release. Do not touch `anchor.style.position`
-  // -- it may be a user-set inline style we would otherwise stomp.
   if (count === undefined) return;
   if (count <= 1) {
     refCounts.delete(anchor);

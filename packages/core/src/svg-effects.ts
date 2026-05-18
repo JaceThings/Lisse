@@ -1,18 +1,23 @@
-import { generatePath } from "./generate-path.js";
 import type { SmoothCornerOptions, EffectsConfig, BorderConfig, ShadowConfig, GradientConfig } from "./types.js";
-import { SVG_NS, nextUid, hexToRgb, darkenHex, adjustOptions, isGradient, createGradientDef, updateGradientDef, darkenGradient } from "./svg-shared.js";
+import { SVG_NS, nextUid, hexToRgb, darkenHex, adjustOptions, isGradient, createGradientDef, updateGradientDef, darkenGradient, createPathCache } from "./svg-shared.js";
 
 export interface SvgEffectsHandle {
   update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
   destroy(): void;
 }
 
-/** Set x/y/width/height on an element to cover a `w`×`h` area expanded by `pad` on every side. */
+/** Set x/y/width/height on an element to cover a `w`×`h` area padded by `pad` on every side. */
 function padBounds(el: Element, pad: number, w: number, h: number): void {
   el.setAttribute("x", String(-pad));
   el.setAttribute("y", String(-pad));
   el.setAttribute("width", String(w + pad * 2));
   el.setAttribute("height", String(h + pad * 2));
+}
+
+/** Apply `padBounds` to a mask and its inner rect together. */
+function padMaskAndRect(mask: Element, rect: Element, pad: number, w: number, h: number): void {
+  padBounds(mask, pad, w, h);
+  padBounds(rect, pad, w, h);
 }
 
 function createKnockoutMask(
@@ -60,27 +65,23 @@ interface BorderElements {
   dblRect: Element;
   strokeMultiplier: number;
   padDblMask?: (pad: number, w: number, h: number) => void;
-  /** Reference to the <defs> element for creating gradient defs. */
   defs: Element;
-  /** Current gradient element for the main stroke (null when using a solid color). */
+  /** Main-stroke gradient def (null when stroke is a solid color). */
   gradientEl: Element | null;
-  /** Unique ID for the main gradient def. */
   gradientId: string;
-  /** Current gradient element for the groove/ridge overlay stroke. */
+  /** Groove/ridge overlay-stroke gradient def. */
   overlayGradientEl: Element | null;
-  /** Unique ID for the overlay gradient def. */
   overlayGradientId: string;
 }
 
-/** Remove a gradient def from the DOM and null out the reference. */
+/** Remove a gradient def from the DOM and clear the reference. */
 function removeGradient(els: BorderElements, which: "main" | "overlay"): void {
-  const key: "gradientEl" | "overlayGradientEl" =
-    which === "main" ? "gradientEl" : "overlayGradientEl";
+  const key = which === "main" ? "gradientEl" : "overlayGradientEl";
   els[key]?.remove();
   els[key] = null;
 }
 
-/** Resolve the stroke color value: either a hex string or a `url(#id)` reference. */
+/** Return a hex string or `url(#id)` reference for the configured stroke. */
 function resolveStroke(
   color: string | GradientConfig,
   els: BorderElements,
@@ -90,8 +91,7 @@ function resolveStroke(
     removeGradient(els, which);
     return color;
   }
-  const elKey: "gradientEl" | "overlayGradientEl" =
-    which === "main" ? "gradientEl" : "overlayGradientEl";
+  const elKey = which === "main" ? "gradientEl" : "overlayGradientEl";
   const id = which === "main" ? els.gradientId : els.overlayGradientId;
   if (els[elKey]) {
     updateGradientDef(els[elKey], color);
@@ -127,7 +127,7 @@ function updateBorder(
   els.grooveOverlay.style.display = "none";
   els.strokePath.removeAttribute("stroke-dasharray");
   els.strokePath.setAttribute("stroke-linecap", "butt");
-  // Clean up overlay gradient for non-groove/ridge styles (will be re-created if needed)
+  // Overlay gradient is groove/ridge-only; re-created below if needed.
   if (style !== "groove" && style !== "ridge") {
     removeGradient(els, "overlay");
   }
@@ -180,7 +180,7 @@ function updateBorder(
   }
 }
 
-/** Elements for a single inner shadow in the pool. */
+/** Pool entry for a single inner shadow. */
 interface InnerShadowEntry {
   maskId: string;
   mask: Element;
@@ -237,16 +237,15 @@ function removeInnerShadowEntry(entry: InnerShadowEntry): void {
 }
 
 /**
- * Creates an SVG overlay for inner/outer borders and inner shadow effects.
- * The SVG is appended to `anchor` and uses clip-path, mask, and filter elements
- * that are updated in sync with the smooth-corner path.
+ * SVG overlay for inner/outer/middle borders and inner shadows.
+ * Appended to `anchor`; clip-path, mask and filter elements update in sync
+ * with the smooth-corner path on each `update()` call.
  */
 export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   const id = nextUid();
   const clipId = `sc-clip-${id}`;
   const maskId = `sc-mask-${id}`;
 
-  // Root SVG
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.style.position = "absolute";
   svg.style.inset = "0";
@@ -255,17 +254,16 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   svg.style.zIndex = "1";
   svg.setAttribute("aria-hidden", "true");
 
-  // Defs
   const defs = document.createElementNS(SVG_NS, "defs");
 
-  // ClipPath (for inner border)
+  // ClipPath for the inner border.
   const clipPathEl = document.createElementNS(SVG_NS, "clipPath");
   clipPathEl.setAttribute("id", clipId);
   const clipShape = document.createElementNS(SVG_NS, "path");
   clipPathEl.appendChild(clipShape);
   defs.appendChild(clipPathEl);
 
-  // Mask (for outer border) — white rect + black shape = outer region
+  // Outer-border mask: white rect minus black shape = outer region.
   const maskEl = document.createElementNS(SVG_NS, "mask");
   maskEl.setAttribute("id", maskId);
   maskEl.setAttribute("maskUnits", "userSpaceOnUse");
@@ -277,7 +275,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   maskEl.appendChild(maskShape);
   defs.appendChild(maskEl);
 
-  // Double-knockout masks
   const innerDblMaskId = `sc-dbl-inner-${id}`;
   const { rect: innerDblRect, knockout: innerDblKnockout } =
     createKnockoutMask(innerDblMaskId, defs, false);
@@ -292,15 +289,13 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
 
   svg.appendChild(defs);
 
-  // Inner shadow rendering: shared <g clip-path> wrapper for all inner shadows
+  // Shared <g clip-path> wrapper for all inner shadows.
   const isShadowClip = document.createElementNS(SVG_NS, "g");
   isShadowClip.setAttribute("clip-path", `url(#${clipId})`);
   svg.appendChild(isShadowClip);
 
-  // Pool of inner shadow entries
   const innerShadowPool: InnerShadowEntry[] = [];
 
-  // Border stroke groups
   const { group: innerStrokeGroup, strokePath: innerStrokePath, grooveOverlay: innerGrooveOverlay } =
     createStrokeGroup({ attr: "clip-path", value: `url(#${clipId})` });
   svg.appendChild(innerStrokeGroup);
@@ -315,7 +310,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
 
   anchor.appendChild(svg);
 
-  // Border element bags for the shared updateBorder function
   const innerBorderEls: BorderElements = {
     strokePath: innerStrokePath, grooveOverlay: innerGrooveOverlay,
     strokeGroup: innerStrokeGroup, dblMaskId: innerDblMaskId,
@@ -331,10 +325,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
     strokeMultiplier: 2,
     defs, gradientEl: null, gradientId: `sc-grad-outer-${id}`,
     overlayGradientEl: null, overlayGradientId: `sc-grad-outer-ov-${id}`,
-    padDblMask(pad, w, h) {
-      padBounds(outerDblMask, pad, w, h);
-      padBounds(outerDblRect, pad, w, h);
-    },
+    padDblMask: (pad, w, h) => padMaskAndRect(outerDblMask, outerDblRect, pad, w, h),
   };
   const middleBorderEls: BorderElements = {
     strokePath: middleStrokePath, grooveOverlay: middleGrooveOverlay,
@@ -343,10 +334,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
     strokeMultiplier: 1,
     defs, gradientEl: null, gradientId: `sc-grad-middle-${id}`,
     overlayGradientEl: null, overlayGradientId: `sc-grad-middle-ov-${id}`,
-    padDblMask(pad, w, h) {
-      padBounds(middleDblMask, pad, w, h);
-      padBounds(middleDblRect, pad, w, h);
-    },
+    padDblMask: (pad, w, h) => padMaskAndRect(middleDblMask, middleDblRect, pad, w, h),
   };
 
   return {
@@ -357,54 +345,28 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
       svg.setAttribute("height", String(height));
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-      // Per-dispatch memo for generatePath. Inner-shadow pools frequently
-      // share (w, h, options) with the main path and only differ by spread,
-      // so a local cache keyed on all four avoids redundant distribute +
-      // per-corner math for each shadow.
-      const pathCache = new Map<string, string>();
-      const optionsKey = JSON.stringify(options);
-      const getPath = (
-        w: number,
-        h: number,
-        opts: SmoothCornerOptions,
-        spread: number,
-      ): string => {
-        const cacheKey = `${w}:${h}:${spread}:${optionsKey}`;
-        let cached = pathCache.get(cacheKey);
-        if (cached === undefined) {
-          cached = generatePath(w, h, opts);
-          pathCache.set(cacheKey, cached);
-        }
-        return cached;
-      };
-
+      const getPath = createPathCache(options);
       const d = getPath(width, height, options, 0);
 
-      // Update clip and mask paths
       clipShape.setAttribute("d", d);
       maskShape.setAttribute("d", d);
       maskRect.setAttribute("width", String(width));
       maskRect.setAttribute("height", String(height));
 
-      // Inner border
       updateBorder(effects.innerBorder, d, width, height, innerBorderEls);
 
-      // Outer border — extend main mask bounds before the border call
+      // Outer border needs an extended mask region before the border call.
       const ob = effects.outerBorder;
       if (ob && ob.width > 0 && ob.opacity > 0) {
-        padBounds(maskEl, ob.width, width, height);
-        padBounds(maskRect, ob.width, width, height);
+        padMaskAndRect(maskEl, maskRect, ob.width, width, height);
       }
       updateBorder(ob, d, width, height, outerBorderEls);
 
-      // Middle border
       updateBorder(effects.middleBorder, d, width, height, middleBorderEls);
 
-      // Inner shadows — normalize to array
       const rawIs = effects.innerShadow;
       const isArr: ShadowConfig[] = rawIs == null ? [] : Array.isArray(rawIs) ? rawIs : [rawIs];
 
-      // Reconcile pool size
       while (innerShadowPool.length < isArr.length) {
         innerShadowPool.push(createInnerShadowEntry(defs, isShadowClip));
       }
@@ -426,11 +388,9 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         const spread = is.spread;
         const pad = Math.max(is.blur * 3, 20) + Math.max(Math.abs(is.offsetX), Math.abs(is.offsetY)) + Math.abs(spread);
 
-        // Mask: white rect (visible) + black squircle cutout (hole)
-        padBounds(entry.mask, pad, width, height);
-        padBounds(entry.maskRect, pad, width, height);
+        // Mask: white rect (visible) + black squircle cutout (hole).
+        padMaskAndRect(entry.mask, entry.maskRect, pad, width, height);
 
-        // Cutout path — adjusted for spread, offset for positioning
         const cutW = Math.max(1, width - spread * 2);
         const cutH = Math.max(1, height - spread * 2);
         const cutOpts = spread !== 0 ? adjustOptions(options, -spread) : options;
@@ -438,7 +398,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
         entry.maskCutout.setAttribute("transform",
           `translate(${is.offsetX + spread},${is.offsetY + spread})`);
 
-        // Blur
         if (is.blur > 0) {
           entry.feBlur.setAttribute("stdDeviation", String(is.blur));
           entry.blurGroup.setAttribute("filter", `url(#${entry.filterId})`);
@@ -446,7 +405,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
           entry.blurGroup.removeAttribute("filter");
         }
 
-        // Shadow rect (covers full padded area, masked to frame shape)
         padBounds(entry.rect, pad, width, height);
         entry.rect.setAttribute("fill", hexToRgb(is.color));
         entry.rect.setAttribute("fill-opacity", String(is.opacity));

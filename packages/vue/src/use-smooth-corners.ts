@@ -11,6 +11,7 @@ import {
   createSvgEffects,
   createDropShadow,
   observeResize,
+  getLayoutSize,
   DEFAULT_SHADOW,
   extractAndStripEffects,
   restoreStyles,
@@ -90,12 +91,12 @@ export function useSmoothCorners(
 
   // Single resize-synchronised callback. Mirrors the React hook's sync()
   // pattern: one observeResize registration per element routes both the
-  // clip-path update and the effects update through one getBoundingClientRect
-  // read per frame.
+  // clip-path update and the effects update through one layout-size read
+  // per frame.
   function syncAll() {
     const el = unref(target);
     if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
+    const { width, height } = getLayoutSize(el);
     if (width <= 0 || height <= 0) return;
 
     el.style.clipPath = generateClipPath(width, height, unref(options));

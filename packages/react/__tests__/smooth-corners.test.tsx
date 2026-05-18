@@ -534,6 +534,226 @@ describe("<SmoothCorners /> - lazy drop-shadow", () => {
   });
 });
 
+describe("<SmoothCorners /> - shadowStrategy='box-shadow'", () => {
+  it("renders a sibling div carrying the expected CSS box-shadow chain", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 16 }}
+          shadowStrategy="box-shadow"
+          shadow={[
+            { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000000", opacity: 0.25 },
+            { offsetX: 0, offsetY: 1, blur: 2, spread: -1, color: "#ff0000", opacity: 0.5 },
+          ]}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+
+    const sibling = container.querySelector(
+      "[data-slot='smooth-corners-box-shadow']",
+    ) as HTMLElement | null;
+    expect(sibling).not.toBeNull();
+    expect(sibling!.style.boxShadow).toBe(
+      "0px 4px 8px 0px rgba(0,0,0,0.25), 0px 1px 2px -1px rgba(255,0,0,0.5)",
+    );
+    expect(sibling!.style.borderRadius).toBe("16px");
+    expect(sibling!.style.position).toBe("absolute");
+    expect(sibling!.style.pointerEvents).toBe("none");
+    expect(sibling!.style.zIndex).toBe("-1");
+  });
+
+  it("creates no drop-shadow SVG when shadowStrategy='box-shadow'", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 12 }}
+          shadowStrategy="box-shadow"
+          shadow={{ offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 }}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+
+    const inner = container.querySelector("[data-slot='smooth-corners']");
+    const wrapper = inner!.parentElement as HTMLElement;
+    // No SVG overlays should be present — neither the drop-shadow SVG
+    // (which the box-shadow path bypasses) nor the effects overlay (no
+    // borders / inner-shadow / autoEffects). The CSS sibling div is the
+    // only descendant rendered alongside the inner element.
+    expect(wrapper.querySelectorAll("svg").length).toBe(0);
+    expect(
+      wrapper.querySelector("[data-slot='smooth-corners-box-shadow']"),
+    ).not.toBeNull();
+  });
+
+  it("skips the box-shadow sibling when no shadow chain is provided", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          shadowStrategy="box-shadow"
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+    expect(
+      container.querySelector("[data-slot='smooth-corners-box-shadow']"),
+    ).toBeNull();
+  });
+
+  it("drops invisible (opacity<=0) entries from the chain", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          shadowStrategy="box-shadow"
+          shadow={[
+            { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0 },
+            { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000", opacity: 0.3 },
+          ]}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+    const sibling = container.querySelector(
+      "[data-slot='smooth-corners-box-shadow']",
+    ) as HTMLElement;
+    expect(sibling.style.boxShadow).toBe("0px 2px 4px 0px rgba(0,0,0,0.3)");
+  });
+
+  it("emits four-value border-radius for per-corner configs", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ topLeft: 4, topRight: 8, bottomRight: 12, bottomLeft: 16 }}
+          shadowStrategy="box-shadow"
+          shadow={{ offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 }}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+    const sibling = container.querySelector(
+      "[data-slot='smooth-corners-box-shadow']",
+    ) as HTMLElement;
+    // happy-dom may normalise the four-value shorthand into separate
+    // longhand properties; compare against the inline style attribute.
+    const inline = sibling.getAttribute("style") ?? "";
+    expect(inline).toContain("4px 8px 12px 16px");
+  });
+
+  it("default strategy is 'svg' — drop-shadow SVG is created, no CSS sibling", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          shadow={{ offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 }}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+
+    const inner = container.querySelector("[data-slot='smooth-corners']");
+    const wrapper = inner!.parentElement as HTMLElement;
+    // SVG drop-shadow present (z-index:-1 marker), no CSS sibling.
+    const svgs = Array.from(wrapper.querySelectorAll("svg"));
+    expect(svgs.some((s) => (s as SVGElement).style.zIndex === "-1")).toBe(true);
+    expect(
+      wrapper.querySelector("[data-slot='smooth-corners-box-shadow']"),
+    ).toBeNull();
+  });
+
+  it("flipping strategy svg→box-shadow tears down the SVG drop-shadow handle", () => {
+    function Tester({ strategy }: { strategy: "svg" | "box-shadow" }) {
+      return (
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          shadowStrategy={strategy}
+          shadow={{ offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 }}
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => {
+      root.render(<Tester strategy="svg" />);
+    });
+
+    const inner = container.querySelector("[data-slot='smooth-corners']");
+    const wrapper = inner!.parentElement as HTMLElement;
+    // Drop-shadow SVG (z-index:-1) exists under "svg" strategy.
+    const hasDropShadowSvg = (): boolean =>
+      Array.from(wrapper.querySelectorAll("svg")).some(
+        (s) => (s as SVGElement).style.zIndex === "-1",
+      );
+    expect(hasDropShadowSvg()).toBe(true);
+    expect(wrapper.style.isolation).toBe("isolate");
+
+    // Flip to box-shadow. The SVG drop-shadow handle must be torn down
+    // (no leftover SVG, no leftover isolation:isolate on the anchor).
+    act(() => {
+      root.render(<Tester strategy="box-shadow" />);
+    });
+
+    expect(hasDropShadowSvg()).toBe(false);
+    // The CSS sibling div should be present in its place.
+    expect(
+      wrapper.querySelector("[data-slot='smooth-corners-box-shadow']"),
+    ).not.toBeNull();
+  });
+
+  it("flipping strategy box-shadow→svg reattaches the SVG drop-shadow handle", () => {
+    function Tester({ strategy }: { strategy: "svg" | "box-shadow" }) {
+      return (
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          shadowStrategy={strategy}
+          shadow={{ offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 }}
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => {
+      root.render(<Tester strategy="box-shadow" />);
+    });
+
+    const inner = container.querySelector("[data-slot='smooth-corners']");
+    const wrapper = inner!.parentElement as HTMLElement;
+    expect(
+      wrapper.querySelector("[data-slot='smooth-corners-box-shadow']"),
+    ).not.toBeNull();
+
+    act(() => {
+      root.render(<Tester strategy="svg" />);
+    });
+
+    const hasDropShadowSvg = Array.from(wrapper.querySelectorAll("svg")).some(
+      (s) => (s as SVGElement).style.zIndex === "-1",
+    );
+    expect(hasDropShadowSvg).toBe(true);
+    expect(
+      wrapper.querySelector("[data-slot='smooth-corners-box-shadow']"),
+    ).toBeNull();
+  });
+});
+
 describe("<SmoothCorners /> - ref forwarding", () => {
   it("forwards the external ref to the inner element", () => {
     const ref = { current: null as HTMLElement | null };
