@@ -13,7 +13,7 @@ import {
   hasEffects,
   mergeEffects,
 } from "@lisse/core";
-import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig, ShadowConfig } from "@lisse/core";
 
 /**
  * `useLayoutEffect` on the client, `useEffect` during SSR — mutate the DOM
@@ -49,6 +49,9 @@ interface SyncRefs {
   effectsPropRef: React.MutableRefObject<EffectsConfig | undefined>;
   wrapperRefRef: React.MutableRefObject<React.RefObject<HTMLElement | null> | undefined>;
   skipShadowHandleRef: React.MutableRefObject<boolean>;
+  onExtractedShadowRef: React.MutableRefObject<
+    ((shadow: ShadowConfig | ShadowConfig[] | undefined) => void) | undefined
+  >;
 }
 
 /**
@@ -115,6 +118,18 @@ export interface UseEffectsOptions {
    * Default: `false` (SVG drop-shadow active).
    */
   skipShadowHandle?: boolean;
+  /**
+   * Called whenever the hook auto-extracts (or stops auto-extracting) a
+   * CSS `box-shadow` from the consumer element. Receives the parsed
+   * shadow chain, or `undefined` when no shadow is currently extracted
+   * (initial mount with no CSS shadow, `autoEffects=false`, or unmount).
+   *
+   * `<SmoothCorners shadowStrategy="box-shadow">` uses this to route an
+   * extracted chain into its CSS sibling div when the SVG handle is
+   * skipped — without it the extracted shadow would be stripped from the
+   * consumer element and never re-rendered.
+   */
+  onExtractedShadow?: (shadow: ShadowConfig | ShadowConfig[] | undefined) => void;
 }
 
 /**
@@ -138,7 +153,8 @@ export function useSmoothCorners(
   options: SmoothCornerOptions,
   effectsOptions?: UseEffectsOptions,
 ): void {
-  const { wrapperRef, effects, autoEffects, skipShadowHandle } = effectsOptions ?? {};
+  const { wrapperRef, effects, autoEffects, skipShadowHandle, onExtractedShadow } =
+    effectsOptions ?? {};
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -153,8 +169,11 @@ export function useSmoothCorners(
   const skipShadowHandleRef = useRef(skipShadowHandle ?? false);
   skipShadowHandleRef.current = skipShadowHandle ?? false;
 
+  const onExtractedShadowRef = useRef(onExtractedShadow);
+  onExtractedShadowRef.current = onExtractedShadow;
+
   const refsRef = useRef<SyncRefs>({
-    optionsRef, effectsPropRef, wrapperRefRef, skipShadowHandleRef,
+    optionsRef, effectsPropRef, wrapperRefRef, skipShadowHandleRef, onExtractedShadowRef,
   });
 
   // Stable signatures for the effect deps. JSON.stringify is safe on these
@@ -198,6 +217,8 @@ export function useSmoothCorners(
     if (hasEffects(initialMerged))
       ensureHandles(s, initialMerged, wrapperRefRef.current, skipShadowHandleRef.current);
 
+    onExtractedShadowRef.current?.(s.extracted?.effects.shadow);
+
     const unobserve = observeResize(el, () => runSync(s, refsRef.current));
 
     return () => {
@@ -205,6 +226,7 @@ export function useSmoothCorners(
       s.effectsHandle?.destroy();
       s.shadowHandle?.destroy();
       if (s.extracted) restoreStyles(el, s.extracted.savedStyles);
+      onExtractedShadowRef.current?.(undefined);
       if (s.didAcquire && s.anchor) releasePosition(s.anchor);
       stateRef.current = null;
 
@@ -247,6 +269,7 @@ export function useSmoothCorners(
     } else {
       return;
     }
+    onExtractedShadowRef.current?.(s.extracted?.effects.shadow);
     runSync(s, refsRef.current);
   }, [autoEffectsKey]);
 }

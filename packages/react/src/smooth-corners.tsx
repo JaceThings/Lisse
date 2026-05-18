@@ -1,7 +1,9 @@
 import {
   forwardRef,
+  useCallback,
   useMemo,
   useRef,
+  useState,
   createElement,
   type CSSProperties,
   type ElementType,
@@ -30,10 +32,9 @@ import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@lisse/cor
  * Pick `"box-shadow"` when Safari fidelity matters more than the shadow
  * tracing the squircle outline.
  *
- * **Note**: strategy applies to the explicit `shadow` prop only. Auto-
- * extracted CSS shadows are still stripped but are **not** routed
- * through the sibling div. Either pass the shadow explicitly or set
- * `autoEffects={false}` to keep the consumer's CSS `box-shadow` in place.
+ * Auto-extracted CSS `box-shadow` on the consumer element is routed
+ * through the sibling div automatically; the explicit `shadow` prop
+ * takes precedence over the extracted chain.
  */
 export type ShadowStrategy = "svg" | "box-shadow";
 
@@ -165,6 +166,19 @@ function SmoothCornersImpl<E extends ElementType = "div">(
   // `innerShadow` is unaffected (inside the clip, no WebKit bug).
   const effectiveShadow = useBoxShadow ? undefined : shadow;
 
+  // Box-shadow strategy: collect any auto-extracted CSS box-shadow from
+  // the consumer element so it can be routed into the sibling div. The
+  // hook fires the callback on extraction and again with `undefined` on
+  // teardown / autoEffects=false. Explicit `shadow` prop wins when both
+  // are present, matching `mergeEffects` semantics.
+  const [extractedShadow, setExtractedShadow] = useState<
+    ShadowConfig | ShadowConfig[] | undefined
+  >(undefined);
+  const onExtractedShadow = useCallback(
+    (next: ShadowConfig | ShadowConfig[] | undefined) => setExtractedShadow(next),
+    [],
+  );
+
   const explicitEffects = {
     innerBorder,
     outerBorder,
@@ -173,10 +187,11 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     shadow: effectiveShadow,
   };
   const hasExplicit = hasEffects(explicitEffects);
+  const siblingShadow = useBoxShadow ? (shadow ?? extractedShadow) : undefined;
   // Wrapper is required when any effect renders OR when the box-shadow
   // sibling div needs its relative positioning context.
   const needsWrapper =
-    (autoEffects ?? true) || hasExplicit || (useBoxShadow && shadow !== undefined);
+    (autoEffects ?? true) || hasExplicit || siblingShadow !== undefined;
 
   const effectsOptions = {
     wrapperRef: needsWrapper
@@ -185,6 +200,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     effects: hasExplicit ? explicitEffects : undefined,
     autoEffects,
     skipShadowHandle: useBoxShadow,
+    onExtractedShadow: useBoxShadow ? onExtractedShadow : undefined,
   };
 
   useSmoothCorners(internalRef, options, effectsOptions);
@@ -199,8 +215,8 @@ function SmoothCornersImpl<E extends ElementType = "div">(
   // clipped element (z-index:-1) carries the chain. Must be a sibling —
   // clip-path on the consumer's element would otherwise crop the halo.
   let shadowSibling: ReactNode = null;
-  if (useBoxShadow && shadow !== undefined) {
-    const chain = buildBoxShadowChain(shadow);
+  if (useBoxShadow && siblingShadow !== undefined) {
+    const chain = buildBoxShadowChain(siblingShadow);
     if (chain !== "") {
       const style: CSSProperties = {
         position: "absolute",
