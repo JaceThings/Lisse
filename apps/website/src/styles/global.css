@@ -129,6 +129,73 @@ h3 {
   -webkit-user-select: none;
 }
 
+/* Native range input restyle for the Playground sliders. We layer a
+ * styled track + fill div underneath the input (see Slider.tsx); the
+ * input itself stays interactive (keyboard focus, drag, accessibility)
+ * but its visuals are stripped so the layered div shows through. The
+ * thumb is intentionally invisible — the fill bar's right edge is the
+ * value indicator, matching the Figma reference. */
+.playground-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.playground-slider::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 100%;
+  border: none;
+}
+.playground-slider::-moz-range-track {
+  background: transparent;
+  height: 100%;
+  border: none;
+}
+.playground-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.playground-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* Click-to-type affordance on the value readout. The span gets cursor:text
+ * on hover so users see they can click and edit; the input replaces it
+ * in-place with matching font features, right-aligned, no border or
+ * outline (FocusRingOverlay handles focus visuals). */
+.playground-slider-value {
+  cursor: text;
+  font-feature-settings: "ss03" 1, "ss04" 1;
+  /* Explicit on the readout so the digits don't shift width as values
+     count from 10 → 100. <input> doesn't inherit body's variant by
+     default, so it gets the same rule below. */
+  font-variant-numeric: tabular-nums;
+}
+.playground-slider-input {
+  width: 4ch;
+  min-width: 2ch;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  text-align: right;
+  font: inherit;
+  letter-spacing: inherit;
+  font-feature-settings: "ss03" 1, "ss04" 1;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
