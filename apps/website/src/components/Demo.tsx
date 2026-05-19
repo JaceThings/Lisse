@@ -20,20 +20,21 @@ import {
 
 const SQUIRCLE_SMOOTHING = 0.6;
 // Inverted-scale baseline. Figma 8:1373 → 141.316² (radius 30) in normal
-// mode; Figma 22:207 → 460.319² (radius ~97.7) in compare mode. We render
-// the SVG at COMPARE size as the layout baseline and `scale(0.307)` DOWN
-// for normal mode rather than scaling UP for compare. Safari rasterises
-// an SVG's content at its layout size and bilinear-upsamples the cache
-// when an ancestor transform enlarges it — visible as stair-stepping
-// under the 3.26× zoom. Downsampling is always crisp, so the inverted
-// baseline produces clean curves at both states. Radius scales
-// proportionally to preserve the 30 / 141.316 ≈ 0.2123 visual ratio.
-const SQUIRCLE_BASE_SIZE = 460.319;
+// mode. Compare mode keeps the same `scale(1)` baseline; the base size
+// is sized to fit within the 299 px grid container minus the
+// `SQUIRCLE_TOP` offset (≈ 220 px available below), so the whole
+// squircle stays visible in compare mode instead of overflowing past
+// the grid bottom. Radius scales proportionally to preserve the visual
+// 30 / 141.316 ≈ 0.2123 ratio. The SVG renders at the largest baseline
+// (compare) and `scale(SQUIRCLE_NORMAL_SCALE)` DOWN for normal mode —
+// Safari rasterises SVG content at the element's layout size and
+// bilinear-upsamples on ancestor `transform: scale()`, so always
+// downsampling keeps curves crisp at both states.
+const SQUIRCLE_BASE_SIZE = 220;
 const SQUIRCLE_NORMAL_SCALE = 141.316 / SQUIRCLE_BASE_SIZE;
-const SQUIRCLE_RADIUS = 97.711;
+const SQUIRCLE_RADIUS = SQUIRCLE_BASE_SIZE * (97.711 / 460.319);
 // Top-edge offset from grid top (Figma 22:207 → y=78.84). Top-anchored
-// rather than centred so the squircle stays put when scaling up; the
-// bottom overflows past the grid and is clipped by the wrapper.
+// rather than centred so the squircle stays put when scaling up.
 const SQUIRCLE_TOP = 78.842;
 const SMOOTHING_ICON = 14;
 const COMPARE_ICON = 16;
