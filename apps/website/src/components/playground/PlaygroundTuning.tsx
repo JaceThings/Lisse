@@ -18,7 +18,7 @@ export interface PlaygroundTuning {
 }
 
 export const DEFAULT_TUNING: PlaygroundTuning = {
-  maxStretchPx: 8,
+  maxStretchPx: 3,
   deadZonePx: 0,
   cursorRangePx: 200,
   compressY: 0.85,
