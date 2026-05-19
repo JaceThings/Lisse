@@ -10,6 +10,7 @@ html {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
   text-rendering: optimizeLegibility;
   /* Inter v4 ships an `opsz` axis; pair with the `standard` variant in main.tsx. */
   font-optical-sizing: auto;
