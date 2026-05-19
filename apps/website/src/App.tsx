@@ -21,7 +21,11 @@ function DevAgentation() {
   const [Toolbar, setToolbar] = useState<ComponentType | null>(null);
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    import("agentation").then((m) => setToolbar(() => m.PageFeedbackToolbarCSS));
+    // Catch silences `Unhandled promise rejection` if the package is
+     // missing or fails to load in dev. The toolbar simply doesn't appear.
+    import("agentation")
+      .then((m) => setToolbar(() => m.PageFeedbackToolbarCSS))
+      .catch(() => {});
   }, []);
   return Toolbar ? <Toolbar /> : null;
 }

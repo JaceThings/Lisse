@@ -225,52 +225,52 @@ export function Slider({
         onPointerMove={drag.onPointerMove}
         onLostPointerCapture={drag.onLostPointerCapture}
       >
-      <div
-        ref={trackRef}
-        className="relative w-full"
-        style={{ height: trackHeight }}
-      >
-        <motion.div
-          className="absolute top-0 left-0 h-full"
-          style={{
-            width: rubberBand.width,
-            x: rubberBand.x,
-            scaleY: rubberBand.scaleY,
-          }}
+        <div
+          ref={trackRef}
+          className="relative w-full"
+          style={{ height: trackHeight }}
         >
-          <SmoothCorners
-            asChild
-            autoEffects={false}
-            corners={{ radius: trackHeight / 2, smoothing: tuning.trackSmoothing }}
+          <motion.div
+            className="absolute top-0 left-0 h-full"
+            style={{
+              width: rubberBand.width,
+              x: rubberBand.x,
+              scaleY: rubberBand.scaleY,
+            }}
           >
-            <div
-              className="relative h-full w-full overflow-hidden bg-[rgba(126,117,108,0.12)]"
-              aria-hidden
+            <SmoothCorners
+              asChild
+              autoEffects={false}
+              corners={{ radius: trackHeight / 2, smoothing: tuning.trackSmoothing }}
             >
-              <motion.div
-                className="absolute top-0 h-full bg-[#7e756c]"
-                style={{ left: fillLeft, width: fillWidth }}
-              />
-            </div>
-          </SmoothCorners>
-        </motion.div>
-        {/* Hidden native range stays as the keyboard + screen-reader path.
-            Pointer events are disabled so it never steals drags from the
-            elastic handler. It remains focusable via Tab and still
-            receives arrow-key input. */}
-        <input
-          id={id}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={handleKeyboardInput}
-          onKeyDown={handleRangeKeyDown}
-          data-focus-ring
-          className="playground-slider absolute inset-0 h-full w-full pointer-events-none appearance-none bg-transparent"
-        />
-      </div>
+              <div
+                className="relative h-full w-full overflow-hidden bg-[rgba(126,117,108,0.12)]"
+                aria-hidden
+              >
+                <motion.div
+                  className="absolute top-0 h-full bg-[#7e756c]"
+                  style={{ left: fillLeft, width: fillWidth }}
+                />
+              </div>
+            </SmoothCorners>
+          </motion.div>
+          {/* Hidden native range stays as the keyboard + screen-reader path.
+              Pointer events are disabled so it never steals drags from the
+              elastic handler. It remains focusable via Tab and still
+              receives arrow-key input. */}
+          <input
+            id={id}
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={handleKeyboardInput}
+            onKeyDown={handleRangeKeyDown}
+            data-focus-ring
+            className="playground-slider absolute inset-0 h-full w-full pointer-events-none appearance-none bg-transparent"
+          />
+        </div>
       </div>
     </div>
   );
