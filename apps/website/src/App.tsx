@@ -20,7 +20,7 @@ const INSTALL_FIRST = 9;
 export function App() {
   return (
     <main className="flex min-h-dvh w-full items-stretch justify-center bg-bg">
-      <article className="relative flex w-[510px] max-w-full flex-col items-stretch gap-figma-9 py-figma-20 max-[560px]:w-[calc(100vw-32px)] max-[560px]:py-figma-6">
+      <article className="@container/column relative flex w-[510px] max-w-full flex-col items-stretch gap-figma-9 py-figma-20 max-[560px]:w-[calc(100vw-32px)] max-[560px]:py-figma-6">
         <Header staggerFrom={HEADER_FIRST} />
         <Intro staggerFrom={INTRO_FIRST} />
         <Stagger index={DEMO_INDEX}>
