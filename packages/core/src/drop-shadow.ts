@@ -136,42 +136,19 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
 
         const colour = hexToRgb(s.color);
 
-        if (s.blur === 0 && spread > 0) {
-          // Ring layer — stroke the original silhouette (no spread expansion)
-          // so WebKit Core Graphics produces a uniform hairline matching
-          // Skia. `stroke-width = spread * 2` puts half the stroke outside
-          // the silhouette (the visible ring of width `spread`) and half
-          // inside (hidden by the content). Bypasses the filter entirely,
-          // so the filterUnits/region changes above don't apply to this
-          // path. See the header note for the prior fill-spread approach
-          // this supersedes.
-          entry.pathEl.setAttribute("d", getPath(width, height, options, 0));
-          entry.pathEl.setAttribute("transform", `translate(${s.offsetX},${s.offsetY})`);
-          entry.pathEl.setAttribute("fill", "none");
-          entry.pathEl.removeAttribute("fill-opacity");
-          entry.pathEl.setAttribute("stroke", colour);
-          entry.pathEl.setAttribute("stroke-width", String(spread * 2));
-          entry.pathEl.setAttribute("stroke-opacity", String(s.opacity));
-          entry.pathEl.removeAttribute("filter");
-        } else {
-          const adjusted = adjustOptions(options, spread);
-          entry.pathEl.setAttribute("d", getPath(shadowWidth, shadowHeight, adjusted, spread));
-          entry.pathEl.setAttribute("transform", `translate(${s.offsetX - spread},${s.offsetY - spread})`);
-          entry.pathEl.setAttribute("fill", colour);
-          entry.pathEl.setAttribute("fill-opacity", String(s.opacity));
-          // Clear stroke attrs left over from a prior ring render on this reused entry.
-          entry.pathEl.removeAttribute("stroke");
-          entry.pathEl.removeAttribute("stroke-width");
-          entry.pathEl.removeAttribute("stroke-opacity");
+        const adjusted = adjustOptions(options, spread);
+        entry.pathEl.setAttribute("d", getPath(shadowWidth, shadowHeight, adjusted, spread));
+        entry.pathEl.setAttribute("transform", `translate(${s.offsetX - spread},${s.offsetY - spread})`);
+        entry.pathEl.setAttribute("fill", colour);
+        entry.pathEl.setAttribute("fill-opacity", String(s.opacity));
 
-          if (s.blur > 0) {
-            const pad = computeFilterPad(s.blur, spread);
-            setFilterRegionUserSpace(entry.filterEl, shadowWidth, shadowHeight, pad);
-            entry.feBlur.setAttribute("stdDeviation", String(s.blur));
-            entry.pathEl.setAttribute("filter", `url(#${entry.filterId})`);
-          } else {
-            entry.pathEl.removeAttribute("filter");
-          }
+        if (s.blur > 0) {
+          const pad = computeFilterPad(s.blur, spread);
+          setFilterRegionUserSpace(entry.filterEl, shadowWidth, shadowHeight, pad);
+          entry.feBlur.setAttribute("stdDeviation", String(s.blur));
+          entry.pathEl.setAttribute("filter", `url(#${entry.filterId})`);
+        } else {
+          entry.pathEl.removeAttribute("filter");
         }
       }
 
