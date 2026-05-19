@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { SmoothCorners } from "@lisse/react";
 import type { BorderConfig, ShadowConfig, SmoothCornerOptions } from "@lisse/core";
+import { IS_SAFARI } from "./is-safari.ts";
 
 interface PreviewProps {
   corners: SmoothCornerOptions;
@@ -96,10 +97,19 @@ export function Preview({
             the wrapper div never collapses — see the long-form note in
             the git history for the SVG-overlay reparenting bug that
             `autoEffects={false}` previously triggered. */}
+        {/* Safari rasterises the SVG <feGaussianBlur> filter software-side
+            (WebKit bug 283156). With the shadow params spring-tweening on
+            every preset toggle, the filter regenerates 60×/sec and that
+            cost compounds with whatever else is repainting. The CSS
+            box-shadow path skips the filter graph entirely. Trade-off:
+            the silhouette becomes a rounded-rect, not the squircle path
+            — visible only on close inspection at the resting state, and
+            invisible during the transition that motivated this. */}
         <SmoothCorners
           corners={corners}
           shadow={shadow}
           innerShadow={innerShadow}
+          shadowStrategy={IS_SAFARI ? "box-shadow" : "svg"}
           style={{
             width: size,
             height: size,
