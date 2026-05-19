@@ -100,7 +100,7 @@ export function Install({ staggerFrom }: InstallProps) {
               >
                 <Card>
                   <div className={ROW_VISUAL}>
-                    <span className="inline-flex h-[17px] w-[18px] flex-none items-center justify-center">
+                    <span className="inline-flex h-[17px] w-[18px] flex-none items-center justify-center text-text-input">
                       {row.logo}
                     </span>
                     <span className="min-w-0 flex-1 text-left font-mono text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-input">
