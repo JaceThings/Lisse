@@ -76,7 +76,7 @@ html.selection-highlight-ready ::selection { background-color: transparent; colo
 // this on window. Cleaner than coupling via a CSS class on a parent.
 export const SELECTION_HIGHLIGHT_HIDE_EVENT = "selection-highlight:hide";
 
-export const SELECTION_HIGHLIGHT_CONFIG = {
+const SELECTION_HIGHLIGHT_CONFIG = {
   noiseTile: {
     width: 256,
     height: 64,

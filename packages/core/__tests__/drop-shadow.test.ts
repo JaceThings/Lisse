@@ -7,13 +7,6 @@ import type { SmoothCornerOptions, ShadowConfig } from "../src/types.js";
 let anchor: HTMLElement;
 const opts: SmoothCornerOptions = { radius: 16 };
 
-// happy-dom's default UA contains "AppleWebKit" (and lacks "Chrome"), so
-// `IS_WEBKIT` evaluates to true when the module is first loaded under test.
-// That means every `createDropShadow` call schedules a rAF loop. Without
-// the no-op stub below, the loops accumulate across tests and bleed
-// device-pixel-snap writes into later assertions. The UA-stub tests near
-// the bottom of this file install their own rAF behaviour and re-import
-// the module via `vi.resetModules()`, so this stub is the safe default.
 beforeEach(() => {
   vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 0);
   vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});

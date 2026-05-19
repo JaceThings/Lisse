@@ -1,6 +1,6 @@
 import { SmoothCorners } from "@lisse/react";
 
-export interface RadioPillOption<T extends string> {
+interface RadioPillOption<T extends string> {
   value: T;
   label: string;
 }

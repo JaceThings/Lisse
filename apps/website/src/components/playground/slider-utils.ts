@@ -1,0 +1,46 @@
+// Matches the preview-square's state-change tween in Playground.tsx so a
+// preset click reads as a single beat: preview, fill bar, and readout
+// settle together on the same Apple-ease curve and duration.
+export const PROP_CHANGE_DURATION = 0.35;
+export const PROP_CHANGE_EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
+
+// NumericText handles digit transitions on the readout. Duration mirrors
+// the prop-change tween so digits finish morphing as the fill bar settles.
+export const READOUT_TRANSITION = { duration: 300 };
+
+export const CLICK_THRESHOLD = 3;
+
+export const clamp = (n: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, n));
+
+export const snap = (n: number, step: number) =>
+  step > 0 ? Math.round(n / step) * step : n;
+
+// Widest legal display in characters, so the readout column can reserve
+// a stable width. Without this, a 2→3-digit transition (e.g. 99→100) or
+// a NumericText mid-morph width fluctuation reflows the row's flex layout
+// and tugs the label sideways — visible on narrow grid cells, not on
+// full-width single sliders.
+export const reservedChars = (
+  min: number,
+  max: number,
+  step: number,
+  format?: (n: number) => string,
+  sampleValues?: readonly number[],
+): number => {
+  const sample = (n: number): string => {
+    if (format) return format(n);
+    const stepStr = String(step);
+    const decimals = stepStr.includes(".") ? stepStr.split(".")[1].length : 0;
+    return decimals > 0 ? n.toFixed(decimals) : String(n);
+  };
+  // Extra samples cover special-case formatted strings (e.g. an "iOS – 0.60"
+  // label at a single interior value) whose width can exceed both endpoints.
+  const lengths = [sample(min).length, sample(max).length];
+  if (sampleValues) for (const v of sampleValues) lengths.push(sample(v).length);
+  return Math.max(...lengths);
+};
+
+export const prefersReducedMotion = (): boolean =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
