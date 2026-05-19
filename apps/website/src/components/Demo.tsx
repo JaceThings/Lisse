@@ -13,38 +13,40 @@ import {
 // Two orthogonal toggles:
 //   smoothing — front square's corner curve: Apple squircle (0.6) ↔
 //               CSS quarter-circle (0).
-//   comparing — zoom (~3.26×) + a red CSS-rounded back overlay. The
-//               four red corner gaps reveal how the squircle pulls in
-//               past a plain rounded rect. With smoothing off in compare
-//               mode the layers collapse — no red visible — by design.
+//   comparing — grow the square to a viewport-responsive size and
+//               reveal a red CSS-rounded back overlay underneath. The
+//               four red corner gaps show how the squircle pulls in
+//               past a plain rounded rect. With smoothing off the
+//               layers collapse — no red visible — by design.
 
 const SQUIRCLE_SMOOTHING = 0.6;
-// Inverted-scale baseline. SVG is baked at 510 px — the desktop column
-// max — so every rendered state is a downscale (`scale ≤ 1`). Safari
-// rasterises SVG content at its layout size and bilinear-upsamples on
-// ancestor `transform: scale()`; downsampling stays crisp, upsampling
-// does not, so the inverted baseline keeps curves clean at every state.
-// Radius preserves the Figma 30/141.316 ≈ 0.2123 squircle character.
+// Baked SVG dimensions. The path is generated once at the desktop max
+// (510 px); the wrapper sizes itself to the current mode and the SVG
+// fills it via `width="100%" height="100%"`. Safari rasterises an SVG
+// at its CSS box size, so resizing the wrapper triggers a fresh raster
+// at the right resolution — no ancestor `transform: scale()` to up-
+// sample a stale bitmap. Radius preserves the Figma 30/141.316 ≈
+// 0.2123 squircle character.
 const SQUIRCLE_BASE_SIZE = 510;
-const SQUIRCLE_NORMAL_SCALE = 141.316 / SQUIRCLE_BASE_SIZE;
 const SQUIRCLE_RADIUS = SQUIRCLE_BASE_SIZE * (97.711 / 460.319);
-// Compare-mode scale has two regimes, matching the article column's
-// 560 px breakpoint (where it flips from `calc(100vw - 32px)` to a
-// fixed 510):
-//   • mobile/tablet (< 560 viewport, fluid column) — scale fills the
+// Normal mode — fixed Figma 8:1373 dimensions.
+const SQUIRCLE_NORMAL_SIZE = 141.316;
+// Compare mode has two regimes, matching the article column's 560 px
+// breakpoint (where it flips from `calc(100vw - 32px)` to a fixed 510):
+//   • mobile/tablet (< 560 viewport, fluid column) — square fills the
 //     column width minus a horizontal inset, so top-left and top-right
-//     corners clear the grid mask's side feather. The square is
-//     allowed to overflow the grid bottom; the mask clips it, only
-//     the top corners need to be visible for the comparison to read.
-//   • desktop (>= 560 viewport, fixed column) — scale stays pinned to
-//     the original Figma 22:207 baseline (460/510) so the demo
-//     doesn't grow into the surrounding whitespace.
+//     corners clear the grid mask's side feather. Bottom overflows
+//     the grid and is clipped by the mask; only the top corners need
+//     to be visible for the comparison to read.
+//   • desktop (>= 560 viewport, fixed column) — square pinned to the
+//     original Figma 22:207 baseline (460 px) so the demo doesn't
+//     grow into the surrounding whitespace.
 // `100cqi` resolves to the `@container/column` article's width.
 const SQUIRCLE_COMPARE_INSET = 20;
-const SQUIRCLE_COMPARE_DESKTOP_SCALE = 460.319 / SQUIRCLE_BASE_SIZE;
-const SQUIRCLE_COMPARE_MOBILE_SCALE = `calc((100cqi - ${SQUIRCLE_COMPARE_INSET * 2}px) / ${SQUIRCLE_BASE_SIZE}px)`;
+const SQUIRCLE_COMPARE_DESKTOP_SIZE = 460.319;
+const SQUIRCLE_COMPARE_MOBILE_SIZE = `calc(100cqi - ${SQUIRCLE_COMPARE_INSET * 2}px)`;
 // Top-edge offset from grid top (Figma 22:207 → y=78.84). Top-anchored
-// rather than centred so the squircle stays put when scaling up.
+// rather than centred so the squircle stays put when the size changes.
 const SQUIRCLE_TOP = 78.842;
 const SMOOTHING_ICON = 14;
 const COMPARE_ICON = 16;
@@ -54,7 +56,7 @@ function describeState(smoothing: boolean, comparing: boolean): string {
     ? "Smoothing is on; the demo square uses Lisse's squircle corners."
     : "Smoothing is off; the demo square uses standard CSS quarter-circle corners.";
   if (!comparing) return smoothingPart;
-  return `Comparison view active, zoomed in. ${smoothingPart}${
+  return `Comparison view active. ${smoothingPart}${
     smoothing
       ? " The four red wedges show how far the squircle pulls in from the CSS-rounded back."
       : " The front collapses onto the back, so no red corners are visible."
@@ -77,9 +79,9 @@ export function Demo() {
 
   // Inline <svg><path> rather than divs with `clip-path: path()`. Safari
   // rasterises CSS clip-path once at layout size and re-uses that bitmap
-  // when an ancestor `transform: scale()` enlarges it — stair-steps at
-  // the corners under the compare-mode zoom. SVG paths re-tessellate at
-  // composite time, so curves stay crisp at every scale.
+  // when the element resizes — stair-steps at the corners as the wrapper
+  // grows. SVG paths re-tessellate at composite time, so the curves stay
+  // crisp at every size.
   const frontPath = useMemo(
     () => generatePath(SQUIRCLE_BASE_SIZE, SQUIRCLE_BASE_SIZE, {
       radius: SQUIRCLE_RADIUS,
@@ -125,28 +127,25 @@ export function Demo() {
       >
         <GridBackground />
 
-        {/* Centering + scaling wrapper baked at the desktop column max
-            (SQUIRCLE_BASE_SIZE = 510), scaling DOWN per mode. The
-            `--compare-scale` CSS variable picks one of two values:
-            mobile fills the column via `100cqi`, desktop pins to the
-            original Figma 22:207 ratio. `transform-origin: 50% 0`
-            anchors the top edge at SQUIRCLE_TOP so the square grows
-            downward; on mobile it overflows the grid bottom (clipped
-            by the mask) and only the top corners stay visible. */}
+        {/* Centering wrapper. Size is mode-dependent: normal mode is a
+            fixed 141 px square; compare mode picks one of two values
+            via media query — mobile fills `100cqi - 40px`, desktop
+            pins to the original Figma 22:207 baseline (460 px). The
+            SVG inside fills the wrapper at 100%×100%, so the squircle
+            resizes with its container and Safari rasterises at the
+            current layout size (no transform-scale upsampling). On
+            mobile the bottom overflows the grid and is clipped by
+            the mask; only the top corners stay visible. */}
         <div
-          className="absolute left-1/2 max-[559px]:[--compare-scale:var(--compare-scale-mobile)] min-[560px]:[--compare-scale:var(--compare-scale-desktop)]"
+          className="absolute left-1/2 max-[559px]:[--squircle-size:var(--squircle-size-mobile)] min-[560px]:[--squircle-size:var(--squircle-size-desktop)]"
           style={{
             top: SQUIRCLE_TOP,
-            width: SQUIRCLE_BASE_SIZE,
-            height: SQUIRCLE_BASE_SIZE,
-            ["--compare-scale-mobile" as string]: SQUIRCLE_COMPARE_MOBILE_SCALE,
-            ["--compare-scale-desktop" as string]: String(SQUIRCLE_COMPARE_DESKTOP_SCALE),
-            transform: comparing
-              ? "translateX(-50%) scale(var(--compare-scale))"
-              : `translateX(-50%) scale(${SQUIRCLE_NORMAL_SCALE})`,
-            transformOrigin: "50% 0",
-            transition: "transform 350ms var(--ease-out-quint)",
-            willChange: "transform",
+            width: comparing ? "var(--squircle-size)" : `${SQUIRCLE_NORMAL_SIZE}px`,
+            height: comparing ? "var(--squircle-size)" : `${SQUIRCLE_NORMAL_SIZE}px`,
+            ["--squircle-size-mobile" as string]: SQUIRCLE_COMPARE_MOBILE_SIZE,
+            ["--squircle-size-desktop" as string]: `${SQUIRCLE_COMPARE_DESKTOP_SIZE}px`,
+            transform: "translateX(-50%)",
+            transition: "width 350ms var(--ease-out-quint), height 350ms var(--ease-out-quint)",
           }}
         >
           {/* Compare-mode back: red square at smoothing 0 (CSS quarter-
