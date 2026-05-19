@@ -61,14 +61,13 @@ export function Slider({
   const trackRef = useRef<HTMLDivElement | null>(null);
   const propAnimRef = useRef<ReturnType<typeof animate> | null>(null);
   // Captured once on mount — double-click on the label reverts to this.
-  // Subsequent prop updates (preset clicks, drags) don't touch the ref.
+  // Subsequent prop updates (presets, drags) don't touch the ref.
   const initialValueRef = useRef<number>(value);
 
   const range = max - min;
   const safeRange = range === 0 ? 1 : range;
-  // `reservedChars` constructs `format(min)` and `format(max)` to measure
-  // the widest legal display; only re-run when those inputs change so it
-  // doesn't tax every drag-tick re-render.
+  // Memoised: `reservedChars` calls `format()` to measure the widest legal
+  // display — recompute only when its inputs change, not on every drag tick.
   const readoutMinWidth = useMemo(
     () => `${reservedChars(min, max, step, format, formatSamples)}ch`,
     [min, max, step, format, formatSamples],
@@ -81,17 +80,14 @@ export function Slider({
   // readout never displays an illegal value during rubber-band.
   const reported = useMotionValue(value);
 
-  // Signed ranges (min < 0 < max) anchor the fill chunk at the zero
-  // position and grow outward — leftward for negative values, rightward
-  // for positive. Unsigned ranges keep the legacy left-anchored fill.
-  // Both cases collapse into the same `leftEdge`/`rightEdge` math, so we
-  // derive `fillLeft` + `fillWidth` for the absolute-positioned div.
+  // Signed ranges (min < 0 < max) anchor the fill chunk at zero and grow
+  // outward. Unsigned ranges stay left-anchored. Both fall out of the same
+  // `leftEdge`/`rightEdge` math.
   const isSigned = min < 0 && max > 0;
   const toPercent = (v: number) => ((v - min) / safeRange) * 100;
-  // Signed sliders snap to zero within ±step/2. Treat that band as
-  // exactly zero in the fill geometry so a sub-step `reported` value
-  // (e.g. 0.4 with step=1) doesn't paint a sliver while the readout
-  // already shows "0".
+  // Treat the ±step/2 band around zero as exactly zero in fill geometry so
+  // a sub-step `reported` value (e.g. 0.4 with step=1) doesn't paint a
+  // sliver while the readout already shows "0".
   const fillLeft = useTransform(reported, (v) => {
     const clamped = clamp(v, min, max);
     if (isSigned && Math.abs(clamped) < step / 2) {
@@ -113,9 +109,9 @@ export function Slider({
     return format ? format(stepped) : String(stepped);
   });
 
-  // Mirror the motion value into React state so NumericText (which takes
-  // a plain string prop, not a motion value) re-renders on every frame
-  // of the tween and morphs its digits in step with the fill bar.
+  // Mirror the motion value into React state — NumericText takes a plain
+  // string prop, so it needs a re-render on every tween frame to morph its
+  // digits in step with the fill bar.
   const [displayedText, setDisplayedText] = useState(() => displayed.get());
   useMotionValueEvent(displayed, "change", setDisplayedText);
 
@@ -136,11 +132,9 @@ export function Slider({
     },
   });
 
-  // Tween `reported` toward the controlled prop when it changes from a
-  // non-drag source (preset click, keyboard). The fill bar and readout
-  // both subscribe to `reported`, so they animate together. During a
-  // pointer drag, the drag itself is the source of truth — skip the
-  // tween so the input stays snappy.
+  // Tween `reported` toward the controlled prop on non-drag changes
+  // (preset, keyboard). During a pointer drag the drag is the source of
+  // truth — skip the tween so the input stays snappy.
   useEffect(() => {
     if (drag.isDraggingRef.current) return;
     if (propAnimRef.current) propAnimRef.current.stop();

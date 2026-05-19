@@ -4,29 +4,18 @@ import { Header } from "../components/Header.tsx";
 import { Layout } from "../components/Layout.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 
-// Justified body matches Figma node 35:238 — `text-text-primary`, not the
-// muted input colour. `hyphens-auto` is inherited from the global `p` rule
-// in global.css but listing it here keeps the intent visible at the call
-// site.
+// Figma node 35:238 — `text-text-primary` (not muted input). `hyphens-auto`
+// is also inherited from global.css; listed here for visibility.
 const BODY =
   "text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-primary text-justify hyphens-auto";
 
-// Reveal sequence: header heading + 4 definition lines (5), then one
-// stagger slot per body paragraph, then the footer nav as a single slot.
 const HEADER_FIRST = 0;
 const BODY_FIRST = 5;
 const PARAGRAPHS = 8;
 const FOOTER_INDEX = BODY_FIRST + PARAGRAPHS;
 
-/**
- * Long-form explainer page. Reuses the dictionary `Header` at the top so
- * the brand mark, etymology, and divider stay consistent across routes,
- * then walks through what a squircle is, why CSS quarter-circles fall
- * short, and how Lisse draws the smoother curve.
- *
- * Body copy here is placeholder — the layout, hierarchy, and reveal order
- * are the load-bearing pieces; the words will be rewritten.
- */
+// Body copy is placeholder — layout, hierarchy, and reveal order are the
+// load-bearing pieces; words will be rewritten.
 export function What() {
   return (
     <Layout articleClassName="gap-figma-9">
@@ -131,8 +120,8 @@ export function What() {
             aria-label="Site"
             className="flex w-full items-start gap-figma-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-secondary whitespace-nowrap"
           >
-            {/* `py-2 -my-2` extends tap target to ~33px tall without
-                shifting the footer layout — text stays on its baseline. */}
+            {/* `py-2 -my-2` extends tap target to ~33px without shifting
+                the footer layout — text stays on its baseline. */}
             <Link to="/what" className="py-2 -my-2" data-focus-ring>
               What?
             </Link>

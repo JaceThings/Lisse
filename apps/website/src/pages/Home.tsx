@@ -5,17 +5,13 @@ import { Install } from "../components/Install.tsx";
 import { Layout } from "../components/Layout.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 
-// Reveal sequence top to bottom: header heading + 4 definition lines (5),
-// three intro paragraphs (3), demo (1), four install rows (4). Header,
-// Intro, and Install accept the starting index and wrap each line
-// internally; Demo is a single stagger item.
+// Reveal sequence: header (5 lines) → intro (3) → demo (1) → install (4).
+// Header/Intro/Install accept the starting index and wrap each line.
 const HEADER_FIRST = 0;
 const INTRO_FIRST = 5;
 const DEMO_INDEX = 8;
 const INSTALL_FIRST = 9;
 
-/** Landing page. Every rounded surface renders through @lisse/react's
- *  SmoothCorners — the page dogfoods the library. */
 export function Home() {
   return (
     <Layout>

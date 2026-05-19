@@ -15,11 +15,6 @@ import { PerCornerSection } from "../components/playground/sections/PerCornerSec
 import { RadiusSection } from "../components/playground/sections/RadiusSection.tsx";
 import { ShadowSection } from "../components/playground/sections/ShadowSection.tsx";
 
-/**
- * Top-level Playground container. Owns the live dialkit panel for slider
- * physics + state-change springs, then provides those values down through
- * `PlaygroundTuningProvider` so every <Slider/> picks them up via context.
- */
 export function Playground() {
   const dial = useDialKit("Playground Tuning", {
     stretch: {
@@ -75,8 +70,8 @@ export function Playground() {
     <PlaygroundTuningProvider value={tuning}>
       <Layout articleClassName="gap-figma-9">
         <NoteBlock />
-        {/* 48px between sections matches Figma `--p-12`; the column already
-            uses `gap-figma-9` so we space these manually. */}
+        {/* 48px between sections matches Figma `--p-12`; column already
+            uses `gap-figma-9` so these are spaced manually. */}
         <div className="flex w-full flex-col" style={{ gap: 48 }}>
           <RadiusSection />
           <CornerShapeSection />

@@ -1,8 +1,8 @@
 import { useSpringNumber } from "../../hooks/useSpringNumber.ts";
 
-// Preview state-change tween — fixed values, not tunable via the dialkit
-// panel. The user wants the dialkit panel to drive slider behaviour only,
-// not the preview-square's preset-click animation.
+// Preview state-change tween — fixed, not tunable via the dialkit panel.
+// The dialkit drives slider behaviour only, not the preview-square's
+// preset-click animation.
 const STATE_CHANGE_DURATION = 0.35;
 export const STATE_CHANGE_EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
 

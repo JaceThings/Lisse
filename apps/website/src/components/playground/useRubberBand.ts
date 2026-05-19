@@ -8,22 +8,18 @@ interface UseRubberBandOptions {
 
 export function useRubberBand({ tuning }: UseRubberBandOptions) {
   // Signed: negative when the pointer pulls past the left edge, positive
-  // when it pulls past the right. The track grows by Math.abs(stretch) and
-  // shifts left by `stretch` when negative, so the stretched edge always
-  // tracks the cursor while the opposite edge stays pinned.
+  // past the right. Width grows by |stretch|; X shifts left by stretch when
+  // negative so the opposite edge stays pinned. Width change (not scaleX)
+  // keeps the corner radius and SmoothCorners path uniform.
   const stretchPx = useMotionValue(0);
 
-  // Width grows by |stretch|; X shifts left by stretch when negative so the
-  // right edge stays pinned during left-overflow. Width change keeps the
-  // corner radius and SmoothCorners path uniform (no scaleX distortion).
   const width = useTransform(
     stretchPx,
     (px) => `calc(100% + ${Math.abs(px)}px)`,
   );
   const x = useTransform(stretchPx, (px) => (px < 0 ? px : 0));
-  // Mirrors the stretch with a thinning Y — at maxStretchPx in either
-  // direction, height squashes to `compressY`. Subtle pull-thin feedback,
-  // tracks the same motion value as width so they move in sync.
+  // At maxStretchPx in either direction, height squashes to `compressY` —
+  // a subtle pull-thin that tracks the same motion value as width.
   const maxStretch = tuning.maxStretchPx;
   const scaleY = useTransform(
     stretchPx,

@@ -15,8 +15,7 @@ interface PreviewProps {
   size?: number;
 }
 
-// 255px canvas height matches Figma "Figure Content" frames across every
-// section. The square is centred in the cream-white card via flex.
+// Figma "Figure Content" frames across every section.
 const CANVAS_HEIGHT = 255;
 const DEFAULT_SIZE = 100;
 const DEFAULT_FILL = "#7e766d";
@@ -40,11 +39,10 @@ interface BorderLayerProps {
   size: number;
 }
 
-// One stacked border slot. Keyed by lineCap so cap toggles crossfade;
-// thickness / dash / gap / style / preset updates pass through to the
-// same SmoothCorners and animate via the parent's motion springs.
-// Explicit pixel dimensions (not 100%) so SmoothCorners can measure
-// the path on first paint without relying on ResizeObserver feedback.
+// Keyed by lineCap so cap toggles crossfade; other prop updates pass
+// through to the same SmoothCorners and animate via parent springs.
+// Explicit pixel dimensions (not 100%) so SmoothCorners measures the
+// path on first paint without relying on ResizeObserver feedback.
 function BorderLayer({ corners, border, slot, size }: BorderLayerProps) {
   const capKey = border?.lineCap ?? "butt";
   return (

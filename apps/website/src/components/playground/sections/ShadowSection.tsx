@@ -31,9 +31,8 @@ interface ShadowSectionProps {
 }
 
 export function ShadowSection({ title, description, kind }: ShadowSectionProps) {
-  // Inner shadows look like a blur-bomb at the drop-shadow defaults; pick
-  // a tight 3px blur with no spread so the preview reads as a soft inner
-  // edge instead of a halo.
+  // Inner shadows look like a blur-bomb at drop-shadow defaults — tight
+  // 3px blur reads as a soft edge instead of a halo.
   const defaults = kind === "inner"
     ? { x: 0, y: 0, blur: 3, spread: 0 }
     : { x: 0, y: 0, blur: 8, spread: 6 };
@@ -76,8 +75,8 @@ export function ShadowSection({ title, description, kind }: ShadowSectionProps) 
   // `#f0eeed` against `#7e766d` for the drop-shadow variant.
   const fill = kind === "inner" ? "#f0eeed" : undefined;
 
-  // Mirror the latest preset + preset-derived targets into refs so the
-  // per-knob handlers stay identity-stable across renders.
+  // Mirror preset + targets into refs so the per-knob handlers stay
+  // identity-stable across renders.
   const presetRef = useRef(preset);
   presetRef.current = preset;
   const targetsRef = useRef(targets);
@@ -86,9 +85,9 @@ export function ShadowSection({ title, description, kind }: ShadowSectionProps) 
   const makeSetKnob = useCallback(
     (knob: ShadowKnob, setter: (n: number) => void) =>
       (v: number, fromDrag = false) => {
-        // Sync the other knobs' React state to the current preset's targets
-        // before switching to custom — otherwise the non-dragged knobs would
-        // spring from their preset values to the stale custom defaults.
+        // Sync the other knobs' React state to the preset's targets before
+        // switching to custom — otherwise the non-dragged knobs would spring
+        // from preset values to stale custom defaults.
         const p = presetRef.current;
         const t = targetsRef.current;
         if (p !== "custom") {
@@ -109,9 +108,9 @@ export function ShadowSection({ title, description, kind }: ShadowSectionProps) 
   const onBlurChange = useMemo(() => makeSetKnob("blur", setBlur), [makeSetKnob]);
   const onSpreadChange = useMemo(() => makeSetKnob("spread", setSpread), [makeSetKnob]);
 
-  // When switching presets, sync the React state to the preset's targets
-  // so a later drag from "custom" doesn't snap back to a stale value. The
-  // animation springs because fromDrag is false here.
+  // Sync React state to the preset's targets so a later drag from "custom"
+  // doesn't snap back to a stale value. fromDrag is false here, so the
+  // change springs.
   const onPresetChange = useCallback((next: ShadowPreset) => {
     setFromDrag(NO_DRAG);
     if (next === "subtle") {

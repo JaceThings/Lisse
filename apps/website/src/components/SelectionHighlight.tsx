@@ -8,9 +8,9 @@ function getIsTouchPrimary() {
   return typeof window !== "undefined" && window.matchMedia(TOUCH_MEDIA_QUERY).matches;
 }
 
-// Inject (or refresh) the component's CSS at module load. Updating
-// `textContent` on the existing element — rather than bailing when it's
-// already present — means Vite HMR picks up edits without a hard reload.
+// Inject the component's CSS at module load. Updating `textContent` on the
+// existing element (rather than bailing if present) lets Vite HMR pick up
+// edits without a hard reload.
 const STYLE_ID = "selection-highlight-styles";
 if (typeof document !== "undefined") {
   let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
@@ -60,20 +60,16 @@ html.selection-highlight-ready ::selection { background-color: transparent; colo
 
 // Marker-style text-selection highlight.
 //
-// Architecture:
-//   - One <div> per visual line, appended to the nearest POSITIONED
-//     ancestor so it scrolls natively — no JS during scroll.
-//   - Visual character from a single pre-rendered noise SVG used as
-//     mask-image. The browser rasterises once and caches; per-element
-//     cost is ~zero. Per-line variation via mask-position offset.
-//   - Endpoint pooling and overall alpha come from a linear-gradient
-//     background. Gradient × noise mask = marker texture.
-//   - Seed for per-line jitter derives from anchor-relative top —
-//     stable across scroll AND selection extension (only width changes
-//     per char, not top).
+// One <div> per visual line, appended to the nearest POSITIONED ancestor
+// so it scrolls natively (no JS during scroll). Visual character comes
+// from a single pre-rendered noise SVG used as mask-image (browser rasters
+// once and caches; per-line variation via mask-position). A linear-gradient
+// supplies endpoint pooling and overall alpha — gradient × noise mask =
+// marker texture. Per-line jitter seed derives from anchor-relative top,
+// stable across scroll AND selection extension.
 
-// Other components can request an immediate fade-out by dispatching
-// this on window. Cleaner than coupling via a CSS class on a parent.
+// Window event for other components to request an immediate fade-out.
+// Cleaner than coupling via a CSS class on a parent.
 export const SELECTION_HIGHLIGHT_HIDE_EVENT = "selection-highlight:hide";
 
 const SELECTION_HIGHLIGHT_CONFIG = {
@@ -306,11 +302,10 @@ export function SelectionHighlight() {
     // selection paints if JS fails to hydrate.
     document.documentElement.classList.add("selection-highlight-ready");
 
-    // Overlays are keyed by line IDENTITY (anchor-relative top), NOT by
-    // array index. When selection extends upward, existing lines keep
-    // their existing overlay (and stay visibly-on), so only the genuinely
-    // new top line fades in. Array-indexed pooling caused every existing
-    // line to fade-in flicker when a new line was added above.
+    // Keyed by line IDENTITY (anchor-relative top), NOT array index. When
+    // selection extends upward, existing lines keep their overlay (and stay
+    // visible), so only the genuinely new top line fades in. Array-indexed
+    // pooling caused every existing line to fade-in flicker on prepend.
     const overlays = new Map<number, HTMLDivElement>();
     let currentAnchor: HTMLElement = document.body;
 

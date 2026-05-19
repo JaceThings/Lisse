@@ -37,8 +37,8 @@ export function CornerShapeSection() {
     setPreset("on");
   }, []);
 
-  // Annotate the iOS / Apple / Figma squircle default with its name; every
-  // other value reads as a plain two-decimal number.
+  // Annotate the iOS/Apple/Figma squircle default with its name; every other
+  // value reads as a plain two-decimal number.
   const formatSmoothing = useCallback(
     (v: number) => (Math.abs(v - 0.6) < 0.005 ? "iOS – 0.60" : v.toFixed(2)),
     [],

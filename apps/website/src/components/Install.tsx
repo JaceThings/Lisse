@@ -78,12 +78,10 @@ export function Install({ staggerFrom }: InstallProps) {
       <Divider />
       <div
         className="flex w-full flex-col gap-figma-3"
-        // Empirical 0.5 CSS px padding to land the install rows'
-        // wrappers on integer device-pixel Y (2× Retina) so Safari's
-        // SVG drop-shadow rasterisation lands clean. The natural flow
-        // through Header → Intro → Demo → Install accumulates a
-        // fractional Y offset by the time it reaches the rows; this
-        // padding zeroes that out.
+        // Empirical 0.5 CSS px to land the rows on an integer device-pixel
+        // Y (2× Retina) for clean Safari SVG drop-shadow raster. The flow
+        // through Header → Intro → Demo accumulates a fractional Y offset
+        // by the time it reaches the rows; this zeroes that out.
         style={{ paddingTop: "0.5px" }}
         data-focus-section="install"
       >

@@ -54,18 +54,17 @@ export function PerCornerSection() {
     bottomRight: { radius: aBr, smoothing: targets.smoothing },
   };
 
-  // Mirror the latest preset + preset-derived targets into refs so the
-  // per-corner handlers stay identity-stable. Without this, each render
-  // would hand four fresh callbacks to <Slider>, defeating any downstream
-  // memoisation.
+  // Mirror preset + targets into refs so the per-corner handlers stay
+  // identity-stable. Without this, each render would hand four fresh
+  // callbacks to <Slider>, defeating downstream memoisation.
   const presetRef = useRef(preset);
   presetRef.current = preset;
   const targetsRef = useRef(targets);
   targetsRef.current = targets;
 
-  // When the user starts dragging a corner, sync the *other* corners'
-  // React state to their currently-displayed (preset-derived) target so
-  // switching into custom doesn't pop the siblings to stale defaults.
+  // When a corner starts changing, sync the *other* corners' React state
+  // to their preset-derived target so switching into custom doesn't pop
+  // siblings to stale defaults.
   const makeSetCorner = useCallback(
     (knob: CornerKnob, setter: (n: number) => void) =>
       (v: number, fromDrag = false) => {

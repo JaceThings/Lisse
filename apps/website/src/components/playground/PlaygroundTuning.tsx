@@ -13,7 +13,6 @@ export interface PlaygroundTuning {
   // track
   trackHeight: number;
   trackSmoothing: number;
-  // misc
   stepHaptic: boolean;
 }
 

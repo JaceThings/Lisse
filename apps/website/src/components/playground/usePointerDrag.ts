@@ -69,9 +69,8 @@ export function usePointerDrag({
     const raw = ratio * range + min;
     const stepped = clamp(snap(raw, step), min, max);
     // Drive the fill bar from the continuous raw position so the visual
-    // follows the pointer smoothly between steps. The readout's transform
-    // re-applies `snap()` so the displayed number still respects step.
-    // On release, the prop-tween snaps the fill bar to the legal value.
+    // follows the pointer between steps; the readout's transform re-applies
+    // `snap()`. On release, the prop-tween snaps the fill to the legal value.
     reported.set(clamp(raw, min, max));
     if (stepped !== value) onChange(stepped, true);
   };
@@ -94,9 +93,9 @@ export function usePointerDrag({
     isClickRef.current = true;
     pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
 
-    // Start a tween toward the tapped position. If the user goes on to
-    // drag, the move handler cancels this tween and switches to direct
-    // pointer tracking. Otherwise the tween plays out as a tap-to-jump.
+    // Tween toward the tapped position. If the user drags, the move handler
+    // cancels this tween and switches to direct pointer tracking; otherwise
+    // it plays out as a tap-to-jump.
     const ratio = clamp((e.clientX - rect.left) / rect.width, 0, 1);
     const raw = ratio * range + min;
     const targetValue = clamp(snap(raw, step), min, max);
@@ -139,11 +138,10 @@ export function usePointerDrag({
     draggingRef.current = false;
     pointerIdRef.current = null;
     rubberBand.releaseStretch();
-    // After a real drag, `reported` is the continuous raw position —
-    // possibly a sub-step fraction. Tween it to the legal stepped prop
-    // value so signed sliders don't leave a sliver of fill at the
-    // crossover. A click already animated toward the stepped target and
-    // the parent's `value` matches, so no follow-up tween is needed.
+    // After a real drag, `reported` may hold a sub-step fraction. Tween it
+    // to the stepped prop value so signed sliders don't leave a sliver of
+    // fill at the crossover. A click already animated toward the stepped
+    // target, so no follow-up tween is needed.
     if (!isClickRef.current) {
       if (pointerAnimRef.current) {
         pointerAnimRef.current.stop();

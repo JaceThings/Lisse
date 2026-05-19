@@ -4,10 +4,9 @@ import { FocusRingOverlay } from "./components/FocusRingOverlay.tsx";
 import { SelectionHighlight } from "./components/SelectionHighlight.tsx";
 import { Home } from "./pages/Home.tsx";
 
-// Home stays eagerly imported so the landing route renders without a
-// Suspense flash on first paint. Playground and What are split off because
-// they each pull in heavy code paths (dialkit, large section trees) that
-// most visitors never touch.
+// Home stays eager so the landing route renders without a Suspense flash;
+// Playground and What pull in heavy code paths (dialkit, large section
+// trees) that most visitors never touch, so they split.
 const Playground = lazy(() =>
   import("./pages/Playground.tsx").then((m) => ({ default: m.Playground })),
 );
@@ -16,7 +15,7 @@ const What = lazy(() =>
 );
 
 // In production `import.meta.env.DEV` is replaced with `false`, so the
-// dynamic import lives inside a dead branch and Vite drops `agentation`
+// dynamic import lives in a dead branch and Vite drops `agentation`
 // from the build entirely.
 function DevAgentation() {
   const [Toolbar, setToolbar] = useState<ComponentType | null>(null);
@@ -27,13 +26,9 @@ function DevAgentation() {
   return Toolbar ? <Toolbar /> : null;
 }
 
-/**
- * Router root. Each `<Route>` swaps the page body; the overlay
- * effects (`FocusRingOverlay`, `SelectionHighlight`) mount once at
- * this level so they persist across route changes. Unknown paths
- * fall back to `<Home />` — the SPA fallback in nginx.conf already
- * routes deep links here, so this is just the client-side mirror.
- */
+// Overlay effects (`FocusRingOverlay`, `SelectionHighlight`) mount once
+// here so they persist across route changes. Unknown paths fall back to
+// `<Home />` — nginx.conf's SPA fallback routes deep links here.
 export function App() {
   return (
     <BrowserRouter>

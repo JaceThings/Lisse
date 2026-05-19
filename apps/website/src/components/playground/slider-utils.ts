@@ -1,11 +1,10 @@
-// Matches the preview-square's state-change tween in Playground.tsx so a
-// preset click reads as a single beat: preview, fill bar, and readout
-// settle together on the same Apple-ease curve and duration.
+// Matches the preview-square's state-change tween so a preset click reads
+// as a single beat: preview, fill bar, and readout settle together.
 export const PROP_CHANGE_DURATION = 0.35;
 export const PROP_CHANGE_EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
-// NumericText handles digit transitions on the readout. Duration mirrors
-// the prop-change tween so digits finish morphing as the fill bar settles.
+// Duration mirrors the prop-change tween so digits finish morphing as
+// the fill bar settles.
 export const READOUT_TRANSITION = { duration: 300 };
 
 export const CLICK_THRESHOLD = 3;
@@ -34,8 +33,8 @@ export const reservedChars = (
     const decimals = stepStr.includes(".") ? stepStr.split(".")[1].length : 0;
     return decimals > 0 ? n.toFixed(decimals) : String(n);
   };
-  // Extra samples cover special-case formatted strings (e.g. an "iOS – 0.60"
-  // label at a single interior value) whose width can exceed both endpoints.
+  // Extra samples cover formatted strings (e.g. "iOS – 0.60") whose width
+  // can exceed both endpoints.
   const lengths = [sample(min).length, sample(max).length];
   if (sampleValues) for (const v of sampleValues) lengths.push(sample(v).length);
   return Math.max(...lengths);

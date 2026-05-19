@@ -36,10 +36,9 @@ interface BorderSectionProps {
   position: "outer" | "inner" | "middle";
 }
 
-// Per-position defaults so each Border section opens on a preset that
-// reads cleanly: outer/inner use a fine dotted ring; centre uses a wider
-// dashed pattern so it doesn't visually fight the inner/outer rings on
-// the same canvas.
+// Per-position defaults: outer/inner open on a fine dotted ring, centre
+// on a wider dashed pattern so it doesn't visually fight the inner/outer
+// rings on the same canvas.
 const POSITION_DEFAULTS: Record<
   BorderSectionProps["position"],
   { preset: BorderPreset; thickness: number; dashCap: DashCap; dash: number; gap: number }
@@ -80,15 +79,14 @@ export function BorderSection({ title, description, position }: BorderSectionPro
     lineCap: dashCap,
   };
 
-  // Border knobs always tween (short 120ms), so we don't need to track
-  // a fromDrag flag — drag and preset clicks both feed through the same
-  // path and get the same smoothing. The state setters themselves are
-  // identity-stable, so we hand them directly to <Slider>.
+  // Border knobs always tween (short 120ms), so no fromDrag flag — drag
+  // and preset clicks both go through the same path. State setters are
+  // identity-stable, so they go directly to <Slider>.
 
   const onPresetChange = useCallback((next: BorderPreset) => {
     setPreset(next);
-    // Sync slider values per preset so Thickness/Dash/Gap reflect
-    // the preset's intended look, not the previous custom state.
+    // Sync Thickness/Dash/Gap to the preset's intended look, not the
+    // previous custom state.
     if (next === "solid") {
       setThickness(2);
     } else if (next === "dashed") {
@@ -102,9 +100,9 @@ export function BorderSection({ title, description, position }: BorderSectionPro
     }
   }, []);
 
-  // Slider relevance by preset. Thickness drives every visible border;
-  // dash/gap/cap only apply to the dashed-pattern styles. Uniform styles
-  // (solid/double/groove/ridge) keep Thickness but drop the pattern row.
+  // Thickness drives every visible border; dash/gap/cap only apply to
+  // dashed-pattern styles. Uniform styles (solid/double/groove/ridge)
+  // keep Thickness but drop the pattern row.
   const showThickness = preset !== "none";
   const showDashRow = preset === "dashed" || preset === "dotted";
 
