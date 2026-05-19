@@ -1,24 +1,30 @@
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
-import { DialRoot } from "dialkit";
-import "dialkit/styles.css";
-import { PageFeedbackToolbarCSS } from "agentation";
+import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { FocusRingOverlay } from "./components/FocusRingOverlay.tsx";
 import { SelectionHighlight } from "./components/SelectionHighlight.tsx";
 import { Home } from "./pages/Home.tsx";
-import { Playground } from "./pages/Playground.tsx";
-import { What } from "./pages/What.tsx";
 
-/**
- * The dialkit panel is route-scoped to /playground so it doesn't show
- * on Home or /what. Rendered as a sibling of <Routes> rather than inside
- * <Playground> so the panel survives route-revisits without remounting.
- * `productionEnabled` is left at its default — dialkit hides itself in
- * production builds, which is what we want here.
- */
-function PlaygroundDialRoot() {
-  const { pathname } = useLocation();
-  if (pathname !== "/playground") return null;
-  return <DialRoot position="bottom-right" defaultOpen={false} />;
+// Home stays eagerly imported so the landing route renders without a
+// Suspense flash on first paint. Playground and What are split off because
+// they each pull in heavy code paths (dialkit, large section trees) that
+// most visitors never touch.
+const Playground = lazy(() =>
+  import("./pages/Playground.tsx").then((m) => ({ default: m.Playground })),
+);
+const What = lazy(() =>
+  import("./pages/What.tsx").then((m) => ({ default: m.What })),
+);
+
+// In production `import.meta.env.DEV` is replaced with `false`, so the
+// dynamic import lives inside a dead branch and Vite drops `agentation`
+// from the build entirely.
+function DevAgentation() {
+  const [Toolbar, setToolbar] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    import("agentation").then((m) => setToolbar(() => m.PageFeedbackToolbarCSS));
+  }, []);
+  return Toolbar ? <Toolbar /> : null;
 }
 
 /**
@@ -31,20 +37,17 @@ function PlaygroundDialRoot() {
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/playground" element={<Playground />} />
-        <Route path="/what" element={<What />} />
-        <Route path="*" element={<Home />} />
-      </Routes>
+      <Suspense fallback={<div className="min-h-screen bg-bg" />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/playground" element={<Playground />} />
+          <Route path="/what" element={<What />} />
+          <Route path="*" element={<Home />} />
+        </Routes>
+      </Suspense>
       <FocusRingOverlay />
       <SelectionHighlight />
-      <PlaygroundDialRoot />
-      {/* Agentation: dev-only annotation toolbar — click UI elements to add
-          notes and copy structured context (selector / source file / styles)
-          for AI agents. Vite statically replaces `import.meta.env.DEV` so
-          the rendered tree is DCE'd in production. */}
-      {import.meta.env.DEV && <PageFeedbackToolbarCSS />}
+      <DevAgentation />
     </BrowserRouter>
   );
 }
