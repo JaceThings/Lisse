@@ -19,20 +19,30 @@ import {
 //               mode the layers collapse — no red visible — by design.
 
 const SQUIRCLE_SMOOTHING = 0.6;
-// Inverted-scale baseline. Figma 8:1373 → 141.316² (radius 30) in normal
-// mode. Compare mode keeps the same `scale(1)` baseline; the base size
-// is sized to fit within the 299 px grid container minus the
-// `SQUIRCLE_TOP` offset (≈ 220 px available below), so the whole
-// squircle stays visible in compare mode instead of overflowing past
-// the grid bottom. Radius scales proportionally to preserve the visual
-// 30 / 141.316 ≈ 0.2123 ratio. The SVG renders at the largest baseline
-// (compare) and `scale(SQUIRCLE_NORMAL_SCALE)` DOWN for normal mode —
-// Safari rasterises SVG content at the element's layout size and
-// bilinear-upsamples on ancestor `transform: scale()`, so always
-// downsampling keeps curves crisp at both states.
-const SQUIRCLE_BASE_SIZE = 220;
+// Inverted-scale baseline. SVG is baked at 510 px — the desktop column
+// max — so every rendered state is a downscale (`scale ≤ 1`). Safari
+// rasterises SVG content at its layout size and bilinear-upsamples on
+// ancestor `transform: scale()`; downsampling stays crisp, upsampling
+// does not, so the inverted baseline keeps curves clean at every state.
+// Radius preserves the Figma 30/141.316 ≈ 0.2123 squircle character.
+const SQUIRCLE_BASE_SIZE = 510;
 const SQUIRCLE_NORMAL_SCALE = 141.316 / SQUIRCLE_BASE_SIZE;
 const SQUIRCLE_RADIUS = SQUIRCLE_BASE_SIZE * (97.711 / 460.319);
+// Compare-mode scale has two regimes, matching the article column's
+// 560 px breakpoint (where it flips from `calc(100vw - 32px)` to a
+// fixed 510):
+//   • mobile/tablet (< 560 viewport, fluid column) — scale fills the
+//     column width minus a horizontal inset, so top-left and top-right
+//     corners clear the grid mask's side feather. The square is
+//     allowed to overflow the grid bottom; the mask clips it, only
+//     the top corners need to be visible for the comparison to read.
+//   • desktop (>= 560 viewport, fixed column) — scale stays pinned to
+//     the original Figma 22:207 baseline (460/510) so the demo
+//     doesn't grow into the surrounding whitespace.
+// `100cqi` resolves to the `@container/column` article's width.
+const SQUIRCLE_COMPARE_INSET = 20;
+const SQUIRCLE_COMPARE_DESKTOP_SCALE = 460.319 / SQUIRCLE_BASE_SIZE;
+const SQUIRCLE_COMPARE_MOBILE_SCALE = `calc((100cqi - ${SQUIRCLE_COMPARE_INSET * 2}px) / ${SQUIRCLE_BASE_SIZE}px)`;
 // Top-edge offset from grid top (Figma 22:207 → y=78.84). Top-anchored
 // rather than centred so the squircle stays put when scaling up.
 const SQUIRCLE_TOP = 78.842;
@@ -115,19 +125,27 @@ export function Demo() {
       >
         <GridBackground />
 
-        {/* Centering + scaling wrapper laid out at COMPARE size, scaling
-            DOWN to ~141×141 for normal mode (see SQUIRCLE_BASE_SIZE).
-            `transform-origin: 50% 0` anchors the top edge at SQUIRCLE_TOP
-            so the box grows downward into the grid (Figma 22:207). */}
+        {/* Centering + scaling wrapper baked at the desktop column max
+            (SQUIRCLE_BASE_SIZE = 510), scaling DOWN per mode. The
+            `--compare-scale` CSS variable picks one of two values:
+            mobile fills the column via `100cqi`, desktop pins to the
+            original Figma 22:207 ratio. `transform-origin: 50% 0`
+            anchors the top edge at SQUIRCLE_TOP so the square grows
+            downward; on mobile it overflows the grid bottom (clipped
+            by the mask) and only the top corners stay visible. */}
         <div
-          className="absolute left-1/2"
+          className="absolute left-1/2 max-[559px]:[--compare-scale:var(--compare-scale-mobile)] min-[560px]:[--compare-scale:var(--compare-scale-desktop)]"
           style={{
             top: SQUIRCLE_TOP,
             width: SQUIRCLE_BASE_SIZE,
             height: SQUIRCLE_BASE_SIZE,
-            transform: `translateX(-50%) scale(${comparing ? 1 : SQUIRCLE_NORMAL_SCALE})`,
+            ["--compare-scale-mobile" as string]: SQUIRCLE_COMPARE_MOBILE_SCALE,
+            ["--compare-scale-desktop" as string]: String(SQUIRCLE_COMPARE_DESKTOP_SCALE),
+            transform: comparing
+              ? "translateX(-50%) scale(var(--compare-scale))"
+              : `translateX(-50%) scale(${SQUIRCLE_NORMAL_SCALE})`,
             transformOrigin: "50% 0",
-            transition: "transform 500ms var(--ease-out-quint)",
+            transition: "transform 350ms var(--ease-out-quint)",
             willChange: "transform",
           }}
         >
