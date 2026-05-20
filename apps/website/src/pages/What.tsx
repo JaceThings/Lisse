@@ -6,15 +6,12 @@ import { Stagger } from "../components/Stagger.tsx";
 const BODY =
   "text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-primary text-justify hyphens-auto";
 
-// Body Staggers share the global APP_MOUNT_MS anchor — on first app
-// load their delays are still in the future and the cascade plays; on
-// navigation those delays are past so items appear immediately and the
-// route-level fade in App.tsx carries the transition.
+// Indices 0–5 are reserved for the Header; body starts at 6.
 export function What() {
   return (
     <>
       <section className="flex w-full flex-col gap-figma-4 pb-figma-6">
-        <Stagger index={0}>
+        <Stagger index={6}>
           <p className={BODY}>
             A squircle is a rounded rectangle whose corners ease into the
             straight edges with continuous curvature instead of a single
@@ -25,7 +22,7 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={1}>
+        <Stagger index={7}>
           <p className={BODY}>
             CSS border-radius draws a single arc at each corner. The arc
             meets the straight edge at a sharp tangent: the curvature
@@ -36,11 +33,11 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={2}>
+        <Stagger index={8}>
           <Divider />
         </Stagger>
 
-        <Stagger index={3}>
+        <Stagger index={9}>
           <p className={BODY}>
             Two shapes fix the seam. A superellipse sits between a circle
             and a square, with one number controlling how round or how
@@ -52,7 +49,7 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={4}>
+        <Stagger index={10}>
           <p className={BODY}>
             Apple uses the arc-with-shoulders shape, and the
             implementation comes with some baggage. The two halves of
@@ -67,7 +64,7 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={5}>
+        <Stagger index={11}>
           <p className={BODY}>
             When Figma added smoothing in 2018, they chose to redraw the
             curve from scratch rather than copy Apple's path. Daniel
@@ -85,11 +82,11 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={6}>
+        <Stagger index={12}>
           <Divider />
         </Stagger>
 
-        <Stagger index={7}>
+        <Stagger index={13}>
           <p className={BODY}>
             CSS itself is catching up. The CSS spec is the rulebook
             every browser agrees to implement, written and revised by a
@@ -102,7 +99,7 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={8}>
+        <Stagger index={14}>
           <p className={BODY}>
             The spec includes a squircle keyword, which sounds like the
             whole problem is solved. Read the definition closely and the
@@ -116,7 +113,7 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={9}>
+        <Stagger index={15}>
           <p className={BODY}>
             Browser support isn't there yet either. Chrome added the
             property in August 2025. Safari has it behind a feature flag
@@ -130,11 +127,11 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={10}>
+        <Stagger index={16}>
           <Divider />
         </Stagger>
 
-        <Stagger index={11}>
+        <Stagger index={17}>
           <p className={BODY}>
             That's where Lisse fits. It draws the Figma squircle as an
             SVG path and clips the element to it. Borders and shadows
@@ -148,7 +145,7 @@ export function What() {
           </p>
         </Stagger>
 
-        <Stagger index={12}>
+        <Stagger index={18}>
           <p className={BODY}>
             The rest of a design translates cleanly into CSS. The curve
             is the part that doesn't, and now it does.

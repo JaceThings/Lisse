@@ -66,50 +66,47 @@ export function Playground() {
 
   return (
     <PlaygroundTuningProvider value={tuning}>
-      {/* Body Staggers share the global APP_MOUNT_MS anchor — on first app
-          load delays are positive and the cascade plays; on navigation they
-          clamp to 0 and items appear immediately, with the route-level
-          fade in App.tsx carrying the visible transition. 48px between
-          sections matches Figma `--p-12`. */}
+      {/* Indices 0–5 are reserved for the Header; body starts at 6.
+          48px between sections matches Figma `--p-12`. */}
       <div className="flex w-full flex-col" style={{ gap: 48 }}>
-          <Stagger index={0}>
+          <Stagger index={6}>
             <RadiusSection />
           </Stagger>
-          <Stagger index={1}>
+          <Stagger index={7}>
             <CornerShapeSection />
           </Stagger>
-          <Stagger index={2}>
+          <Stagger index={8}>
             <PerCornerSection />
           </Stagger>
-          <Stagger index={3}>
+          <Stagger index={9}>
             <ShadowSection
               title="Drop Shadow"
               description="SVG-based drop shadows that follow the smooth corner path exactly."
               kind="drop"
             />
           </Stagger>
-          <Stagger index={4}>
+          <Stagger index={10}>
             <ShadowSection
               title="Inner Shadow"
               description="Inset shadows rendered inside the smooth corner path for depth and dimension."
               kind="inner"
             />
           </Stagger>
-          <Stagger index={5}>
+          <Stagger index={11}>
             <BorderSection
               title="Outer Border"
               description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
               position="outer"
             />
           </Stagger>
-          <Stagger index={6}>
+          <Stagger index={12}>
             <BorderSection
               title="Inner Border"
               description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
               position="inner"
             />
           </Stagger>
-          <Stagger index={7}>
+          <Stagger index={13}>
             <BorderSection
               title="Center Border"
               description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
