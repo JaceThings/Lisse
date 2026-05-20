@@ -1,9 +1,7 @@
 import { useMemo } from "react";
 import { DialRoot, useDialKit } from "dialkit";
 import "dialkit/styles.css";
-import { Layout } from "../components/Layout.tsx";
-import { Footer } from "../components/playground/Footer.tsx";
-import { NoteBlock } from "../components/playground/NoteBlock.tsx";
+import { Stagger } from "../components/Stagger.tsx";
 import {
   DEFAULT_TUNING,
   PlaygroundTuningProvider,
@@ -68,42 +66,57 @@ export function Playground() {
 
   return (
     <PlaygroundTuningProvider value={tuning}>
-      <Layout articleClassName="gap-figma-9">
-        <NoteBlock />
-        {/* 48px between sections matches Figma `--p-12`; column already
-            uses `gap-figma-9` so these are spaced manually. */}
-        <div className="flex w-full flex-col" style={{ gap: 48 }}>
-          <RadiusSection />
-          <CornerShapeSection />
-          <PerCornerSection />
-          <ShadowSection
-            title="Drop Shadow"
-            description="SVG-based drop shadows that follow the smooth corner path exactly."
-            kind="drop"
-          />
-          <ShadowSection
-            title="Inner Shadow"
-            description="Inset shadows rendered inside the smooth corner path for depth and dimension."
-            kind="inner"
-          />
-          <BorderSection
-            title="Outer Border"
-            description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
-            position="outer"
-          />
-          <BorderSection
-            title="Inner Border"
-            description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
-            position="inner"
-          />
-          <BorderSection
-            title="Center Border"
-            description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
-            position="middle"
-          />
+      {/* Body Staggers share the global APP_MOUNT_MS anchor — on first app
+          load delays are positive and the cascade plays; on navigation they
+          clamp to 0 and items appear immediately, with the route-level
+          fade in App.tsx carrying the visible transition. 48px between
+          sections matches Figma `--p-12`. */}
+      <div className="flex w-full flex-col" style={{ gap: 48 }}>
+          <Stagger index={0}>
+            <RadiusSection />
+          </Stagger>
+          <Stagger index={1}>
+            <CornerShapeSection />
+          </Stagger>
+          <Stagger index={2}>
+            <PerCornerSection />
+          </Stagger>
+          <Stagger index={3}>
+            <ShadowSection
+              title="Drop Shadow"
+              description="SVG-based drop shadows that follow the smooth corner path exactly."
+              kind="drop"
+            />
+          </Stagger>
+          <Stagger index={4}>
+            <ShadowSection
+              title="Inner Shadow"
+              description="Inset shadows rendered inside the smooth corner path for depth and dimension."
+              kind="inner"
+            />
+          </Stagger>
+          <Stagger index={5}>
+            <BorderSection
+              title="Outer Border"
+              description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
+              position="outer"
+            />
+          </Stagger>
+          <Stagger index={6}>
+            <BorderSection
+              title="Inner Border"
+              description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
+              position="inner"
+            />
+          </Stagger>
+          <Stagger index={7}>
+            <BorderSection
+              title="Center Border"
+              description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
+              position="middle"
+            />
+          </Stagger>
         </div>
-        <Footer />
-      </Layout>
       {/* DialRoot lives inside the Playground so dialkit + its CSS only load
           on this route. `productionEnabled` defaults to false — dialkit hides
           itself in production builds. */}

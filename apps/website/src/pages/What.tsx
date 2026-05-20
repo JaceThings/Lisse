@@ -1,145 +1,160 @@
-import { Link } from "react-router-dom";
 import { Divider } from "../components/Divider.tsx";
-import { Header } from "../components/Header.tsx";
-import { Layout } from "../components/Layout.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 
 // Figma node 35:238 — `text-text-primary` (not muted input). `hyphens-auto`
-// is also inherited from global.css; listed here for visibility.
+// is inherited from global.css; listed here for visibility.
 const BODY =
   "text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-primary text-justify hyphens-auto";
 
-const HEADER_FIRST = 0;
-const BODY_FIRST = 5;
-const PARAGRAPHS = 8;
-const FOOTER_INDEX = BODY_FIRST + PARAGRAPHS;
-
-// Body copy is placeholder — layout, hierarchy, and reveal order are the
-// load-bearing pieces; words will be rewritten.
+// Body Staggers share the global APP_MOUNT_MS anchor — on first app
+// load their delays are still in the future and the cascade plays; on
+// navigation those delays are past so items appear immediately and the
+// route-level fade in App.tsx carries the transition.
 export function What() {
   return (
-    <Layout articleClassName="gap-figma-9">
-      <Header staggerFrom={HEADER_FIRST} />
-
+    <>
       <section className="flex w-full flex-col gap-figma-4 pb-figma-6">
-        <Stagger index={BODY_FIRST}>
+        <Stagger index={0}>
           <p className={BODY}>
             A squircle is a rounded rectangle whose corners ease into the
-            straight edges instead of meeting them at a hard tangent. The
-            curvature ramps up gradually, peaks at the corner, and ramps
-            back down — the same shape Apple uses for app icons and Figma
-            uses for any frame with corner smoothing turned on.
+            straight edges with continuous curvature instead of a single
+            circular arc. Apple introduced the shape to iOS in 2013 with
+            iOS 7, where every app icon was cut to it. Figma and Sketch
+            both added corner smoothing in 2018, and the shape has been
+            spreading through design tools ever since.
           </p>
         </Stagger>
 
-        <Stagger index={BODY_FIRST + 1}>
+        <Stagger index={1}>
           <p className={BODY}>
-            CSS border-radius doesn't draw this curve. It draws a
-            quarter-circle: a single arc with constant curvature that hits
-            the edge at a sharp tangent. At small radii nobody notices.
-            At the radii most product surfaces use — 12, 16, 24 pixels —
-            the seam between arc and edge is visible, and the corner reads
-            as harder than it should.
+            CSS border-radius draws a single arc at each corner. The arc
+            meets the straight edge at a sharp tangent: the curvature
+            jumps from nothing to its maximum in one step. The eye reads
+            this as a corner bolted on. At small radii nobody notices.
+            Past about 16 pixels the seam shows, and the corner reads as
+            harder than it should.
           </p>
         </Stagger>
 
-        <Stagger index={BODY_FIRST + 2}>
+        <Stagger index={2}>
+          <Divider />
+        </Stagger>
+
+        <Stagger index={3}>
           <p className={BODY}>
-            Lisse generates the squircle path in SVG and clips the element
-            to it. The shape is a superellipse with a smoothing parameter
-            that controls how far the curve reaches into the straight edge
-            before it starts turning. A smoothing of zero collapses back
-            to the CSS quarter-circle; a smoothing of one is the maximally
-            soft Apple-style corner. Most surfaces want somewhere around
-            0.6.
+            Two shapes fix the seam. A superellipse sits between a circle
+            and a square, with one number controlling how round or how
+            square it is. The other shape is a small circular arc at the
+            apex of the corner, with smooth shoulders on either side that
+            ease the arc into the straight edges so the curvature never
+            jumps. The two look similar at icon scale, but they're built
+            differently underneath.
           </p>
         </Stagger>
 
-        <Stagger index={BODY_FIRST + 3}>
+        <Stagger index={4}>
           <p className={BODY}>
-            Because the path is generated per element and not inherited
-            from the browser's rounded-rectangle primitive, borders and
-            drop shadows have to be regenerated too — otherwise they trace
-            the wrong shape. Lisse handles both. Strokes follow the same
-            superellipse; shadows are rendered as offset copies of the
-            clip path, so the soft edge stays consistent with the surface
-            it's attached to.
+            Apple uses the arc-with-shoulders shape, and the
+            implementation comes with some baggage. The two halves of
+            each corner aren't quite mirror images of each other. There's
+            a tiny straight segment on one side that almost certainly
+            shouldn't be there: the developers who pulled the actual
+            path out of iOS describe it as a probable bug, preserved
+            across releases. The shape also breaks down at low aspect
+            ratios, where it stops looking like a squircle and starts
+            looking like a generic rounded rectangle. None of this is
+            configurable. Apple's curve is fixed.
           </p>
         </Stagger>
 
-        <Stagger index={BODY_FIRST + 4}>
+        <Stagger index={5}>
           <p className={BODY}>
-            Per-corner radii work the same way they do in CSS. Pass a
-            single number for a uniform squircle, or four numbers — or an
-            object keyed by corner — and each corner gets its own radius
-            and smoothing. Mixed corners stay continuous along the edges
-            between them; you don't get the kink you'd see if you tried
-            to butt two different border-radius values together.
+            When Figma added smoothing in 2018, they chose to redraw the
+            curve from scratch rather than copy Apple's path. Daniel
+            Furse's writeup at the time gives the reasoning. Apple's path
+            isn't a clean formula you can describe in one line. It
+            carries the asymmetry across, has no smoothing dial to turn,
+            and falls apart at low aspect ratios. Reimplementing the
+            same family of shape solved all three at once. The two halves
+            of each corner mirror each other properly. A single smoothing
+            dial controls how soft the corner gets: zero gives back a
+            plain circular arc, and one gives the maximum smoothness the
+            construction allows. Around 0.6 is close enough to Apple's
+            shape that nobody can tell at icon scale, but the geometry
+            underneath is more sensible to work with.
           </p>
         </Stagger>
 
-        <Stagger index={BODY_FIRST + 5}>
+        <Stagger index={6}>
+          <Divider />
+        </Stagger>
+
+        <Stagger index={7}>
           <p className={BODY}>
-            The library is small. The core has no dependencies and ships
-            as plain ESM. Framework bindings exist for React, Vue, and
-            Svelte; each one is a thin wrapper that takes the same props,
-            measures the element on mount and on resize, and feeds the
-            measurements to the core. There's no runtime cost on top of
-            what the browser already does to paint the element.
+            CSS itself is catching up. The CSS spec is the rulebook
+            every browser agrees to implement, written and revised by a
+            working group at the W3C. Anything that lands in the spec
+            eventually shows up in Chrome, Safari, and Firefox in some
+            form. A new property called corner-shape is going through
+            that process now. It sits next to border-radius and changes
+            which curve the radius traces, so authors can pick something
+            other than the default circular arc without reaching for SVG.
           </p>
         </Stagger>
 
-        <Stagger index={BODY_FIRST + 6}>
+        <Stagger index={8}>
           <p className={BODY}>
-            Resize handling is the part that makes the library worth
-            installing. A squircle path depends on the element's pixel
-            width and height — not on percentages, not on cqi units — so
-            the path has to be regenerated whenever the box changes size.
-            Lisse uses a single shared ResizeObserver for every mounted
-            instance, batches reads against the browser's layout phase,
-            and only writes back into the DOM if the new path actually
-            differs from the previous one.
+            The spec includes a squircle keyword, which sounds like the
+            whole problem is solved. Read the definition closely and the
+            keyword resolves to a superellipse with a fixed exponent
+            built in. That's the other shape family. It looks close to
+            the iOS squircle at first glance, but the curvature is
+            distributed differently, and at the sizes used in interfaces
+            the difference is visible. Apple, Figma, and Lisse all draw
+            arc-with-shoulders. The CSS default draws something else and
+            calls it by the same name.
           </p>
         </Stagger>
 
-        <Stagger index={BODY_FIRST + 7}>
+        <Stagger index={9}>
           <p className={BODY}>
-            If you've ever shipped a component library that tried to
-            match a Figma file pixel-for-pixel and given up on the
-            corners, this is the missing piece. The rest of the design
-            translates cleanly into CSS — the curve is the part that
-            doesn't, and now it does.
+            Browser support isn't there yet either. Chrome added the
+            property in August 2025. Safari has it behind a feature flag
+            but hasn't shipped it to release. Firefox hasn't started.
+            Even on the optimistic timeline where every engine ships in
+            the next year, what's landing first isn't the shape that
+            matches iOS or Figma. The CSS property is a useful primitive
+            for new designs that pick the superellipse on purpose. It
+            isn't a substitute for the squircle people already see in
+            iOS, in Figma files, and in design systems that copy them.
+          </p>
+        </Stagger>
+
+        <Stagger index={10}>
+          <Divider />
+        </Stagger>
+
+        <Stagger index={11}>
+          <p className={BODY}>
+            That's where Lisse fits. It draws the Figma squircle as an
+            SVG path and clips the element to it. Borders and shadows
+            trace the same shape: strokes follow the squircle, and
+            shadows are offset copies of the clip, so the soft edge
+            stays consistent with the surface it sits on. Per-corner
+            radii compose cleanly, with no kink at the boundary between
+            corners of different roundness. A single observer watches
+            every Lisse-wrapped element and only redraws when the box
+            actually changes size.
+          </p>
+        </Stagger>
+
+        <Stagger index={12}>
+          <p className={BODY}>
+            The rest of a design translates cleanly into CSS. The curve
+            is the part that doesn't, and now it does.
           </p>
         </Stagger>
       </section>
-
-      <Stagger index={FOOTER_INDEX}>
-        <footer className="flex w-full flex-col gap-figma-5">
-          <Divider />
-          <nav
-            aria-label="Site"
-            className="flex w-full items-start gap-figma-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-secondary whitespace-nowrap"
-          >
-            {/* `py-2 -my-2` extends tap target to ~33px without shifting
-                the footer layout — text stays on its baseline. */}
-            <Link to="/what" className="py-2 -my-2" data-focus-ring>
-              What?
-            </Link>
-            <Link to="/playground" className="py-2 -my-2" data-focus-ring>
-              Playground
-            </Link>
-            <a
-              href="https://github.com/jaceattard/smooth-corners"
-              className="py-2 -my-2"
-              data-focus-ring
-              target="_blank"
-              rel="noreferrer"
-            >
-              Docs
-            </a>
-          </nav>
-        </footer>
-      </Stagger>
-    </Layout>
+    </>
   );
 }

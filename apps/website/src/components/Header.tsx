@@ -66,7 +66,9 @@ export function Header({ staggerFrom }: HeaderProps) {
           </Stagger>
         </div>
       </div>
-      <Divider />
+      <Stagger index={staggerFrom + 5}>
+        <Divider />
+      </Stagger>
     </header>
   );
 }

@@ -57,10 +57,15 @@ export function FocusRingOverlay({
     const ww = Math.max(0, wv as number);
     const hh = Math.max(0, hv as number);
     if (ww === 0 || hh === 0) return "";
-    return generatePath(ww, hh, {
-      radius: radius + Math.min(offsetX, offsetY),
-      smoothing,
-    });
+    // Cap radius against the rect's min dimension so small elements
+    // (e.g. compact footer links) don't render as near-capsules — the
+    // smoothing extends the curve past `radius` and eats the straight
+    // edge entirely on the short axis without this clamp.
+    const r = Math.min(
+      radius + Math.min(offsetX, offsetY),
+      Math.min(ww, hh) / 2.5,
+    );
+    return generatePath(ww, hh, { radius: r, smoothing });
   });
 
   const visible = useRef(false);
