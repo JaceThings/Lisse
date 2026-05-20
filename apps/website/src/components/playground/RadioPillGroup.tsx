@@ -53,6 +53,7 @@ export function RadioPillGroup<T extends string>({
             aria-checked={selected}
             data-focus-ring
             onClick={() => {
+              if (option.value === value) return;
               playPillSelect();
               onChange(option.value);
             }}

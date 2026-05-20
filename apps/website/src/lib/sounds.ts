@@ -56,36 +56,44 @@ function getNoise(c: AudioContext) {
 }
 
 export function playTick() {
-  const c = audio();
-  c.resume().catch(() => {});
-  const now = c.currentTime;
+  // Wrapped in try/catch because slider drags call this 100+ times per
+  // second on fine-step sliders; if the AudioContext enters a broken
+  // state (resource pressure, exotic browser), an unhandled throw on
+  // every step crossing would spam the console for the whole drag.
+  try {
+    const c = audio();
+    c.resume().catch(() => {});
+    const now = c.currentTime;
 
-  const master = c.createGain();
-  master.gain.value = TICK_VOLUME;
-  master.connect(c.destination);
+    const master = c.createGain();
+    master.gain.value = TICK_VOLUME;
+    master.connect(c.destination);
 
-  // Sine partial.
-  const osc = c.createOscillator();
-  osc.type = "sine";
-  osc.frequency.value = TICK_FREQ;
-  const oscEnv = c.createGain();
-  oscEnv.gain.setValueAtTime(1, now);
-  oscEnv.gain.exponentialRampToValueAtTime(0.0005, now + TICK_DECAY_SEC);
-  osc.connect(oscEnv).connect(master);
-  osc.start(now);
-  osc.stop(now + TICK_DECAY_SEC + 0.02);
+    // Sine partial.
+    const osc = c.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = TICK_FREQ;
+    const oscEnv = c.createGain();
+    oscEnv.gain.setValueAtTime(1, now);
+    oscEnv.gain.exponentialRampToValueAtTime(0.0005, now + TICK_DECAY_SEC);
+    osc.connect(oscEnv).connect(master);
+    osc.start(now);
+    osc.stop(now + TICK_DECAY_SEC + 0.02);
 
-  // Noise burst — rung through a bandpass at the partial's pitch.
-  const noise = c.createBufferSource();
-  noise.buffer = getNoise(c);
-  const nGain = c.createGain();
-  nGain.gain.setValueAtTime(NOISE_LEVEL, now);
-  nGain.gain.exponentialRampToValueAtTime(0.0005, now + NOISE_DURATION_SEC);
-  const filter = c.createBiquadFilter();
-  filter.type = "bandpass";
-  filter.frequency.value = TICK_FREQ;
-  filter.Q.value = NOISE_Q;
-  noise.connect(nGain).connect(filter).connect(master);
-  noise.start(now);
-  noise.stop(now + NOISE_DURATION_SEC + 0.01);
+    // Noise burst — rung through a bandpass at the partial's pitch.
+    const noise = c.createBufferSource();
+    noise.buffer = getNoise(c);
+    const nGain = c.createGain();
+    nGain.gain.setValueAtTime(NOISE_LEVEL, now);
+    nGain.gain.exponentialRampToValueAtTime(0.0005, now + NOISE_DURATION_SEC);
+    const filter = c.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = TICK_FREQ;
+    filter.Q.value = NOISE_Q;
+    noise.connect(nGain).connect(filter).connect(master);
+    noise.start(now);
+    noise.stop(now + NOISE_DURATION_SEC + 0.01);
+  } catch {
+    // Audio is non-essential; if the context is broken, drop the tick.
+  }
 }
