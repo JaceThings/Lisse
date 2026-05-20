@@ -160,6 +160,10 @@ h3 {
   height: 16px;
   background: transparent;
   border: none;
+  /* iOS Safari paints the default thumb chrome even with appearance:none +
+   * transparent background. Zero opacity suppresses the paint while
+   * keeping the thumb hit-testable (a 0×0 thumb breaks pointer routing). */
+  opacity: 0;
   cursor: pointer;
 }
 .playground-slider::-moz-range-thumb {
@@ -167,6 +171,7 @@ h3 {
   height: 16px;
   background: transparent;
   border: none;
+  opacity: 0;
   cursor: pointer;
 }
 
