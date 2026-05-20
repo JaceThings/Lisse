@@ -69,51 +69,51 @@ export function Playground() {
       {/* Indices 0–5 are reserved for the Header; body starts at 6.
           48px between sections matches Figma `--p-12`. */}
       <div className="flex w-full flex-col" style={{ gap: 48 }}>
-          <Stagger index={6}>
-            <RadiusSection />
-          </Stagger>
-          <Stagger index={7}>
-            <CornerShapeSection />
-          </Stagger>
-          <Stagger index={8}>
-            <PerCornerSection />
-          </Stagger>
-          <Stagger index={9}>
-            <ShadowSection
-              title="Drop Shadow"
-              description="SVG-based drop shadows that follow the smooth corner path exactly."
-              kind="drop"
-            />
-          </Stagger>
-          <Stagger index={10}>
-            <ShadowSection
-              title="Inner Shadow"
-              description="Inset shadows rendered inside the smooth corner path for depth and dimension."
-              kind="inner"
-            />
-          </Stagger>
-          <Stagger index={11}>
-            <BorderSection
-              title="Outer Border"
-              description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
-              position="outer"
-            />
-          </Stagger>
-          <Stagger index={12}>
-            <BorderSection
-              title="Inner Border"
-              description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
-              position="inner"
-            />
-          </Stagger>
-          <Stagger index={13}>
-            <BorderSection
-              title="Center Border"
-              description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
-              position="middle"
-            />
-          </Stagger>
-        </div>
+        <Stagger index={6}>
+          <RadiusSection />
+        </Stagger>
+        <Stagger index={7}>
+          <CornerShapeSection />
+        </Stagger>
+        <Stagger index={8}>
+          <PerCornerSection />
+        </Stagger>
+        <Stagger index={9}>
+          <ShadowSection
+            title="Drop Shadow"
+            description="SVG-based drop shadows that follow the smooth corner path exactly."
+            kind="drop"
+          />
+        </Stagger>
+        <Stagger index={10}>
+          <ShadowSection
+            title="Inner Shadow"
+            description="Inset shadows rendered inside the smooth corner path for depth and dimension."
+            kind="inner"
+          />
+        </Stagger>
+        <Stagger index={11}>
+          <BorderSection
+            title="Outer Border"
+            description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
+            position="outer"
+          />
+        </Stagger>
+        <Stagger index={12}>
+          <BorderSection
+            title="Inner Border"
+            description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
+            position="inner"
+          />
+        </Stagger>
+        <Stagger index={13}>
+          <BorderSection
+            title="Center Border"
+            description="Stroke borders that perfectly trace the smooth corner path. Supports multiple line styles."
+            position="middle"
+          />
+        </Stagger>
+      </div>
       {/* DialRoot lives inside the Playground so dialkit + its CSS only load
           on this route. `productionEnabled` defaults to false — dialkit hides
           itself in production builds. */}
