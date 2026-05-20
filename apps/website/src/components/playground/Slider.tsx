@@ -135,14 +135,15 @@ export function Slider({
 
   // Tick on every step crossing during a drag. Integer-step sliders
   // click discretely; fine sub-integer steps read as a scrape on rapid
-  // drag (smoothing slider, step 0.01).
+  // drag (smoothing slider, step 0.01). The ref tracks the snapped
+  // value across ALL changes (drag + preset tweens) so the first tick
+  // of a fresh drag doesn't fire against a stale baseline.
   const lastSteppedRef = useRef<number>(clamp(snap(value, step), min, max));
   useMotionValueEvent(reported, "change", (latest) => {
-    if (!drag.isDraggingRef.current) return;
     const stepped = clamp(snap(latest, step), min, max);
     if (stepped !== lastSteppedRef.current) {
       lastSteppedRef.current = stepped;
-      playTick();
+      if (drag.isDraggingRef.current) playTick();
     }
   });
 
