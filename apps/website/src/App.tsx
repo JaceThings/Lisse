@@ -39,6 +39,18 @@ const FADE_MS = 250;
 const FOOTER_SLIDE_MS = 350;
 const EASE = [0.4, 0, 0.2, 1] as const;
 
+// The static <link rel="canonical"> in index.html applies to every SPA
+// route. Update it per route so Googlebot consolidates each path
+// against itself, matching what sitemap.xml lists as distinct URLs.
+function CanonicalUpdater() {
+  const location = useLocation();
+  useEffect(() => {
+    const link = document.querySelector('link[rel="canonical"]');
+    if (link) link.setAttribute("href", `https://corne.rs${location.pathname}`);
+  }, [location.pathname]);
+  return null;
+}
+
 function AnimatedBody() {
   const location = useLocation();
   // First app mount has no preceding footer to slide; subsequent route
@@ -109,6 +121,7 @@ export function App() {
             <PersistentFooter />
           </Layout>
         </LayoutGroup>
+        <CanonicalUpdater />
         <FocusRingOverlay />
         <SelectionHighlight />
         <DevAgentation />
