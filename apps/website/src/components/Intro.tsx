@@ -2,13 +2,13 @@ import { Stagger } from "./Stagger.tsx";
 
 interface IntroProps {
   /** Reveal index for the intro paragraph. */
-  staggerFrom: number;
+  staggerIndex: number;
 }
 
-export function Intro({ staggerFrom }: IntroProps) {
+export function Intro({ staggerIndex }: IntroProps) {
   return (
-    <section className="flex w-full flex-col pb-6 text-text-primary">
-      <Stagger index={staggerFrom}>
+    <section className="w-full pb-6 text-text-primary">
+      <Stagger index={staggerIndex}>
         <p className="text-[14px] leading-[1.4] font-medium tracking-[-0.25px] text-justify hyphens-auto">
           Lisse is a small JavaScript library that draws squircle corners, the
           same continuous curve Figma and iOS use. Bindings for React, Vue, and
