@@ -91,7 +91,10 @@ if (typeof window !== "undefined") {
       silent.setAttribute("playsinline", "");
       silent.volume = 0.0001;
       silent.play().catch(() => {});
-    } catch {}
+    } catch {
+      // Let the next gesture retry — don't strip the listeners.
+      return;
+    }
     window.removeEventListener("pointerdown", unlock);
     window.removeEventListener("keydown", unlock);
   };
