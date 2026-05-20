@@ -1,6 +1,6 @@
 {
   "name": "website",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "corne.rs landing site for the Lisse squircle library",
