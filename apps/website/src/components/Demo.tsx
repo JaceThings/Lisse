@@ -9,6 +9,12 @@ import {
   OverlayOutlineIcon,
   XMarkIcon,
 } from "../icons/sf/index.tsx";
+import {
+  playCompareEnter,
+  playCompareExit,
+  playSmoothingEnter,
+  playSmoothingExit,
+} from "../lib/sounds.ts";
 
 const SQUIRCLE_SMOOTHING = 0.6;
 // Path generated once at the desktop max (510 px); the wrapper sizes
@@ -50,8 +56,18 @@ function describeState(smoothing: boolean, comparing: boolean): string {
 export function Demo() {
   const [smoothing, setSmoothing] = useState(true);
   const [comparing, setComparing] = useState(false);
-  const toggleSmoothing = () => setSmoothing((s) => !s);
-  const toggleCompare = () => setComparing((c) => !c);
+  const toggleSmoothing = () =>
+    setSmoothing((s) => {
+      if (s) playSmoothingExit();
+      else playSmoothingEnter();
+      return !s;
+    });
+  const toggleCompare = () =>
+    setComparing((c) => {
+      if (c) playCompareExit();
+      else playCompareEnter();
+      return !c;
+    });
 
   // Tween smoothing rather than letting Lisse snap, so the corners
   // visibly morph between the Apple squircle and the CSS quarter-circle.

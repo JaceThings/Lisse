@@ -24,6 +24,10 @@ function playFile(src: string, volume: number) {
 export const playClick = () => playFile("/click.webm", 0.6);
 export const playCopySuccess = () => playFile("/copy-success.webm", 0.5);
 export const playPillSelect = () => playFile("/pill-select.webm", 0.6);
+export const playCompareEnter = () => playFile("/compare-enter.webm", 0.06);
+export const playCompareExit = () => playFile("/compare-exit.webm", 0.06);
+export const playSmoothingEnter = () => playFile("/smoothing-enter.webm", 0.35);
+export const playSmoothingExit = () => playFile("/smoothing-exit.webm", 0.35);
 
 // === Tick (synthesised) ====================================================
 // A 5.5 kHz sine partial (exp decay over 12 ms) plus a 3 ms white-noise
