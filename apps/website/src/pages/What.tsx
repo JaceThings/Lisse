@@ -4,7 +4,7 @@ import { Stagger } from "../components/Stagger.tsx";
 // Figma node 35:238 — `text-text-primary` (not muted input). `hyphens-auto`
 // is inherited from global.css; listed here for visibility.
 const BODY =
-  "text-[14px] leading-[1.2] max-[560px]:leading-[1.6] font-medium tracking-[-0.25px] text-text-primary text-justify hyphens-auto";
+  "text-[14px] leading-[1.4] max-[560px]:leading-[1.6] font-medium tracking-[-0.25px] text-text-primary text-justify hyphens-auto";
 
 // Indices 0–5 are reserved for the Header; body starts at 6.
 export function What() {

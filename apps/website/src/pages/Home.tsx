@@ -4,14 +4,14 @@ import { Intro } from "../components/Intro.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 
 // Indices 0–5 are header; body starts at 6.
-const INTRO_FIRST = 6;
-const DEMO_INDEX = 9;
-const INSTALL_FIRST = 10;
+const INTRO_INDEX = 6;
+const DEMO_INDEX = 7;
+const INSTALL_FIRST = 8;
 
 export function Home() {
   return (
     <>
-      <Intro staggerFrom={INTRO_FIRST} />
+      <Intro staggerIndex={INTRO_INDEX} />
       <Stagger index={DEMO_INDEX}>
         <Demo />
       </Stagger>
