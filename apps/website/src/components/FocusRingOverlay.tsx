@@ -93,8 +93,8 @@ export function FocusRingOverlay({
       };
     };
 
-    // Snap spring + raw in lockstep so the spring doesn't slide in from
-    // the origin or interpolate across a gap.
+    // Jump springs alongside raw values so they don't interpolate from
+    // the previous position.
     const snap = ({ nx, ny, nw, nh }: Rect) => {
       xS.jump(nx); yS.jump(ny); wS.jump(nw); hS.jump(nh);
       x.set(nx); y.set(ny); w.set(nw); h.set(nh);
@@ -185,12 +185,12 @@ export function FocusRingOverlay({
       });
     };
 
-    // Only navigation keys flip modality to "keyboard". Escape and
-    // Enter/Space are activation keys used in both modes — counting them
-    // would re-trigger the ring on the next programmatic .focus().
+    // Activation keys (Enter/Space/Escape) don't indicate in-page
+    // navigation; counting them would re-trigger the ring on the next
+    // programmatic .focus().
     const onModalityKey = (e: KeyboardEvent) => {
       if (!NAV_KEYS.has(e.key)) return;
-      // Cmd/Ctrl/Alt + arrow is a browser shortcut, not in-page navigation.
+      // Modifier + arrow is a browser shortcut, not in-page navigation.
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       lastModality.current = "keyboard";
     };
@@ -198,12 +198,10 @@ export function FocusRingOverlay({
       lastModality.current = "mouse";
     };
 
-    // Walk up the DOM checking each ancestor's opacity. The focused link
-    // itself never animates — the motion.span around it does (e.g. the
-    // Home link's exit), and so does AnimatedBody when a route fades.
-    // Any ancestor with opacity < 1 means our target is currently being
-    // animated out (or sits inside something that is), and we should
-    // fade the ring rather than track the moving target.
+    // The focused link itself never fades; its motion.span ancestor does
+    // (Home link exit, AnimatedBody route exit). Any ancestor below
+    // opacity 1 means we're being animated out — fade the ring instead
+    // of tracking the moving target.
     const isMidExit = (el: HTMLElement): boolean => {
       let node: HTMLElement | null = el;
       while (node && node !== document.body) {
@@ -214,17 +212,11 @@ export function FocusRingOverlay({
       return false;
     };
 
-    // The target element can move under us — e.g. the footer slides on
-    // route change and its focused nav link travels with it. Without
-    // this poll the ring stays pinned to the link's original document Y
-    // while the link drifts away. Re-feeding the raw motion values each
-    // frame lets the existing springs follow the target with their usual
-    // stiffness; when the target isn't moving the writes are no-ops.
-    //
-    // Bail (fade the ring out via hide) when the target has been removed
-    // from the DOM (post-exit) or is mid-fade somewhere up the tree —
-    // otherwise getBoundingClientRect on a removed node returns the
-    // zero-rect and the ring snaps to the top-left of the viewport.
+    // Targets can move externally (footer slides on route change). The
+    // poll re-feeds raw values so the springs follow; writes are no-ops
+    // when nothing's moving. Bail on removed or mid-exit elements —
+    // otherwise getBoundingClientRect on a detached node returns the
+    // zero-rect and the ring snaps to the viewport origin.
     let rafId = 0;
     const follow = () => {
       if (visible.current && targetRef.current && !fadingOut) {

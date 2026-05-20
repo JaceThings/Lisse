@@ -16,9 +16,8 @@ import { Home } from "./pages/Home.tsx";
 import { Playground } from "./pages/Playground.tsx";
 import { What } from "./pages/What.tsx";
 
-// All routes are imported eagerly. Lazy + Suspense was creating a
-// suspend/resume cycle that broke Footer's entrance animation and caused
-// a visible body collapse mid-transition.
+// Routes are eager: lazy + Suspense creates a suspend/resume cycle
+// that collapses the footer mid-transition.
 
 function DevAgentation() {
   const [Toolbar, setToolbar] = useState<ComponentType | null>(null);
@@ -81,12 +80,8 @@ function AnimatedBody() {
   );
 }
 
-// motion.footer with `layout="position"` animates the footer's Y when
-// flex flow position changes (i.e., when the body above swaps to
-// different-height content). LayoutGroup wraps Header + AnimatedBody +
-// PersistentFooter so framer-motion knows to remeasure the footer when
-// a sibling's content changes — without it, the footer would never see
-// its position has changed.
+// LayoutGroup is required: without it framer-motion never sees that a
+// sibling's size changed and the footer's translateY never animates.
 function PersistentFooter() {
   return (
     <motion.footer

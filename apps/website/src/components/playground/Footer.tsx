@@ -1,16 +1,30 @@
 import { AnimatePresence, motion } from "framer-motion";
+import type { ReactNode } from "react";
 import { useNavigate, useLocation, type LinkProps } from "react-router-dom";
 import { Divider } from "../Divider.tsx";
 
 const LINK =
   "py-2 -my-2 hover:text-text-primary transition-[color] duration-150 ease-out";
-// Nav-row layout transition is just for the home-link width change in/out
-// of `/`. The whole-footer slide is owned by App.tsx's motion.footer +
-// LayoutGroup pair; this transition only governs the local home-link
-// width-collapse when toggling between root and a sub-page.
+// Governs the home-link's width-collapse only; the whole-footer slide
+// is App.tsx's motion.footer + LayoutGroup pair.
 const NAV_LAYOUT_TRANSITION = {
   layout: { duration: 0.32, ease: [0.32, 0.72, 0, 1] as const },
 };
+
+// Wraps a plain nav link so framer-motion tracks its position; when the
+// Home link enters or exits, siblings slide to their new flex positions
+// instead of snapping.
+function NavSlot({ children }: { children: ReactNode }) {
+  return (
+    <motion.span
+      layout
+      transition={NAV_LAYOUT_TRANSITION}
+      className="inline-flex"
+    >
+      {children}
+    </motion.span>
+  );
+}
 
 interface ScrollLinkProps extends Omit<LinkProps, "to"> {
   to: string;
@@ -39,12 +53,9 @@ function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
       navigated = true;
       navigate(to);
     };
-    // `scrollend` exists in lib.dom but isn't actually implemented in
-    // every browser we ship to (notably older Safari). Feature-detect at
-    // runtime; fall back to a distance-scaled timeout.
-    const hasScrollEnd =
-      typeof (window as unknown as { onscrollend?: unknown }).onscrollend !==
-      "undefined";
+    // `scrollend` is in lib.dom but missing in older Safari — feature-
+    // detect at runtime; fall back to a distance-scaled timeout.
+    const hasScrollEnd = "onscrollend" in window;
     if (hasScrollEnd) {
       const handler = () => {
         window.removeEventListener("scrollend", handler);
@@ -62,16 +73,10 @@ function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
   return <a href={to} onClick={handleClick} {...rest} />;
 }
 
-// Footer renders the divider + nav contents only. The <footer> element
-// itself lives in App.tsx as a motion.footer so it can participate in
-// the LayoutGroup's position tracking — that's what makes it slide
-// smoothly to its new Y when the body content above it changes size.
-// The flex+gap classes live HERE (on the inner wrapper) rather than on
-// motion.footer because the Stagger sits between them, so a gap class
-// at the footer level would have nothing to space.
+// Gap classes live here (not on App.tsx's motion.footer) because the
+// Stagger between them would leave a footer-level gap with nothing to
+// space.
 export function Footer() {
-  // Home link only shows when the user is somewhere else; on `/` the
-  // nav drops it so the current page isn't repeated.
   const showHome = useLocation().pathname !== "/";
 
   return (
@@ -83,19 +88,10 @@ export function Footer() {
         aria-label="Site"
         className="flex w-full items-start gap-figma-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-secondary whitespace-nowrap"
       >
-        {/* `py-2 -my-2` extends tap target to ~33px tall without
-            changing the visible footer layout — text stays on baseline.
-            `ScrollLink` keeps internal navigation client-side and runs
-            a smooth scroll-to-top before the route swap so the
-            persistent header animates back into view. */}
-        {/* `mode="popLayout"` sets the exiting Home link to
-            position:absolute as soon as exit begins. Without it the
-            element keeps its flex space for the full exit duration, so
-            the sibling links can't reflow until exit completes — they
-            snap to their new positions only after the Home link is
-            gone. With popLayout the siblings see the freed space
-            immediately and their `layout` props animate them sideways
-            in lockstep with the Home link's fade. */}
+        {/* popLayout makes the exiting Home link position:absolute so
+            siblings see the freed flex space immediately and slide in
+            lockstep with its fade — instead of waiting out the exit
+            then snapping. */}
         <AnimatePresence mode="popLayout" initial={false}>
           {showHome && (
             <motion.span
@@ -122,11 +118,7 @@ export function Footer() {
             </motion.span>
           )}
         </AnimatePresence>
-        {/* Each remaining link is a motion.span with `layout` so that
-            when the Home link's AnimatePresence inserts or removes its
-            element, these siblings smoothly slide to their new flex
-            positions instead of snapping. */}
-        <motion.span layout transition={NAV_LAYOUT_TRANSITION} className="inline-flex">
+        <NavSlot>
           <ScrollLink
             to="/what"
             className={LINK}
@@ -135,8 +127,8 @@ export function Footer() {
           >
             What?
           </ScrollLink>
-        </motion.span>
-        <motion.span layout transition={NAV_LAYOUT_TRANSITION} className="inline-flex">
+        </NavSlot>
+        <NavSlot>
           <ScrollLink
             to="/playground"
             className={LINK}
@@ -145,8 +137,8 @@ export function Footer() {
           >
             Playground
           </ScrollLink>
-        </motion.span>
-        <motion.span layout transition={NAV_LAYOUT_TRANSITION} className="inline-flex">
+        </NavSlot>
+        <NavSlot>
           <a
             href="https://github.com/JaceThings/Lisse/wiki"
             className={LINK}
@@ -157,7 +149,7 @@ export function Footer() {
           >
             Docs
           </a>
-        </motion.span>
+        </NavSlot>
       </motion.nav>
     </div>
   );
