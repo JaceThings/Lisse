@@ -56,18 +56,16 @@ function describeState(smoothing: boolean, comparing: boolean): string {
 export function Demo() {
   const [smoothing, setSmoothing] = useState(true);
   const [comparing, setComparing] = useState(false);
-  const toggleSmoothing = () =>
-    setSmoothing((s) => {
-      if (s) playSmoothingExit();
-      else playSmoothingEnter();
-      return !s;
-    });
-  const toggleCompare = () =>
-    setComparing((c) => {
-      if (c) playCompareExit();
-      else playCompareEnter();
-      return !c;
-    });
+  const toggleSmoothing = () => {
+    if (smoothing) playSmoothingExit();
+    else playSmoothingEnter();
+    setSmoothing((s) => !s);
+  };
+  const toggleCompare = () => {
+    if (comparing) playCompareExit();
+    else playCompareEnter();
+    setComparing((c) => !c);
+  };
 
   // Tween smoothing rather than letting Lisse snap, so the corners
   // visibly morph between the Apple squircle and the CSS quarter-circle.
