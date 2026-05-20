@@ -36,12 +36,16 @@ interface ScrollLinkProps extends Omit<LinkProps, "to"> {
 // with a distance-scaled timeout fallback.
 function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onClick?.(e);
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
-    playClick();
+    // Suppress the click sound when clicking the link for the route
+    // we're already on. The scroll-to-top behaviour below still runs
+    // so the link is useful as a "jump to top" affordance.
+    if (to !== pathname) playClick();
     if (window.scrollY <= 0) {
       navigate(to);
       return;

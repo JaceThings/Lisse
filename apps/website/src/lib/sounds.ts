@@ -17,7 +17,7 @@ export const soundConfig: Record<SoundKey, SoundSettings> = {
   click: { volume: 0.6, pitch: 1.0 },
   copy: { volume: 0.5, pitch: 1.0 },
   pill: { volume: 0.6, pitch: 1.0 },
-  tick: { volume: 0.3, pitch: 2.0 },
+  tick: { volume: 0.6, pitch: 2.0 },
 };
 
 const sources: Record<SoundKey, string> = {
