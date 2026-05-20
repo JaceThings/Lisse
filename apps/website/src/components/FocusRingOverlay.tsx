@@ -78,13 +78,18 @@ export function FocusRingOverlay({
     type Rect = { nx: number; ny: number; nw: number; nh: number };
     let pendingTarget: Rect | null = null;
 
+    // Per-element outset via `data-focus-inset-x` / `-y` (in px). Lets
+    // text-only links (e.g. footer nav) request a wider ring without
+    // changing layout. Falls back to the prop defaults when absent.
     const measure = (el: HTMLElement): Rect => {
       const r = el.getBoundingClientRect();
+      const insetX = Number(el.dataset.focusInsetX) || offsetX;
+      const insetY = Number(el.dataset.focusInsetY) || offsetY;
       return {
-        nx: r.left + window.scrollX - offsetX,
-        ny: r.top + window.scrollY - offsetY,
-        nw: r.width + offsetX * 2,
-        nh: r.height + offsetY * 2,
+        nx: r.left + window.scrollX - insetX,
+        ny: r.top + window.scrollY - insetY,
+        nw: r.width + insetX * 2,
+        nh: r.height + insetY * 2,
       };
     };
 
@@ -193,11 +198,53 @@ export function FocusRingOverlay({
       lastModality.current = "mouse";
     };
 
+    // Walk up the DOM checking each ancestor's opacity. The focused link
+    // itself never animates — the motion.span around it does (e.g. the
+    // Home link's exit), and so does AnimatedBody when a route fades.
+    // Any ancestor with opacity < 1 means our target is currently being
+    // animated out (or sits inside something that is), and we should
+    // fade the ring rather than track the moving target.
+    const isMidExit = (el: HTMLElement): boolean => {
+      let node: HTMLElement | null = el;
+      while (node && node !== document.body) {
+        const op = parseFloat(getComputedStyle(node).opacity);
+        if (Number.isFinite(op) && op < 1) return true;
+        node = node.parentElement;
+      }
+      return false;
+    };
+
+    // The target element can move under us — e.g. the footer slides on
+    // route change and its focused nav link travels with it. Without
+    // this poll the ring stays pinned to the link's original document Y
+    // while the link drifts away. Re-feeding the raw motion values each
+    // frame lets the existing springs follow the target with their usual
+    // stiffness; when the target isn't moving the writes are no-ops.
+    //
+    // Bail (fade the ring out via hide) when the target has been removed
+    // from the DOM (post-exit) or is mid-fade somewhere up the tree —
+    // otherwise getBoundingClientRect on a removed node returns the
+    // zero-rect and the ring snaps to the top-left of the viewport.
+    let rafId = 0;
+    const follow = () => {
+      if (visible.current && targetRef.current && !fadingOut) {
+        const el = targetRef.current;
+        if (!el.isConnected || isMidExit(el)) {
+          hide();
+        } else {
+          slide(measure(el));
+        }
+      }
+      rafId = requestAnimationFrame(follow);
+    };
+    rafId = requestAnimationFrame(follow);
+
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
     document.addEventListener("keydown", onModalityKey, true);
     document.addEventListener("pointerdown", onModalityPointer, true);
     return () => {
+      cancelAnimationFrame(rafId);
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);
       document.removeEventListener("keydown", onModalityKey, true);

@@ -2,7 +2,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate, useLocation, type LinkProps } from "react-router-dom";
 import { Divider } from "../Divider.tsx";
 
-const LINK = "py-2 -my-2 hover:text-text-primary";
+const LINK =
+  "py-2 -my-2 hover:text-text-primary transition-[color] duration-150 ease-out";
 // Nav-row layout transition is just for the home-link width change in/out
 // of `/`. The whole-footer slide is owned by App.tsx's motion.footer +
 // LayoutGroup pair; this transition only governs the local home-link
@@ -110,7 +111,12 @@ export function Footer() {
               }}
               className="inline-flex"
             >
-              <ScrollLink to="/" className={LINK} data-focus-ring>
+              <ScrollLink
+                to="/"
+                className={LINK}
+                data-focus-ring
+                data-focus-inset-x="6"
+              >
                 Home
               </ScrollLink>
             </motion.span>
@@ -121,12 +127,22 @@ export function Footer() {
             element, these siblings smoothly slide to their new flex
             positions instead of snapping. */}
         <motion.span layout transition={NAV_LAYOUT_TRANSITION} className="inline-flex">
-          <ScrollLink to="/what" className={LINK} data-focus-ring>
+          <ScrollLink
+            to="/what"
+            className={LINK}
+            data-focus-ring
+            data-focus-inset-x="6"
+          >
             What?
           </ScrollLink>
         </motion.span>
         <motion.span layout transition={NAV_LAYOUT_TRANSITION} className="inline-flex">
-          <ScrollLink to="/playground" className={LINK} data-focus-ring>
+          <ScrollLink
+            to="/playground"
+            className={LINK}
+            data-focus-ring
+            data-focus-inset-x="6"
+          >
             Playground
           </ScrollLink>
         </motion.span>
@@ -135,6 +151,7 @@ export function Footer() {
             href="https://github.com/JaceThings/Lisse/wiki"
             className={LINK}
             data-focus-ring
+            data-focus-inset-x="6"
             target="_blank"
             rel="noreferrer"
           >
