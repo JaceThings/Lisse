@@ -1,11 +1,7 @@
-// Tiny UI-sound helper. A new Audio instance is created per play so rapid
-// triggers (e.g. dragging a slider through several integer steps) can
-// overlap instead of cutting each other off. The first call to each
-// source primes the browser's HTTP cache; subsequent `new Audio(src)`
-// calls reuse that cached payload with no extra fetch.
-// play() rejects when the user hasn't interacted yet (autoplay policy)
-// — swallow that, the sound just doesn't play on the first interaction,
-// which is fine.
+// Spawns a new Audio per play so rapid triggers can overlap instead of
+// cutting each other off. The first call to each source primes the HTTP
+// cache; subsequent plays reuse it. play() rejects under autoplay policy
+// until first user interaction — swallowed.
 
 export interface SoundSettings {
   volume: number;
@@ -15,9 +11,8 @@ export interface SoundSettings {
 
 export type SoundKey = "click" | "copy" | "pill" | "tick";
 
-// Mutable runtime config. The playground dial writes into this so the
-// values change live without re-rendering anywhere. Defaults below are
-// what ships; the dial lets you tweak them in dev.
+// Mutable runtime config. The playground dial writes here; defaults
+// below are what ships. play() reads on every trigger.
 export const soundConfig: Record<SoundKey, SoundSettings> = {
   click: { volume: 0.6, pitch: 1.0 },
   copy: { volume: 0.5, pitch: 1.0 },
@@ -35,7 +30,6 @@ const sources: Record<SoundKey, string> = {
 const primed = new Set<string>();
 
 function play(key: SoundKey) {
-  if (typeof window === "undefined") return;
   const src = sources[key];
   const { volume, pitch } = soundConfig[key];
   if (!primed.has(src)) {

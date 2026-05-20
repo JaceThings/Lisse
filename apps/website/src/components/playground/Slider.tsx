@@ -133,10 +133,8 @@ export function Slider({
     },
   });
 
-  // Haptic-style tick when the snapped value crosses an integer during a
-  // user drag. For step=1 sliders that's every step; for sub-integer
-  // step sliders (e.g. smoothing 0.01) ticks only fire when the whole
-  // number changes, skipping the in-between decimals.
+  // Haptic-style tick on integer crossings during a drag. step=1 sliders
+  // tick every step; sub-integer steps tick only on whole-number changes.
   const lastIntRef = useRef<number>(Math.floor(clamp(snap(value, step), min, max)));
   useMotionValueEvent(reported, "change", (latest) => {
     if (!drag.isDraggingRef.current) return;

@@ -31,12 +31,9 @@ interface ScrollLinkProps extends Omit<LinkProps, "to"> {
   to: string;
 }
 
-// The Header is mounted at App level and persists across routes. When a
-// user clicks a footer link from a scrolled-down page, we scroll the page
-// back to the top first so they *see* the persistent header before the
-// route swap — reinforcing that the chrome is stable. The scroll uses
-// the `scrollend` event when available; falls back to a timeout sized to
-// the scroll distance.
+// Scrolls to the top before navigating so the user sees the persistent
+// header re-enter before the route swap. Uses `scrollend` when available
+// with a distance-scaled timeout fallback.
 function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
   const navigate = useNavigate();
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -90,10 +87,8 @@ export function Footer() {
         aria-label="Site"
         className="flex w-full items-start gap-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-secondary whitespace-nowrap"
       >
-        {/* popLayout makes the exiting Home link position:absolute so
-            siblings see the freed flex space immediately and slide in
-            lockstep with its fade — instead of waiting out the exit
-            then snapping. */}
+        {/* popLayout sets the exiting Home link to position:absolute so
+            siblings slide to fill the gap in lockstep with the fade. */}
         <AnimatePresence mode="popLayout" initial={false}>
           {showHome && (
             <motion.span

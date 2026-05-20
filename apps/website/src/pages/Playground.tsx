@@ -18,9 +18,8 @@ const BORDER_DESC =
 
 export function Playground() {
   // Spring/cursor/track values are baked in at DEFAULT_TUNING — the dial
-  // now lives for sound tweaking instead. Each entry is [default, min,
-  // max, step]; the playback-rate sliders double as pitch (>1 raises
-  // pitch + shortens, <1 lowers + lengthens).
+  // now drives sound tuning. `pitch` is the audio playback rate (>1
+  // raises pitch + shortens; <1 lowers + lengthens).
   const dial = useDialKit("Sounds", {
     click: {
       volume: [soundConfig.click.volume, 0, 1, 0.05],
@@ -43,14 +42,10 @@ export function Playground() {
   // Mirror dial values into the mutable sound config so play() reads the
   // latest values without re-rendering anything that uses sounds.
   useEffect(() => {
-    soundConfig.click.volume = dial.click.volume;
-    soundConfig.click.pitch = dial.click.pitch;
-    soundConfig.pill.volume = dial.pill.volume;
-    soundConfig.pill.pitch = dial.pill.pitch;
-    soundConfig.tick.volume = dial.tick.volume;
-    soundConfig.tick.pitch = dial.tick.pitch;
-    soundConfig.copy.volume = dial.copy.volume;
-    soundConfig.copy.pitch = dial.copy.pitch;
+    (["click", "pill", "tick", "copy"] as const).forEach((k) => {
+      soundConfig[k].volume = dial[k].volume;
+      soundConfig[k].pitch = dial[k].pitch;
+    });
   }, [
     dial.click.volume, dial.click.pitch,
     dial.pill.volume, dial.pill.pitch,
