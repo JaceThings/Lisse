@@ -8,14 +8,27 @@
 // other off. play() rejects under autoplay policy until first interaction
 // — swallowed.
 
-const primed = new Set<string>();
+const SOUND_FILES = [
+  "/click.webm",
+  "/copy-success.webm",
+  "/pill-select.webm",
+  "/compare-enter.webm",
+  "/compare-exit.webm",
+  "/smoothing-enter.webm",
+  "/smoothing-exit.webm",
+] as const;
+
+// Eager prefetch at module load. Total ~61 KB across the 7 files;
+// small enough to fetch up front without competing with critical path.
+// Each `new Audio()` with `preload = "auto"` issues an HTTP fetch and
+// populates the browser cache, so the first user interaction plays
+// without a cold-cache wait.
+for (const src of SOUND_FILES) {
+  const a = new Audio(src);
+  a.preload = "auto";
+}
 
 function playFile(src: string, volume: number) {
-  if (!primed.has(src)) {
-    const warm = new Audio(src);
-    warm.preload = "auto";
-    primed.add(src);
-  }
   const inst = new Audio(src);
   inst.volume = volume;
   inst.play().catch(() => {});
