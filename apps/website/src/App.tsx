@@ -42,11 +42,17 @@ const EASE = [0.4, 0, 0.2, 1] as const;
 // The static <link rel="canonical"> in index.html applies to every SPA
 // route. Update it per route so Googlebot consolidates each path
 // against itself, matching what sitemap.xml lists as distinct URLs.
+// Unknown paths fall back to "/" to match the catch-all route, which
+// renders <Home /> — otherwise crawlers could index /typo as a
+// duplicate-content URL.
+const CANONICAL_PATHS = new Set(["/", "/what", "/playground"]);
 function CanonicalUpdater() {
   const location = useLocation();
   useEffect(() => {
     const link = document.querySelector('link[rel="canonical"]');
-    if (link) link.setAttribute("href", `https://corne.rs${location.pathname}`);
+    if (!link) return;
+    const path = CANONICAL_PATHS.has(location.pathname) ? location.pathname : "/";
+    link.setAttribute("href", `https://corne.rs${path}`);
   }, [location.pathname]);
   return null;
 }
