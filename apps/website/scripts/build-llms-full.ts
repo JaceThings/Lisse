@@ -1,14 +1,16 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 // Build `apps/website/public/llms-full.txt` by concatenating the root
 // README and each package README. Run before `vite build` (wired into
 // the `prebuild` script in apps/website/package.json) so the served file
 // always reflects the current source-of-truth READMEs.
 
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const repoRoot = join(import.meta.dir, "..", "..", "..");
-const out = join(import.meta.dir, "..", "public", "llms-full.txt");
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(here, "..", "..", "..");
+const out = join(here, "..", "public", "llms-full.txt");
 
 const sources = [
   { title: "Lisse (root)", path: "README.md" },
