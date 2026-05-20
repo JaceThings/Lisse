@@ -62,7 +62,7 @@ const TICK: TickSpec = {
   noiseCutoff: 5500,
   noiseQ: 18,
   drive: 0,
-  volume: 0.15,
+  volume: 0.075,
 };
 
 let ctx: AudioContext | null = null;

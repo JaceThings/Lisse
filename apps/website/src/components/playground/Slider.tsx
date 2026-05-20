@@ -133,15 +133,16 @@ export function Slider({
     },
   });
 
-  // Haptic-style tick on integer crossings during a drag. step=1 sliders
-  // tick every step; sub-integer steps tick only on whole-number changes.
-  const lastIntRef = useRef<number>(Math.floor(clamp(snap(value, step), min, max)));
+  // Haptic-style tick on every step crossing during a drag — feels
+  // continuous on integer-step sliders (every step ticks) AND on
+  // fine-step sliders like smoothing 0–1 step 0.01 (rapid drag reads
+  // as a metallic scrape).
+  const lastSteppedRef = useRef<number>(clamp(snap(value, step), min, max));
   useMotionValueEvent(reported, "change", (latest) => {
     if (!drag.isDraggingRef.current) return;
     const stepped = clamp(snap(latest, step), min, max);
-    const nextInt = Math.floor(stepped);
-    if (nextInt !== lastIntRef.current) {
-      lastIntRef.current = nextInt;
+    if (stepped !== lastSteppedRef.current) {
+      lastSteppedRef.current = stepped;
       playTick();
     }
   });
