@@ -5,6 +5,7 @@
   "type": "module",
   "description": "corne.rs landing site for the Lisse squircle library",
   "scripts": {
+    "predev": "tsx scripts/build-llms-full.ts",
     "dev": "vite",
     "prebuild": "tsx scripts/build-llms-full.ts",
     "build": "tsc -b && vite build",
