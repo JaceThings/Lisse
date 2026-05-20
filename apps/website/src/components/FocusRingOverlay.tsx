@@ -9,18 +9,14 @@ import {
 } from "framer-motion";
 import { generatePath } from "@lisse/core";
 
-// Persistent squircle ring that tracks the focused element. Listens on
-// document for focus moving between elements that match `[data-focus-ring]`.
+// Persistent squircle ring tracking the focused `[data-focus-ring]`.
+// Within a `[data-focus-section]` group the ring springs between targets;
+// across groups it fades out, snaps while invisible, and fades back in —
+// soft cross-dissolve instead of a long visible slide.
 //
-// Within a `[data-focus-section]` group the ring springs smoothly between
-// targets. Across groups it fades out at the current position, snaps to
-// the new target while invisible, and fades back in — replacing a long
-// visible slide between distant sections with a soft cross-dissolve.
-//
-// The ring follows focus: it fades out only when focus leaves all
-// `[data-focus-ring]` targets, and hides on the next focusin if modality
-// has flipped to mouse. Position is in page coordinates (rect.x + scrollX)
-// on an absolute SVG, so it stays glued through scroll without a listener.
+// Position is in page coordinates (rect.x + scrollX) on an absolute SVG,
+// so it stays glued through scroll without a listener. Hides if modality
+// flips to mouse.
 
 const RING_SELECTOR = "[data-focus-ring]";
 const SECTION_SELECTOR = "[data-focus-section]";
@@ -61,10 +57,15 @@ export function FocusRingOverlay({
     const ww = Math.max(0, wv as number);
     const hh = Math.max(0, hv as number);
     if (ww === 0 || hh === 0) return "";
-    return generatePath(ww, hh, {
-      radius: radius + Math.min(offsetX, offsetY),
-      smoothing,
-    });
+    // Cap radius against the rect's min dimension so small elements
+    // (e.g. compact footer links) don't render as near-capsules — the
+    // smoothing extends the curve past `radius` and eats the straight
+    // edge entirely on the short axis without this clamp.
+    const r = Math.min(
+      radius + Math.min(offsetX, offsetY),
+      Math.min(ww, hh) / 2.5,
+    );
+    return generatePath(ww, hh, { radius: r, smoothing });
   });
 
   const visible = useRef(false);
@@ -77,18 +78,23 @@ export function FocusRingOverlay({
     type Rect = { nx: number; ny: number; nw: number; nh: number };
     let pendingTarget: Rect | null = null;
 
+    // Per-element outset via `data-focus-inset-x` / `-y` (in px). Lets
+    // text-only links (e.g. footer nav) request a wider ring without
+    // changing layout. Falls back to the prop defaults when absent.
     const measure = (el: HTMLElement): Rect => {
       const r = el.getBoundingClientRect();
+      const insetX = Number(el.dataset.focusInsetX) || offsetX;
+      const insetY = Number(el.dataset.focusInsetY) || offsetY;
       return {
-        nx: r.left + window.scrollX - offsetX,
-        ny: r.top + window.scrollY - offsetY,
-        nw: r.width + offsetX * 2,
-        nh: r.height + offsetY * 2,
+        nx: r.left + window.scrollX - insetX,
+        ny: r.top + window.scrollY - insetY,
+        nw: r.width + insetX * 2,
+        nh: r.height + insetY * 2,
       };
     };
 
-    // Snap all four axes to a rect (spring + raw, in lockstep) so the
-    // spring doesn't slide in from the origin or interpolate across a gap.
+    // Jump springs alongside raw values so they don't interpolate from
+    // the previous position.
     const snap = ({ nx, ny, nw, nh }: Rect) => {
       xS.jump(nx); yS.jump(ny); wS.jump(nw); hS.jump(nh);
       x.set(nx); y.set(ny); w.set(nw); h.set(nh);
@@ -118,18 +124,15 @@ export function FocusRingOverlay({
     const onFocusIn = (e: FocusEvent) => {
       const t = (e.target as HTMLElement | null)?.closest(RING_SELECTOR) as HTMLElement | null;
       if (!t) return;
-      // Mouse modality reached a focus-ring target — hide instead of show.
-      // When a click flips modality to mouse, the subsequent focusin on the
-      // clicked target hides the ring instead of stranding it at the
-      // previous keyboard position.
+      // A click flips modality to mouse; the subsequent focusin must hide
+      // the ring rather than stranding it at the previous keyboard position.
       if (lastModality.current !== "keyboard") {
         hide();
         return;
       }
       const dest = measure(t);
       if (fadingOut) {
-        // Cross-section fade-out in flight — coalesce. The in-flight
-        // onComplete will snap to whichever target is most recent.
+        // Coalesce — the in-flight onComplete will snap to the most recent.
         pendingTarget = dest;
         targetRef.current = t;
         return;
@@ -147,9 +150,8 @@ export function FocusRingOverlay({
         getSection(targetRef.current) !== getSection(t);
 
       if (crossingSections) {
-        // Cross-section: fade out, snap while invisible, fade back in —
-        // no long-distance slide between groups (e.g. Comparison pill →
-        // first install row).
+        // Fade out, snap while invisible, fade back in — no long-distance
+        // slide between groups (e.g. Comparison pill → first install row).
         targetRef.current = t;
         fadingOut = true;
         pendingTarget = dest;
@@ -168,7 +170,6 @@ export function FocusRingOverlay({
         return;
       }
 
-      // Same-section move: spring slide.
       slide(dest);
       targetRef.current = t;
       fadeTo(1, FADE_IN);
@@ -176,7 +177,7 @@ export function FocusRingOverlay({
 
     const onFocusOut = () => {
       // Defer one frame so a synchronous focus move (Tab) lands its focusin
-      // before we decide whether to hide the ring.
+      // before we decide whether to hide.
       requestAnimationFrame(() => {
         const active = document.activeElement as HTMLElement | null;
         if (active?.closest(RING_SELECTOR)) return;
@@ -184,15 +185,12 @@ export function FocusRingOverlay({
       });
     };
 
-    // Modality tracking. Only navigation keys flip us to "keyboard"; Escape
-    // and Enter/Space are activation keys used in both modes and must not
-    // count, otherwise pressing Escape after a mouse click would re-trigger
-    // the focus ring on the next programmatic .focus().
+    // Activation keys (Enter/Space/Escape) don't indicate in-page
+    // navigation; counting them would re-trigger the ring on the next
+    // programmatic .focus().
     const onModalityKey = (e: KeyboardEvent) => {
       if (!NAV_KEYS.has(e.key)) return;
-      // Cmd/Ctrl/Alt + arrow is a browser shortcut (back/forward, scroll word
-      // jumps), not in-page focus navigation. Don't flip modality on those —
-      // otherwise Cmd+← shows a focus ring on the row we restore focus to.
+      // Modifier + arrow is a browser shortcut, not in-page navigation.
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       lastModality.current = "keyboard";
     };
@@ -200,11 +198,45 @@ export function FocusRingOverlay({
       lastModality.current = "mouse";
     };
 
+    // The focused link itself never fades; its motion.span ancestor does
+    // (Home link exit, AnimatedBody route exit). Any ancestor below
+    // opacity 1 means we're being animated out — fade the ring instead
+    // of tracking the moving target.
+    const isMidExit = (el: HTMLElement): boolean => {
+      let node: HTMLElement | null = el;
+      while (node && node !== document.body) {
+        const op = parseFloat(getComputedStyle(node).opacity);
+        if (Number.isFinite(op) && op < 1) return true;
+        node = node.parentElement;
+      }
+      return false;
+    };
+
+    // Targets can move externally (footer slides on route change). The
+    // poll re-feeds raw values so the springs follow; writes are no-ops
+    // when nothing's moving. Bail on removed or mid-exit elements —
+    // otherwise getBoundingClientRect on a detached node returns the
+    // zero-rect and the ring snaps to the viewport origin.
+    let rafId = 0;
+    const follow = () => {
+      if (visible.current && targetRef.current && !fadingOut) {
+        const el = targetRef.current;
+        if (!el.isConnected || isMidExit(el)) {
+          hide();
+        } else {
+          slide(measure(el));
+        }
+      }
+      rafId = requestAnimationFrame(follow);
+    };
+    rafId = requestAnimationFrame(follow);
+
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
     document.addEventListener("keydown", onModalityKey, true);
     document.addEventListener("pointerdown", onModalityPointer, true);
     return () => {
+      cancelAnimationFrame(rafId);
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);
       document.removeEventListener("keydown", onModalityKey, true);

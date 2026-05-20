@@ -103,7 +103,6 @@ export function angleToCoords(angleDeg: number): { x1: number; y1: number; x2: n
   };
 }
 
-/** Replace all stops on a gradient element. */
 function applyStops(gradientEl: Element, stops: GradientStop[]): void {
   while (gradientEl.lastChild) gradientEl.removeChild(gradientEl.lastChild);
   for (const s of stops) {

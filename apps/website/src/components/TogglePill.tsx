@@ -19,14 +19,11 @@ const LABEL_TRANSITION = { duration: 300 };
 // the page-level <FocusRingOverlay> spring ring.
 const PILL_HITAREA = "cursor-pointer p-1.5 -m-1.5 select-none";
 
-// Visual pill. Width pins to (icon + gap + label + padding) with a 300ms
-// CSS transition. The outer span and inner span pin to the same width
-// in lockstep so the icon (anchored at inner.left via justify-start)
-// glides horizontally with the container. The outer needs an explicit
-// width (rather than shrink-to-fit) so Lisse's clip-path stays in
-// sync with the element's actual size each frame of the transition;
-// content-driven outer sizing produces a visible clip lag where the
-// bg-surface fill overflows past the stale squircle path.
+// Outer + inner spans pin to the same explicit width in lockstep so the
+// icon (anchored at inner.left via justify-start) glides horizontally
+// with the container. Explicit (not shrink-to-fit) on the outer so
+// Lisse's clip-path stays in sync each frame — content-driven sizing
+// produces a clip lag where bg-surface overflows the stale squircle path.
 //
 // `min-h-[29px]` integer-aligns the pill's device-pixel height on 2×
 // Retina (29 CSS → 58 device px). Without it, py-1.5 + text-[14px]
@@ -43,12 +40,8 @@ const PILL_INNER =
   "inline-flex items-center justify-start gap-1 pl-2.5 pr-figma-3 py-1.5 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] whitespace-nowrap " +
   "transition-[width] duration-300 ease-out-quint";
 
-/**
- * Ref-callback that wires a ResizeObserver to whichever element React
- * mounts, reporting border-box width changes through `onWidth`. Uses
- * React 19's ref-callback-cleanup so disconnect happens at unmount
- * without an effect dance.
- */
+// React 19 ref-callback-cleanup so disconnect happens at unmount without
+// an effect dance.
 function useWidthObserver(onWidth: (width: number) => void) {
   return useCallback(
     (el: HTMLSpanElement | null) => {
@@ -74,13 +67,6 @@ interface TogglePillProps {
   label: string;
 }
 
-/**
- * Card-wrapped toggle button with a cross-fading icon and a morphing
- * NumericText label. The pill measures its own label width and pins
- * (button + inner-span) widths to (icon + gap + label + padding) with a
- * CSS transition, so the icon glides horizontally in step with label
- * content changes instead of snapping.
- */
 export function TogglePill({
   pressed,
   onToggle,

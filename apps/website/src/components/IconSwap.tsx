@@ -28,7 +28,7 @@ const TRANSITION =
   `transform 300ms ${SPRING_EASE}, ` +
   `filter 300ms ${SPRING_EASE}`;
 
-export type IconLayer = {
+type IconLayer = {
   key: string;
   active: boolean;
   node: ReactNode;

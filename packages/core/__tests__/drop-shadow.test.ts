@@ -7,13 +7,6 @@ import type { SmoothCornerOptions, ShadowConfig } from "../src/types.js";
 let anchor: HTMLElement;
 const opts: SmoothCornerOptions = { radius: 16 };
 
-// happy-dom's default UA contains "AppleWebKit" (and lacks "Chrome"), so
-// `IS_WEBKIT` evaluates to true when the module is first loaded under test.
-// That means every `createDropShadow` call schedules a rAF loop. Without
-// the no-op stub below, the loops accumulate across tests and bleed
-// device-pixel-snap writes into later assertions. The UA-stub tests near
-// the bottom of this file install their own rAF behaviour and re-import
-// the module via `vi.resetModules()`, so this stub is the safe default.
 beforeEach(() => {
   vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 0);
   vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
@@ -142,7 +135,7 @@ describe("createDropShadow", () => {
     expect(svg.style.display).toBe("none");
   });
 
-  it("update() with blur=0 & spread > 0 — rendered as a stroked ring on the original silhouette", () => {
+  it("update() with blur=0 & spread > 0 — rendered as a filled spread-expanded silhouette", () => {
     const handle = createDropShadow(anchor);
     const shadow: ShadowConfig = {
       offsetX: 0,
@@ -156,17 +149,90 @@ describe("createDropShadow", () => {
 
     const svg = anchor.querySelector("svg")!;
     const path = svg.querySelector("path")!;
-    // Ring layer: stroke on the original silhouette (no spread expansion in
-    // the transform), stroke-width = spread * 2 (half outside = visible
-    // ring of width `spread`, half inside hidden by content). Bypasses the
-    // filter entirely.
-    expect(path.getAttribute("transform")).toBe("translate(0,0)");
-    expect(path.getAttribute("fill")).toBe("none");
-    expect(path.getAttribute("stroke")).toBeTruthy();
-    expect(path.getAttribute("stroke-width")).toBe("20");
-    expect(path.getAttribute("stroke-opacity")).toBe("1");
+    // Filled spread-expanded squircle: the path is rendered at
+    // (width + 2*spread)×(height + 2*spread) with radius + spread on each
+    // corner, then translated by (offset − spread) so it sits centred
+    // around the original silhouette. Strokes can't represent this
+    // geometry when stroke-width exceeds the inner curvature radius
+    // (they self-intersect at corners), so we always use fill.
+    expect(path.getAttribute("transform")).toBe("translate(-10,-10)");
+    expect(path.getAttribute("fill")).toBe("rgb(0,0,0)");
+    expect(path.getAttribute("fill-opacity")).toBe("1");
+    expect(path.getAttribute("stroke")).toBeNull();
     expect(path.getAttribute("filter")).toBeNull();
     expect(path.getAttribute("d")).toBeTruthy();
+  });
+
+  it("blur=0 + spread that exceeds the inner radius — four corners stay symmetric", () => {
+    // Regression for the top-left squircle notch reported at
+    // radius=20 / size=100 / blur=0 / spread=40. The previous
+    // stroked-ring renderer self-intersected at corners when
+    // stroke-width > 2 × inner radius, dropping a rectangular notch
+    // out of one corner. With the filled spread-expanded path the
+    // generated `d` is a uniformly-enlarged squircle whose four
+    // corner arcs share identical curvature.
+    const handle = createDropShadow(anchor);
+    const cornerOpts: SmoothCornerOptions = { radius: 20, smoothing: 0.6 };
+    handle.update(
+      cornerOpts,
+      { offsetX: 0, offsetY: 2, blur: 0, spread: 40, color: "#000", opacity: 1 },
+      100,
+      100,
+    );
+
+    const path = anchor.querySelector("path")!;
+    const d = path.getAttribute("d")!;
+
+    // Pull every elliptical-arc command out of the path. A symmetric
+    // squircle has four arcs, one per corner, all sharing the same
+    // (rx, ry, x-axis-rot, large-arc, sweep) plus an identical arc
+    // section length in both deltas (sign-flipped per direction).
+    const arcs = [...d.matchAll(/a\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([01])\s+([01])\s+(-?[\d.]+)\s+(-?[\d.]+)/g)];
+    expect(arcs).toHaveLength(4);
+
+    const radii = arcs.map((m) => [+m[1], +m[2]]);
+    const xAxisRot = arcs.map((m) => +m[3]);
+    const largeArc = arcs.map((m) => +m[4]);
+    const sweep = arcs.map((m) => +m[5]);
+    const arcLen = arcs.map((m) => [Math.abs(+m[6]), Math.abs(+m[7])]);
+
+    for (let i = 1; i < 4; i++) {
+      expect(radii[i]).toEqual(radii[0]);
+      expect(xAxisRot[i]).toBe(xAxisRot[0]);
+      expect(largeArc[i]).toBe(largeArc[0]);
+      expect(sweep[i]).toBe(sweep[0]);
+      expect(arcLen[i]).toEqual(arcLen[0]);
+    }
+
+    // Path must close (any stray subpath would let stroke linecaps
+    // butt-cut a corner — same failure mode as the original bug).
+    expect(d.trim().endsWith("Z")).toBe(true);
+  });
+
+  it("blur × spread sweep — fill spread-expanded path renders for every legal combo", () => {
+    const handle = createDropShadow(anchor);
+    const cornerOpts: SmoothCornerOptions = { radius: 20, smoothing: 0.6 };
+    const blurs = [0, 4, 16];
+    const spreads = [0, 8, 20, 40];
+
+    for (const blur of blurs) {
+      for (const spread of spreads) {
+        handle.update(
+          cornerOpts,
+          { offsetX: 0, offsetY: 2, blur, spread, color: "#000", opacity: 1 },
+          100,
+          100,
+        );
+        const path = anchor.querySelector("path")!;
+        expect(path.getAttribute("fill")).toBe("rgb(0,0,0)");
+        expect(path.getAttribute("stroke")).toBeNull();
+        const d = path.getAttribute("d")!;
+        expect(d).toBeTruthy();
+        // Four corner arcs, regardless of blur/spread.
+        const arcs = [...d.matchAll(/a\s/g)];
+        expect(arcs).toHaveLength(4);
+      }
+    }
   });
 
   it("update() with negative spread making dimensions <= 0 — SVG hidden", () => {
