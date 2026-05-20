@@ -23,9 +23,9 @@ const BORDER_PRESETS = [
 ] as const satisfies ReadonlyArray<{ value: BorderPreset; label: string }>;
 
 const DASH_CAP_PRESETS = [
-  { value: "butt", label: "No Dash Cap" },
-  { value: "square", label: "Square Dash Cap" },
-  { value: "round", label: "Round Dash Cap" },
+  { value: "butt", label: "None" },
+  { value: "square", label: "Square" },
+  { value: "round", label: "Round" },
 ] as const satisfies ReadonlyArray<{ value: DashCap; label: string }>;
 
 const BORDER_COLOUR = "#eec494";
@@ -121,11 +121,11 @@ export function BorderSection({ title, description, position }: BorderSectionPro
             options={BORDER_PRESETS}
             value={preset}
             onChange={onPresetChange}
-            pillMinWidth="min-w-[110px]"
+            pillBasis="basis-[calc(25%-9px)]"
           />
         </div>
         <Collapse show={showThickness}>
-          <div className={`flex w-full flex-col items-center justify-center p-figma-4 ${ROW_DIVIDER}`}>
+          <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
             <Slider label="Thickness" value={thickness} min={1} max={20} onChange={setThickness} />
           </div>
         </Collapse>
@@ -139,10 +139,10 @@ export function BorderSection({ title, description, position }: BorderSectionPro
             />
           </div>
           <div className={`flex w-full flex-wrap content-center items-center justify-center ${ROW_DIVIDER}`}>
-            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center p-figma-4">
+            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center p-4">
               <Slider label="Dash" value={dash} min={0} max={30} onChange={setDash} />
             </div>
-            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-figma-4 py-figma-4">
+            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4">
               <Slider label="Gap" value={gap} min={0} max={30} onChange={setGap} />
             </div>
           </div>

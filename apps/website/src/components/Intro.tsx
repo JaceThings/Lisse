@@ -10,7 +10,7 @@ interface IntroProps {
 
 export function Intro({ staggerFrom }: IntroProps) {
   return (
-    <section className="flex w-full flex-col gap-figma-4 pb-figma-6 text-text-primary">
+    <section className="flex w-full flex-col gap-4 pb-6 text-text-primary">
       <Stagger index={staggerFrom}>
         <p className={P}>
           Lisse makes the corners on a web page look like the corners in Figma.

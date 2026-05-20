@@ -4,13 +4,13 @@ import { Stagger } from "../components/Stagger.tsx";
 // Figma node 35:238 — `text-text-primary` (not muted input). `hyphens-auto`
 // is inherited from global.css; listed here for visibility.
 const BODY =
-  "text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-primary text-justify hyphens-auto";
+  "text-[14px] leading-[1.2] max-[560px]:leading-[1.6] font-medium tracking-[-0.25px] text-text-primary text-justify hyphens-auto";
 
 // Indices 0–5 are reserved for the Header; body starts at 6.
 export function What() {
   return (
     <>
-      <section className="flex w-full flex-col gap-figma-4 pb-figma-6">
+      <section className="flex w-full flex-col gap-4">
         <Stagger index={6}>
           <p className={BODY}>
             A squircle is a rounded rectangle whose corners ease into the
@@ -149,6 +149,14 @@ export function What() {
           <p className={BODY}>
             The rest of a design translates cleanly into CSS. The curve
             is the part that doesn't, and now it does.
+          </p>
+        </Stagger>
+
+        <Stagger index={19}>
+          <p className={`${BODY} text-text-secondary`}>
+            A more detailed, heavily technical breakdown — the path math,
+            the per-corner composition rules, and Lisse's render strategy —
+            lives in the docs linked at the bottom of the page.
           </p>
         </Stagger>
       </section>

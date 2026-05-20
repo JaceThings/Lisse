@@ -10,6 +10,7 @@ import {
 import { Card } from "./Card.tsx";
 import { Divider } from "./Divider.tsx";
 import { Stagger } from "./Stagger.tsx";
+import { playCopySuccess } from "../lib/sounds.ts";
 
 type RowDef = {
   pkg: string;
@@ -31,7 +32,7 @@ const rows: RowDef[] = [
 const ROW_HITAREA = "block w-full cursor-pointer p-1.5 -m-1.5";
 
 const ROW_VISUAL =
-  "flex w-full items-center gap-1.5 px-figma-2 py-1.5 bg-surface overflow-hidden";
+  "flex w-full items-center gap-1.5 px-2 py-1.5 bg-surface overflow-hidden";
 
 const ICON_TRANSITION =
   "transition-colors duration-300 ease-out-quint";
@@ -57,6 +58,7 @@ export function Install({ staggerFrom }: InstallProps) {
   async function handleCopy(row: RowDef) {
     try {
       await navigator.clipboard.writeText(row.command);
+      playCopySuccess();
       setStatus({ kind: "copied", pkg: row.pkg });
       scheduleReset("copied", row.pkg, 1400);
     } catch {
@@ -71,13 +73,13 @@ export function Install({ staggerFrom }: InstallProps) {
     : "";
 
   return (
-    <section className="flex w-full flex-col gap-figma-5" aria-labelledby="install-heading">
+    <section className="flex w-full flex-col gap-5" aria-labelledby="install-heading">
       <h2 id="install-heading" className="sr-only">
         Install
       </h2>
       <Divider />
       <div
-        className="flex w-full flex-col gap-figma-3"
+        className="flex w-full flex-col gap-3"
         // Empirical 0.5 CSS px to land the rows on an integer device-pixel
         // Y (2× Retina) for clean Safari SVG drop-shadow raster. The flow
         // through Header → Intro → Demo accumulates a fractional Y offset

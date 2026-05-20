@@ -47,9 +47,6 @@ importers:
       agentation:
         specifier: ^3.0.2
         version: 3.0.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      dialkit:
-        specifier: ^1.2.0
-        version: 1.2.0(motion@12.39.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(svelte@5.53.12)(vue@3.5.28(typescript@5.9.3))
       framer-motion:
         specifier: ^12.38.0
         version: 12.39.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -1164,30 +1161,6 @@ packages:
   devalue@5.6.4:
     resolution: {integrity: sha512-Gp6rDldRsFh/7XuouDbxMH3Mx8GMCcgzIb1pDTvNyn8pZGQ22u+Wa+lGV9dQCltFQ7uVw0MhRyb8XDskNFOReA==}
 
-  dialkit@1.2.0:
-    resolution: {integrity: sha512-VRPpFegBQwrXclLFc+qgMchoby+IoJuRjoWjYKSRV2I1cxpvIpAv1WsgO1PiiNhKAGmymKx5ivRBJIZPv1tqGg==}
-    peerDependencies:
-      motion: '>=11.0.0'
-      motion-v: '>=2.0.0'
-      react: '>=18.0.0'
-      react-dom: '>=18.0.0'
-      solid-js: '>=1.6.0'
-      svelte: '>=5.8.0'
-      vue: '>=3.3.0'
-    peerDependenciesMeta:
-      motion-v:
-        optional: true
-      react:
-        optional: true
-      react-dom:
-        optional: true
-      solid-js:
-        optional: true
-      svelte:
-        optional: true
-      vue:
-        optional: true
-
   dir-glob@3.0.1:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
@@ -1521,20 +1494,6 @@ packages:
 
   motion-utils@12.39.0:
     resolution: {integrity: sha512-8nadJAJjTtqRkmRF36FoJTrywK9nnFmnPwnSMyxaOCU7GDjN9RTMJIxx9De8ErM+vpPhMccr/6fo5WciyQLnMQ==}
-
-  motion@12.39.0:
-    resolution: {integrity: sha512-H4a+Ze+a9j+/NTla5ezfb/g9vmIOxC+viDj++NGDZyTZkdRKjiOz3kSv6TalRWM8ZmD2y/CfC6TkQc97ybyqSA==}
-    peerDependencies:
-      '@emotion/is-prop-valid': '*'
-      react: ^18.0.0 || ^19.0.0
-      react-dom: ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      '@emotion/is-prop-valid':
-        optional: true
-      react:
-        optional: true
-      react-dom:
-        optional: true
 
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
@@ -2898,15 +2857,6 @@ snapshots:
 
   devalue@5.6.4: {}
 
-  dialkit@1.2.0(motion@12.39.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(svelte@5.53.12)(vue@3.5.28(typescript@5.9.3)):
-    dependencies:
-      motion: 12.39.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-    optionalDependencies:
-      react: 19.2.5
-      react-dom: 19.2.5(react@19.2.5)
-      svelte: 5.53.12
-      vue: 3.5.28(typescript@5.9.3)
-
   dir-glob@3.0.1:
     dependencies:
       path-type: 4.0.0
@@ -3241,14 +3191,6 @@ snapshots:
       motion-utils: 12.39.0
 
   motion-utils@12.39.0: {}
-
-  motion@12.39.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5):
-    dependencies:
-      framer-motion: 12.39.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      tslib: 2.8.1
-    optionalDependencies:
-      react: 19.2.5
-      react-dom: 19.2.5(react@19.2.5)
 
   mri@1.2.0: {}
 

@@ -21,6 +21,7 @@ import {
 import { useEditableValue } from "./useEditableValue.ts";
 import { usePointerDrag } from "./usePointerDrag.ts";
 import { useRubberBand } from "./useRubberBand.ts";
+import { playTick } from "../../lib/sounds.ts";
 
 interface SliderProps {
   label: string;
@@ -132,6 +133,20 @@ export function Slider({
     },
   });
 
+  // Tick on every step crossing during a drag. Integer-step sliders
+  // click discretely; fine sub-integer steps read as a scrape on rapid
+  // drag (smoothing slider, step 0.01). The ref tracks the snapped
+  // value across ALL changes (drag + preset tweens) so the first tick
+  // of a fresh drag doesn't fire against a stale baseline.
+  const lastSteppedRef = useRef<number>(clamp(snap(value, step), min, max));
+  useMotionValueEvent(reported, "change", (latest) => {
+    const stepped = clamp(snap(latest, step), min, max);
+    if (stepped !== lastSteppedRef.current) {
+      lastSteppedRef.current = stepped;
+      if (drag.isDraggingRef.current) playTick();
+    }
+  });
+
   // Tween `reported` toward the controlled prop on non-drag changes
   // (preset, keyboard). During a pointer drag the drag is the source of
   // truth — skip the tween so the input stays snappy.
@@ -179,7 +194,7 @@ export function Slider({
   const editable = useEditableValue({ value, min, max, step, format, formatSeed, onChange });
 
   return (
-    <div className="flex w-full flex-col gap-figma-2">
+    <div className="flex w-full flex-col gap-2">
       <div className="flex w-full items-center justify-between px-[2px] text-[14px] leading-[1.2] font-medium tracking-[-0.25px]">
         <label
           htmlFor={id}
@@ -217,7 +232,7 @@ export function Slider({
           sits at the label's bottom edge (no overlap onto the label's
           double-click target) while still extending the bottom hit
           area into the row's padding below. `-mt-2` exactly cancels
-          the `gap-figma-2` above; `pt-2` reclaims that 8px as a top
+          the `gap-2` above; `pt-2` reclaims that 8px as a top
           hit extension into the gap. Total target: 8 + 8 + 16 = 32px. */}
       <div
         className="w-full touch-none select-none pt-2 pb-4 -mt-2 -mb-4"

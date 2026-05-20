@@ -1,4 +1,5 @@
 import { SmoothCorners } from "@lisse/react";
+import { playPillSelect } from "../../lib/sounds.ts";
 
 interface RadioPillOption<T extends string> {
   value: T;
@@ -12,6 +13,8 @@ interface RadioPillGroupProps<T extends string> {
   ariaLabel: string;
   /** Tailwind class for min-width per pill — wider rows use `min-w-[110px]`. */
   pillMinWidth?: string;
+  /** Tailwind class for basis per pill — use to force wrapping at a specific width, e.g. 2×2 on mobile. */
+  pillBasis?: string;
 }
 
 // Hit-area extender mirrors TogglePill's PILL_HITAREA: `p-1.5 -m-1.5`
@@ -31,12 +34,13 @@ export function RadioPillGroup<T extends string>({
   onChange,
   ariaLabel,
   pillMinWidth,
+  pillBasis,
 }: RadioPillGroupProps<T>) {
   return (
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="flex w-full flex-wrap content-center items-center justify-center gap-figma-3 p-figma-3"
+      className="flex w-full flex-wrap content-center items-center justify-center gap-3 p-3"
       data-focus-section={`playground-${ariaLabel.replace(/\s+/g, "-").toLowerCase()}`}
     >
       {options.map((option) => {
@@ -48,8 +52,12 @@ export function RadioPillGroup<T extends string>({
             role="radio"
             aria-checked={selected}
             data-focus-ring
-            onClick={() => onChange(option.value)}
-            className={`${PILL_HITAREA} flex flex-1 ${pillMinWidth ?? ""}`}
+            onClick={() => {
+              if (option.value === value) return;
+              playPillSelect();
+              onChange(option.value);
+            }}
+            className={`${PILL_HITAREA} flex flex-1 ${pillMinWidth ?? ""} ${pillBasis ?? ""}`}
           >
             <SmoothCorners
               asChild

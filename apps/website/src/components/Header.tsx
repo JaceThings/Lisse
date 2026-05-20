@@ -12,14 +12,14 @@ interface HeaderProps {
 
 export function Header({ staggerFrom }: HeaderProps) {
   return (
-    <header className="flex w-full flex-col gap-figma-5">
+    <header className="flex w-full flex-col gap-5">
       <div
         className="flex w-full flex-col gap-2.5"
         role="group"
         aria-labelledby="lisse-heading"
       >
         <Stagger index={staggerFrom}>
-          <div className="flex items-end gap-figma-2 whitespace-nowrap text-text-primary">
+          <div className="flex items-end gap-2 whitespace-nowrap text-text-primary">
             <h1
               id="lisse-heading"
               className="text-[16px] leading-none font-[550] tracking-[-0.25px]"
@@ -38,7 +38,7 @@ export function Header({ staggerFrom }: HeaderProps) {
             </p>
           </div>
         </Stagger>
-        <div className="flex flex-col gap-figma-2 pl-figma-2 text-text-secondary">
+        <div className="flex flex-col gap-2 pl-2 text-text-secondary">
           <Stagger index={staggerFrom + 1}>
             <p className={DEF}>
               <span className="font-[550] proportional-nums">1</span> having an even, unbroken
@@ -53,7 +53,7 @@ export function Header({ staggerFrom }: HeaderProps) {
             </p>
           </Stagger>
           <Stagger index={staggerFrom + 3}>
-            <p className={`pl-figma-2 ${DEF}`}>
+            <p className={`pl-2 ${DEF}`}>
               <span className="font-[550] proportional-nums">b</span> (of a curve, line, or
               transition) continuous; without abrupt change (une courbe lisse).
             </p>

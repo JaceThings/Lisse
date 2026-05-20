@@ -17,7 +17,6 @@
     "@numeric-text/react": "^0.1.4",
     "@tailwindcss/vite": "^4.3.0",
     "agentation": "^3.0.2",
-    "dialkit": "^1.2.0",
     "framer-motion": "^12.38.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

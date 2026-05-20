@@ -49,7 +49,7 @@ export function CornerShapeSection() {
   return (
     <Section
       title="Corner Shape"
-      description="Smoothing controls how gradually the curve transitions into the straight edge. A value of 0 gives standard circular arcs, while 1 produces a full squircle."
+      description="Smoothing controls how gradually the curve transitions into the straight edge. 0 gives a circular arc, 1 a full squircle."
     >
       <FigureCard>
         <Preview corners={{ radius: 20, smoothing: animatedSmoothing }} />
@@ -62,7 +62,7 @@ export function CornerShapeSection() {
           />
         </div>
         <Collapse show={preset === "on"}>
-          <div className={`flex w-full flex-col items-center justify-center p-figma-4 ${ROW_DIVIDER}`}>
+          <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
             <Slider
               label="Smoothing"
               value={smoothing}

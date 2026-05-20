@@ -43,7 +43,7 @@ export function RadiusSection() {
   return (
     <Section
       title="Radius"
-      description="Control the corner radius. Higher values produce rounder corners."
+      description="Control the corner radius. Higher values produce rounder corners — at the maximum, the box becomes a full circle."
     >
       <FigureCard>
         <Preview corners={{ radius: animatedRadius, smoothing: 0.6 }} />
@@ -53,10 +53,11 @@ export function RadiusSection() {
             options={RADIUS_PRESETS}
             value={preset}
             onChange={onPresetChange}
+            pillBasis="max-[560px]:basis-[calc(50%-6px)]"
           />
         </div>
         <Collapse show={preset === "custom"}>
-          <div className={`flex w-full flex-col items-center justify-center p-figma-4 ${ROW_DIVIDER}`}>
+          <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
             <Slider
               label="Radius"
               value={radius}

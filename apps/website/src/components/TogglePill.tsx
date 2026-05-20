@@ -37,7 +37,7 @@ const PILL_VISUAL =
   "transition-[color,width] duration-300 ease-out-quint";
 
 const PILL_INNER =
-  "inline-flex items-center justify-start gap-1 pl-2.5 pr-figma-3 py-1.5 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] whitespace-nowrap " +
+  "inline-flex items-center justify-start gap-1 pl-2.5 pr-3 py-1.5 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] whitespace-nowrap " +
   "transition-[width] duration-300 ease-out-quint";
 
 // React 19 ref-callback-cleanup so disconnect happens at unmount without

@@ -2,13 +2,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { useNavigate, useLocation, type LinkProps } from "react-router-dom";
 import { Divider } from "../Divider.tsx";
+import { playClick } from "../../lib/sounds.ts";
 
 const LINK =
   "py-2 -my-2 hover:text-text-primary transition-[color] duration-150 ease-out";
 // Governs the home-link's width-collapse only; the whole-footer slide
 // is App.tsx's motion.footer + LayoutGroup pair.
 const NAV_LAYOUT_TRANSITION = {
-  layout: { duration: 0.32, ease: [0.32, 0.72, 0, 1] as const },
+  layout: { duration: 0.42, ease: [0.22, 0.61, 0.36, 1] as const },
 };
 
 // Wraps a plain nav link so framer-motion tracks its position; when the
@@ -30,19 +31,21 @@ interface ScrollLinkProps extends Omit<LinkProps, "to"> {
   to: string;
 }
 
-// The Header is mounted at App level and persists across routes. When a
-// user clicks a footer link from a scrolled-down page, we scroll the page
-// back to the top first so they *see* the persistent header before the
-// route swap — reinforcing that the chrome is stable. The scroll uses
-// the `scrollend` event when available; falls back to a timeout sized to
-// the scroll distance.
+// Scrolls to the top before navigating so the user sees the persistent
+// header re-enter before the route swap. Uses `scrollend` when available
+// with a distance-scaled timeout fallback.
 function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onClick?.(e);
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
+    // Suppress the click sound when clicking the link for the route
+    // we're already on. The scroll-to-top behaviour below still runs
+    // so the link is useful as a "jump to top" affordance.
+    if (to !== pathname) playClick();
     if (window.scrollY <= 0) {
       navigate(to);
       return;
@@ -80,18 +83,16 @@ export function Footer() {
   const showHome = useLocation().pathname !== "/";
 
   return (
-    <div className="flex w-full flex-col gap-figma-5">
+    <div className="flex w-full flex-col gap-5">
       <Divider />
       <motion.nav
         layout
         transition={NAV_LAYOUT_TRANSITION}
         aria-label="Site"
-        className="flex w-full items-start gap-figma-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-secondary whitespace-nowrap"
+        className="flex w-full items-start gap-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-secondary whitespace-nowrap"
       >
-        {/* popLayout makes the exiting Home link position:absolute so
-            siblings see the freed flex space immediately and slide in
-            lockstep with its fade — instead of waiting out the exit
-            then snapping. */}
+        {/* popLayout sets the exiting Home link to position:absolute so
+            siblings slide to fill the gap in lockstep with the fade. */}
         <AnimatePresence mode="popLayout" initial={false}>
           {showHome && (
             <motion.span
@@ -146,6 +147,7 @@ export function Footer() {
             data-focus-inset-x="6"
             target="_blank"
             rel="noreferrer"
+            onClick={() => playClick()}
           >
             Docs
           </a>

@@ -9,6 +9,12 @@ import {
   OverlayOutlineIcon,
   XMarkIcon,
 } from "../icons/sf/index.tsx";
+import {
+  playCompareEnter,
+  playCompareExit,
+  playSmoothingEnter,
+  playSmoothingExit,
+} from "../lib/sounds.ts";
 
 const SQUIRCLE_SMOOTHING = 0.6;
 // Path generated once at the desktop max (510 px); the wrapper sizes
@@ -50,8 +56,16 @@ function describeState(smoothing: boolean, comparing: boolean): string {
 export function Demo() {
   const [smoothing, setSmoothing] = useState(true);
   const [comparing, setComparing] = useState(false);
-  const toggleSmoothing = () => setSmoothing((s) => !s);
-  const toggleCompare = () => setComparing((c) => !c);
+  const toggleSmoothing = () => {
+    if (smoothing) playSmoothingExit();
+    else playSmoothingEnter();
+    setSmoothing((s) => !s);
+  };
+  const toggleCompare = () => {
+    if (comparing) playCompareExit();
+    else playCompareEnter();
+    setComparing((c) => !c);
+  };
 
   // Tween smoothing rather than letting Lisse snap, so the corners
   // visibly morph between the Apple squircle and the CSS quarter-circle.
@@ -156,7 +170,7 @@ export function Demo() {
       </p>
 
       <div
-        className="absolute left-1/2 flex -translate-x-1/2 items-center gap-figma-4"
+        className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4"
         // Empirical 0.25 CSS px nudge to land the pills on an integer
         // device-pixel Y (2× Retina) so Safari's SVG drop-shadow raster
         // lands clean — otherwise the column's natural flow puts them
