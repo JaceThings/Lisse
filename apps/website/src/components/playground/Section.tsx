@@ -13,7 +13,7 @@ export function Section({ title, description, children }: SectionProps) {
         <h2 className="text-[16px] leading-none font-[550] tracking-[-0.25px]">
           {title}
         </h2>
-        <p className="text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-wrap-pretty">
+        <p className="text-[14px] leading-[1.4] font-medium tracking-[-0.25px] text-wrap-pretty">
           {description}
         </p>
       </div>
