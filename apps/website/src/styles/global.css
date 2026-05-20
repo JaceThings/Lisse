@@ -153,26 +153,30 @@ h3 {
   height: 100%;
   border: none;
 }
+/* iOS Safari paints the default thumb chrome even with appearance:none +
+ * transparent background + opacity:0. The input has pointer-events:none
+ * (the wrapper div handles drag), so the thumb doesn't need to be
+ * hit-testable — collapse it to 0×0 and force every visual property off. */
 .playground-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  background: transparent;
-  border: none;
-  /* iOS Safari paints the default thumb chrome even with appearance:none +
-   * transparent background. Zero opacity suppresses the paint while
-   * keeping the thumb hit-testable (a 0×0 thumb breaks pointer routing). */
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 0;
+  height: 0;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
   opacity: 0;
-  cursor: pointer;
 }
 .playground-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  -moz-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 0;
   background: transparent;
-  border: none;
+  border: 0;
+  box-shadow: none;
   opacity: 0;
-  cursor: pointer;
 }
 
 /* Click-to-type affordance on the value readout. The span gets cursor:text
