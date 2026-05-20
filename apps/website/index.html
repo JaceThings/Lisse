@@ -10,6 +10,8 @@
       content="Squircle corners for the web. Bindings for React, Vue, and Svelte."
     />
     <meta name="theme-color" content="#f7f6f2" />
+    <link rel="canonical" href="https://corne.rs/" />
+    <meta name="robots" content="index,follow" />
 
     <!-- Open Graph / social previews. The 1200x630 PNG at /og-image.png
          is the de facto standard size — Facebook, X, LinkedIn, Discord,
@@ -35,6 +37,52 @@
       content="Squircle corners for the web. Bindings for React, Vue, and Svelte."
     />
     <meta name="twitter:image" content="https://corne.rs/og-image.png" />
+
+    <!-- Structured data. SoftwareApplication describes the runnable
+         library; SoftwareSourceCode describes the repo. Both are parsed
+         by Google, Perplexity, and other AI crawlers as the most
+         reliable signal of what this page is. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "Lisse",
+            "alternateName": "@lisse/core",
+            "description": "JavaScript library that draws squircle corners — the same continuous curve Figma and iOS use. Bindings for React, Vue, and Svelte, plus a framework-agnostic core. Per-corner control, borders, and shadows included.",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Cross-platform (browser, Node, edge runtimes)",
+            "url": "https://corne.rs/",
+            "downloadUrl": "https://www.npmjs.com/package/@lisse/core",
+            "license": "https://opensource.org/licenses/MIT",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "author": {
+              "@type": "Person",
+              "name": "Jace Attard",
+              "url": "https://github.com/JaceThings"
+            }
+          },
+          {
+            "@type": "SoftwareSourceCode",
+            "name": "Lisse",
+            "codeRepository": "https://github.com/JaceThings/Lisse",
+            "programmingLanguage": "TypeScript",
+            "license": "https://opensource.org/licenses/MIT",
+            "url": "https://github.com/JaceThings/Lisse",
+            "author": {
+              "@type": "Person",
+              "name": "Jace Attard",
+              "url": "https://github.com/JaceThings"
+            }
+          }
+        ]
+      }
+    </script>
     <script>
       // Set `data-platform="mac"` on <html> for macOS desktop browsers so
       // CSS can opt into Mac-specific affordances (e.g. SVG cursors on

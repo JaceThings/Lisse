@@ -1,0 +1,32 @@
+# Lisse
+
+> Small JavaScript library that draws squircle corners — the same continuous curve Figma and iOS use. Bindings for React, Vue, and Svelte, plus a framework-agnostic core. Per-corner control, borders, and shadows included.
+
+Lisse (rhymes with "lease") implements Figma's corner-smoothing algorithm in JavaScript. It generates SVG paths and CSS `clip-path` values that produce visually smooth corners, distinct from CSS `border-radius` which uses quarter-circles. MIT-licensed, TypeScript-first, zero runtime dependencies in the core.
+
+## Site
+
+- [Homepage](https://corne.rs/): dictionary-style overview with a live squircle-vs-CSS comparison demo
+- [What?](https://corne.rs/what): plain-language explanation of squircles and why they differ from CSS rounded corners
+- [Playground](https://corne.rs/playground): interactive parameter tuning — radius, smoothing, per-corner control, borders, shadows
+
+## Packages
+
+- [@lisse/core](https://www.npmjs.com/package/@lisse/core): framework-agnostic path generator; zero dependencies
+- [@lisse/react](https://www.npmjs.com/package/@lisse/react): React hook (`useSmoothCorners`) and component (`<SmoothCorners>`)
+- [@lisse/vue](https://www.npmjs.com/package/@lisse/vue): Vue composable and component
+- [@lisse/svelte](https://www.npmjs.com/package/@lisse/svelte): Svelte action and component
+
+## Documentation
+
+- [Full documentation (concatenated)](https://corne.rs/llms-full.txt): every package README in a single file
+- [Root README](https://github.com/JaceThings/Lisse/blob/main/README.md): API reference, quick-start, and design notes
+- [@lisse/core README](https://github.com/JaceThings/Lisse/blob/main/packages/core/README.md)
+- [@lisse/react README](https://github.com/JaceThings/Lisse/blob/main/packages/react/README.md)
+- [@lisse/vue README](https://github.com/JaceThings/Lisse/blob/main/packages/vue/README.md)
+- [@lisse/svelte README](https://github.com/JaceThings/Lisse/blob/main/packages/svelte/README.md)
+
+## Source
+
+- [GitHub repository](https://github.com/JaceThings/Lisse): source, issues, changelog
+- [Algorithm reference](https://www.figma.com/blog/desperately-seeking-squircles/): Figma's original blog post on corner smoothing

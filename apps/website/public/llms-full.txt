@@ -1,0 +1,2845 @@
+# Lisse — full documentation
+
+> Concatenated package READMEs for LLM ingestion. Single-file companion to https://corne.rs/llms.txt. Generated from the corresponding source files in the GitHub repository at https://github.com/JaceThings/Lisse.
+
+
+---
+
+# Lisse (root)
+
+<div align="center">
+
+<img src="assets/logo.png" alt="Lisse" width="128" />
+
+<h1>Lisse</h1>
+
+Lisse *(rhymes with lease)* is Figma-quality squircle smoothing for the web. Generate smooth-cornered SVG paths and clip-paths with per-corner control, borders, and shadows.
+
+[![npm: @lisse/core](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
+[![npm: @lisse/react](https://img.shields.io/npm/v/%40lisse%2Freact?label=%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
+[![npm: @lisse/vue](https://img.shields.io/npm/v/%40lisse%2Fvue?label=%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
+[![npm: @lisse/svelte](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/JaceThings/Lisse/ci.yml?branch=main&label=CI)](https://github.com/JaceThings/Lisse/actions)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
+
+[![bundle: @lisse/core](https://deno.bundlejs.com/badge?q=%40lisse%2Fcore&label=%40lisse%2Fcore)](https://bundlejs.com/?q=%40lisse%2Fcore)
+[![bundle: @lisse/react](https://deno.bundlejs.com/badge?q=%40lisse%2Freact&label=%40lisse%2Freact)](https://bundlejs.com/?q=%40lisse%2Freact)
+[![bundle: @lisse/vue](https://deno.bundlejs.com/badge?q=%40lisse%2Fvue&label=%40lisse%2Fvue)](https://bundlejs.com/?q=%40lisse%2Fvue)
+[![bundle: @lisse/svelte](https://deno.bundlejs.com/badge?q=%40lisse%2Fsvelte&label=%40lisse%2Fsvelte)](https://bundlejs.com/?q=%40lisse%2Fsvelte)
+
+[![downloads: @lisse/core](https://img.shields.io/npm/dw/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
+[![downloads: @lisse/react](https://img.shields.io/npm/dw/%40lisse%2Freact?label=%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
+[![downloads: @lisse/vue](https://img.shields.io/npm/dw/%40lisse%2Fvue?label=%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
+[![downloads: @lisse/svelte](https://img.shields.io/npm/dw/%40lisse%2Fsvelte?label=%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
+
+</div>
+
+<!-- Visual: Hero image - side-by-side comparison of standard CSS border-radius vs Lisse squircle applied to a card. Show the difference clearly. Recommended ~800px wide. Place at /assets/hero.png -->
+
+## What is this?
+
+Standard CSS `border-radius` produces circular arcs at the corners of an element. Designers (and Apple, and Figma) prefer **squircles** -- corners where the curvature transitions smoothly into the straight edges, creating a more organic, polished shape.
+
+Lisse implements [Figma's corner smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/) in JavaScript. It generates SVG paths and CSS `clip-path` values that you can apply to any element, with first-class bindings for React, Vue, and Svelte.
+
+## Features
+
+- Pixel-perfect reproduction of Figma's squircle algorithm
+- Per-corner radius and smoothing control
+- Inner, outer, and middle borders with style variants (solid, dashed, dotted, double, groove, ridge)
+- Inner shadow and drop shadow effects
+- Auto-effects: CSS borders and shadows are automatically converted to SVG equivalents
+- Framework bindings for React, Vue, and Svelte
+- Lightweight core with zero dependencies
+- DOM-free `/path` subpath export for SSR and edge runtimes
+- TypeScript-first with full type coverage
+- Auto-updates on element resize via shared `ResizeObserver`
+- Tree-shakeable ESM and CJS builds
+
+## Which API Should I Use?
+
+Each framework binding offers two ways to apply smooth corners:
+
+| | Component | Hook / Composable / Action |
+|---|---|---|
+| **What it does** | Renders its own element with smooth corners applied | Applies smooth corners to an existing element you already have |
+| **When to use** | Building new UI from scratch, or when you want a drop-in replacement for a `<div>` | You already have an element and want to add smooth corners without changing your DOM structure |
+| **Effects** | Handled automatically (wrapper div is created for you) | You manage the wrapper element yourself (React/Vue) or ensure the parent has `position: relative` (Svelte) |
+
+If you're starting fresh, the component is simpler. If you're adding smooth corners to existing elements, use the hook/composable/action.
+
+## Quick Start
+
+### React
+
+```sh
+npm install @lisse/react
+```
+
+**Component:**
+
+```tsx
+import { SmoothCorners } from "@lisse/react";
+
+function Card() {
+  return (
+    <SmoothCorners corners={{ radius: 20, smoothing: 0.6 }} style={{ background: "#fff", padding: 24 }}>
+      <h2>Hello, squircle</h2>
+    </SmoothCorners>
+  );
+}
+```
+
+**Polymorphic `as` and `asChild`:**
+
+```tsx
+// Render any HTML element (attributes are typed against `as`).
+<SmoothCorners as="a" href="/x" corners={{ radius: 12 }}>Link</SmoothCorners>
+
+// Or merge SmoothCorners onto your own element / component without extra wrappers.
+<SmoothCorners asChild corners={{ radius: 12 }}>
+  <MyButton onClick={handle}>Click</MyButton>
+</SmoothCorners>
+```
+
+**Hook:**
+
+```tsx
+import { useRef } from "react";
+import { useSmoothCorners } from "@lisse/react";
+
+function Card() {
+  const ref = useRef<HTMLDivElement>(null);
+  useSmoothCorners(ref, { radius: 20, smoothing: 0.6 });
+  return <div ref={ref} style={{ background: "#fff", padding: 24 }}>Hello</div>;
+}
+```
+
+### Vue
+
+```sh
+npm install @lisse/vue
+```
+
+**Composable:**
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { useSmoothCorners } from "@lisse/vue";
+
+const el = ref(null);
+useSmoothCorners(el, { radius: 20, smoothing: 0.6 });
+</script>
+
+<template>
+  <div ref="el" style="background: #fff; padding: 24px">Hello, squircle</div>
+</template>
+```
+
+**Component:**
+
+```vue
+<script setup>
+import { SmoothCorners } from "@lisse/vue";
+</script>
+
+<template>
+  <SmoothCorners :corners="{ radius: 20, smoothing: 0.6 }" style="background: #fff; padding: 24px">
+    <h2>Hello, squircle</h2>
+  </SmoothCorners>
+</template>
+```
+
+`SmoothCorners` also accepts an `asChild` boolean that clones the single default slot child instead of rendering its own element. Template refs (`ref="x"`) on `<SmoothCorners>` expose `{ el, wrapper }`.
+
+### Svelte
+
+```sh
+npm install @lisse/svelte
+```
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+</script>
+
+<div use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }} style="background: #fff; padding: 24px">
+  Hello, squircle
+</div>
+```
+
+### Vanilla JS / Core
+
+```sh
+npm install @lisse/core
+```
+
+```ts
+import { generatePath, generateClipPath } from "@lisse/core";
+
+const path = generatePath(200, 200, { radius: 40, smoothing: 0.6 });
+// Use in an <svg> element: <path d={path} />
+
+const clipPath = generateClipPath(200, 200, { radius: 40 });
+element.style.clipPath = clipPath;
+```
+
+<!-- Visual: Grid of 4 cards showing the library used in React, Vue, Svelte, and vanilla JS. Each card has smooth corners applied. Place at /assets/framework-examples.png -->
+
+## Per-Corner Configuration
+
+Every binding accepts per-corner overrides. Each corner can be a number (radius only, using default smoothing) or a full `CornerConfig` object:
+
+```ts
+const options = {
+  topLeft: { radius: 40, smoothing: 0.8 },
+  topRight: 20,
+  bottomRight: { radius: 30, smoothing: 0.4, preserveSmoothing: false },
+  bottomLeft: 0,
+};
+```
+
+When adjacent corners compete for space, larger radii are given priority and smaller corners are reduced proportionally.
+
+<!-- Visual: Single squircle with different radius values per corner, annotated with the radius value at each corner. Place at /assets/per-corner.png -->
+
+## Effects
+
+Lisse clips your element with `clip-path`, which slices through CSS borders and shadows. The library provides SVG-based replacements that follow the squircle shape perfectly.
+
+### Built-in Effects
+
+All framework bindings support five effects rendered as SVG overlays:
+
+| Effect | Description |
+|--------|-------------|
+| `innerBorder` | Border drawn inside the squircle path (clipped to the shape) |
+| `outerBorder` | Border drawn outside the squircle path (masked to the exterior) |
+| `middleBorder` | Border centred on the squircle path (half inside, half outside) |
+| `innerShadow` | Inset shadow inside the squircle |
+| `shadow` | Drop shadow behind the squircle |
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  innerBorder={{ width: 1, color: "#ffffff", opacity: 0.2 }}
+  outerBorder={{ width: 2, color: "#000000", opacity: 0.1 }}
+  middleBorder={{ width: 1, color: "#ff0000", opacity: 0.5 }}
+  innerShadow={{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.15 }}
+  shadow={{ offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 }}
+  style={{ background: "linear-gradient(135deg, #667eea, #764ba2)", padding: 32 }}
+>
+  <p style={{ color: "#fff" }}>Card with all effects</p>
+</SmoothCorners>
+```
+
+#### Multiple Shadows
+
+Both `shadow` and `innerShadow` accept a single `ShadowConfig` or an array of `ShadowConfig[]`. When auto-extracting from CSS, all `box-shadow` layers are extracted -- not just the first.
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  shadow={[
+    { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.1 },
+    { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000000", opacity: 0.2 },
+  ]}
+  innerShadow={[
+    { offsetX: 0, offsetY: 1, blur: 2, spread: 0, color: "#000000", opacity: 0.1 },
+    { offsetX: 0, offsetY: -1, blur: 2, spread: 0, color: "#ffffff", opacity: 0.05 },
+  ]}
+  style={{ background: "#fff", padding: 32 }}
+>
+  Card with layered shadows
+</SmoothCorners>
+```
+
+CSS `box-shadow` with multiple layers is also extracted automatically:
+
+```tsx
+{/* Both shadow layers are extracted and rendered as SVG */}
+<SmoothCorners
+  corners={{ radius: 24 }}
+  style={{
+    background: "#fff",
+    padding: 32,
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.2)",
+  }}
+>
+  Auto-extracted multiple shadows
+</SmoothCorners>
+```
+
+<!-- Visual: 2x2 grid showing each effect type: inner border, outer border, inner shadow, drop shadow. Each on a squircle card. Place at /assets/effects-grid.png -->
+
+### Border Styles
+
+All three border types (`innerBorder`, `outerBorder`, `middleBorder`) support style variants:
+
+| Style | Description |
+|-------|-------------|
+| `solid` | Default. Continuous stroke. |
+| `dashed` | Dashed stroke. Customize with `dash` and `gap`. |
+| `dotted` | Dotted stroke (round caps by default). Customize with `dash` and `gap`. |
+| `double` | Two lines with a gap in the middle. Requires `width >= 3`. |
+| `groove` | 3D grooved effect (darker shade on the outside). |
+| `ridge` | 3D ridged effect (darker shade on the inside). |
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  innerBorder={{
+    width: 4,
+    color: "#3b82f6",
+    opacity: 1,
+    style: "dashed",
+    dash: 12,     // dash length (default: width * 3)
+    gap: 6,       // gap length (default: width * 2)
+    lineCap: "round",  // "butt" | "round" | "square"
+  }}
+>
+  Dashed border
+</SmoothCorners>
+```
+
+### Gradient Borders
+
+`BorderConfig.color` accepts either a hex string or a `GradientConfig` object, enabling gradient-colored borders on any border type (`innerBorder`, `outerBorder`, `middleBorder`) and any border style (`solid`, `dashed`, `dotted`, `double`, `groove`, `ridge`).
+
+Gradient borders are **API-only** -- they cannot be auto-extracted from CSS `border-image`.
+
+Two gradient types are available:
+
+- **`LinearGradientConfig`** -- `{ type: "linear", angle?: number, stops: GradientStop[] }`. The `angle` is in CSS degrees (default `0`, which is bottom-to-top; `90` is left-to-right).
+- **`RadialGradientConfig`** -- `{ type: "radial", cx?: number, cy?: number, r?: number, stops: GradientStop[] }`. All values are relative (0 to 1), defaulting to `0.5`.
+
+Each `GradientStop` is `{ offset: number, color: string, opacity?: number }` where `offset` ranges from 0 to 1.
+
+For `groove` and `ridge` border styles, each stop's color is automatically darkened (via `RGB * 2/3`) to produce the 3D shading effect.
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  innerBorder={{
+    width: 2,
+    color: {
+      type: "linear",
+      angle: 135,
+      stops: [
+        { offset: 0, color: "#667eea" },
+        { offset: 1, color: "#764ba2" },
+      ],
+    },
+    opacity: 1,
+  }}
+  style={{ background: "#fff", padding: 32 }}
+>
+  Gradient border
+</SmoothCorners>
+```
+
+Radial gradient example:
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  outerBorder={{
+    width: 3,
+    color: {
+      type: "radial",
+      cx: 0.5,
+      cy: 0.5,
+      r: 0.7,
+      stops: [
+        { offset: 0, color: "#ff6b6b" },
+        { offset: 0.5, color: "#feca57", opacity: 0.8 },
+        { offset: 1, color: "#48dbfb" },
+      ],
+    },
+    opacity: 1,
+    style: "dashed",
+    dash: 8,
+    gap: 4,
+  }}
+  style={{ background: "#1a1a2e", padding: 32, color: "#fff" }}
+>
+  Radial gradient dashed border
+</SmoothCorners>
+```
+
+### Auto Effects
+
+By default, Lisse automatically reads your CSS and converts it to SVG equivalents. On mount, the library:
+
+1. Reads the element's computed `border` and `box-shadow`
+2. Converts them to SVG effects (`innerBorder`, `shadow`, `innerShadow`)
+3. Strips the CSS properties so they don't get clipped
+4. Restores the original CSS on unmount
+
+This means elements with existing CSS borders and shadows just work:
+
+```tsx
+{/* CSS border is automatically converted to an SVG inner border */}
+<SmoothCorners corners={{ radius: 24 }} style={{ border: "2px solid red" }}>
+  Content
+</SmoothCorners>
+```
+
+Explicit effect props take priority over auto-extracted values:
+
+```tsx
+{/* Explicit innerBorder wins over the CSS border */}
+<SmoothCorners
+  corners={{ radius: 24 }}
+  style={{ border: "2px solid red" }}
+  innerBorder={{ width: 1, color: "#00ff00", opacity: 1 }}
+>
+  Content
+</SmoothCorners>
+```
+
+#### Disabling auto effects
+
+Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffects: false` (Svelte). When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs.
+
+#### What gets extracted
+
+| CSS property | SVG effect | Notes |
+|---|---|---|
+| `border` | `innerBorder` | Width, color, opacity, and style (including `dashed`, `dotted`, `double`, `groove`, `ridge`) are extracted from the top edge. |
+| `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
+| `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
+
+> **Note:** `middleBorder` and `outerBorder` have no CSS equivalent and are only available as explicit props.
+
+#### Limitations
+
+| CSS feature | What happens |
+|---|---|
+| Per-side borders | Only the top border is read. All four sides are stripped. |
+| `inset`, `outset` border styles | Rendered as solid. |
+| `border-image` | Not detected. Use gradient borders via the API instead. |
+| `outline` | Not read or stripped. |
+
+- **Per-side borders** -- Only the top border is read during auto-extraction because `getComputedStyle` returns per-side values (`borderTopWidth`, `borderTopColor`, etc.) and the SVG overlay renders a single uniform border around the entire squircle. If you need different colors per side, use explicit effect props.
+- **`border-image`** -- Not detected because CSS `border-image` syntax is complex (angle units, color spaces, slice semantics). Reliably parsing all variants is not feasible. Use gradient borders via the explicit `BorderConfig.color` API instead.
+- **`outline`** -- Not extracted because CSS outlines don't follow `border-radius` in all browsers, and the squircle shape would make standard outlines look incorrect. The library does not attempt to replicate them.
+- **One-time extraction** -- CSS effects are read once on mount because continuously polling `getComputedStyle` would hurt performance. Changes to CSS borders or shadows after mount will not be reflected. Use explicit effect props for dynamic values.
+- **`!important` rules** -- Cannot be overridden because the library strips effects via inline styles, and `!important` stylesheet rules take precedence over inline styles. The CSS property stays visible alongside the SVG replacement. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- Stripped properties (`border`, `box-shadow`) will not animate because they are removed from the element and replaced with SVG. The SVG effects themselves are not animated. Use `autoEffects: false` and drive explicit effect props instead.
+- **`double` border minimum width** -- Requires `border-width >= 3px` because the double style needs space for two lines and a gap between them. Below 3px, the border falls back to solid.
+- **`groove` / `ridge` shading** -- The dark shade is computed as `RGB * 2/3`, matching Firefox's algorithm. This may look slightly different from browser CSS rendering on standard rectangles, but produces consistent results across browsers on squircle shapes.
+- **Wrapper div (React/Vue)** -- The `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. This can affect flex/grid layouts and child selectors. Use the hook/composable/action approach for full layout control.
+- **Gradient border auto-extraction** -- Gradient borders are API-only. CSS `border-image` is not detected or extracted because its syntax (angle units, color spaces, slice semantics) is too complex to reliably parse. Use explicit `GradientConfig` via `BorderConfig.color` instead.
+
+## Styling Hooks (`data-slot`, `data-state`)
+
+Every element managed by Lisse — whether via the React/Vue components, the React/Vue hooks/composables, or the Svelte action — gets two stable attributes:
+
+- `data-slot="smooth-corners"` — present for the lifetime of the binding.
+- `data-state="pending" | "ready"` — flips to `"ready"` after the first successful clip-path application.
+
+Use these to mask any first-frame flicker without sprinkling component-specific class names throughout your CSS:
+
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
+[data-slot="smooth-corners"][data-state="ready"]   { opacity: 1; transition: opacity 100ms; }
+```
+
+## Migrating from `0.1.x`
+
+The `0.2.0` release consolidates the corner options into a single `corners` prop / config field across React, Vue, and Svelte:
+
+```diff
+- <SmoothCorners radius={20} smoothing={0.6} />
++ <SmoothCorners corners={{ radius: 20, smoothing: 0.6 }} />
+
+- <SmoothCorners topLeft={20} topRight={30} />
++ <SmoothCorners corners={{ topLeft: 20, topRight: 30 }} />
+
+- use:smoothCorners={{ radius: 20, smoothing: 0.6 }}
++ use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }}
+```
+
+The Svelte action no longer accepts the bare `SmoothCornerOptions` shape; pass a `SmoothCornersConfig` (`{ corners, effects?, autoEffects? }`) instead.
+
+`SmoothCornersProps` in React is now generic over the element type passed via `as`, so external callers extending the type need to thread the element parameter (`SmoothCornersProps<"a">`).
+
+## SSR / Path-Only Import
+
+The core package provides a `/path` subpath export that excludes all DOM-dependent code. Use it in server-side rendering, Node.js scripts, or edge runtimes:
+
+```ts
+// DOM-free import - safe for SSR, Node.js, edge runtimes
+import { generatePath } from "@lisse/core/path";
+```
+
+The `/path` export includes `generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `getSVGPathFromPathParams`, `toRadians`, `rounded`, `nextUid`, `hexToRgb`, `SVG_NS`, and `DEFAULT_SHADOW`. It excludes `createSvgEffects`, `createDropShadow`, and `observeResize`.
+
+## Packages
+
+| Package | Description | Docs |
+|---------|-------------|------|
+| [`@lisse/core`](https://www.npmjs.com/package/@lisse/core) | Framework-agnostic path generation and effects | [README](./packages/core/README.md) |
+| [`@lisse/react`](https://www.npmjs.com/package/@lisse/react) | React hook and component | [README](./packages/react/README.md) |
+| [`@lisse/vue`](https://www.npmjs.com/package/@lisse/vue) | Vue composable and component | [README](./packages/vue/README.md) |
+| [`@lisse/svelte`](https://www.npmjs.com/package/@lisse/svelte) | Svelte action | [README](./packages/svelte/README.md) |
+
+## How It Works
+
+The algorithm is based on [Figma's blog post on squircles](https://www.figma.com/blog/desperately-seeking-squircles/) and produces the same smooth corners you see in Figma's design tool.
+
+A standard `border-radius` arc is a quarter circle -- the curvature jumps abruptly from zero (along the straight edge) to a fixed value (along the arc). A squircle uses a series of bezier curves that ease into and out of the corner, distributing curvature smoothly across a longer segment of the edge.
+
+The `smoothing` parameter (0 to 1) controls how far the curvature extends along the edges. At `smoothing: 0` the output is identical to a standard `border-radius`. At `smoothing: 1` the curvature occupies the maximum possible edge length.
+
+When `preserveSmoothing` is `true` (the default), the algorithm maintains the requested smoothing value even if it means reducing the effective corner radius. When `false`, the radius is preserved and smoothing is reduced to fit.
+
+<!-- Visual: Diagram showing a smooth corner's bezier control points (a, b, c, d, p) versus a standard circular arc. Reference Figma's blog post illustration style. Place at /assets/corner-anatomy.png -->
+
+### Border Rendering
+
+The library supports three border positions, each using a different SVG technique to achieve precise placement relative to the squircle path.
+
+**Inner border** draws the SVG stroke at double the specified width, then clips it to the squircle shape. Because a stroke straddles the path (half inside, half outside), clipping removes the outer half entirely. Only the inner portion remains visible, so `innerBorder` appears to sit neatly inside the shape.
+
+**Outer border** also draws the stroke at double width, but instead of clipping it uses an SVG mask. The mask is a white rectangle (fully visible) with a black squircle path cut out of it (fully hidden). This hides the inner half of the stroke and reveals only the outer half. The mask bounds are extended by the border width so the stroke is never cut off at the edges of the SVG.
+
+**Middle border** is the simplest case. The stroke is drawn at its actual width with no clip or mask applied. It naturally straddles the path, half inside and half outside the squircle.
+
+### Shadow Rendering
+
+**Drop shadow** does not use CSS `box-shadow`, which would follow the rectangular bounding box and get clipped. Instead, the library generates an actual squircle SVG path expanded by the `spread` value in all directions. This path is filled with the shadow color, translated by `offsetX`/`offsetY`, and blurred using an SVG `feGaussianBlur` filter. The shadow SVG is positioned behind the element at `z-index: -1` using `isolation: isolate` to create a proper stacking context.
+
+**Inner shadow** uses an SVG mask with a cutout. A white rectangle defines the visible area, and a black squircle path punched out of it creates the hole. A colored rectangle drawn behind this mask produces the appearance of shadow around the inside edges. The cutout path is adjusted for `spread` (shrinking the hole) and `offset` (shifting it). The result is blurred with `feGaussianBlur` and then clipped to the original squircle shape so nothing leaks outside.
+
+### Multiple Shadow Rendering Order
+
+When an array of shadows is provided, the first shadow in the array renders on top (closest to the element). Each shadow gets its own SVG filter element. Shadows are rendered in reverse order in the SVG DOM so that SVG's "later paints on top" rule matches CSS's "first listed is topmost" convention.
+
+### Auto-Effects: Content-Box Compensation
+
+When `autoEffects` strips a CSS border from an element using `box-sizing: content-box`, removing the border would cause layout shift -- the content area would expand to fill the space the border occupied. To prevent this, the library automatically increases padding by the border width on each side. The original padding values are saved and restored on cleanup.
+
+### Resize Handling
+
+All Lisse instances share a single `ResizeObserver`. Callbacks are batched via `requestAnimationFrame` so that multiple elements resizing in the same frame only trigger one re-render pass. When the last observed element is removed, the observer disconnects automatically.
+
+### Anchor Positioning
+
+The SVG overlays (borders, shadows) are absolutely positioned inside an anchor element. The library automatically sets `position: relative` on this anchor if it has `position: static`. A ref-counting system ensures that if multiple Lisse instances share the same anchor, the position is only reset to `static` when the last instance unmounts.
+
+## API Reference
+
+| Function / Export | Package | Description |
+|-------------------|---------|-------------|
+| `generatePath(width, height, options)` | `core` | Generate an SVG path `d` string |
+| `generateClipPath(width, height, options)` | `core` | Generate a CSS `clip-path: path(...)` string |
+| `getPathParamsForCorner(params)` | `core` | Compute bezier control points for a single corner |
+| `distributeAndNormalize(rect)` | `core` | Distribute radii across a rectangle, resolving overlaps |
+| `getSVGPathFromPathParams(input)` | `core` | Assemble a full SVG path from corner parameters |
+| `createSvgEffects(anchor)` | `core` | Create an SVG overlay for borders and inner shadows |
+| `createDropShadow(anchor)` | `core` | Create a path-based drop shadow |
+| `extractAndStripEffects(el)` | `core` | Extract CSS border/shadow and convert to SVG effects |
+| `restoreStyles(el, saved)` | `core` | Restore stripped CSS border/shadow styles |
+| `observeResize(el, callback)` | `core` | Observe element resize with a shared `ResizeObserver` |
+| `useSmoothCorners(ref, options, effects?)` | `react` | React hook for applying smooth corners |
+| `SmoothCorners` | `react` | React component with built-in effects |
+| `useSmoothCorners(target, options, effects?)` | `vue` | Vue composable for applying smooth corners |
+| `SmoothCorners` | `vue` | Vue component with built-in effects |
+| `smoothCorners(node, input)` | `svelte` | Svelte action for applying smooth corners |
+
+See individual package READMEs for full API details.
+
+## Browser Support
+
+Lisse targets evergreen browsers. The runtime uses `clip-path`, `ResizeObserver`, `getComputedStyle`, and standard SVG APIs. Concretely:
+
+| Browser | Minimum version |
+|---|---|
+| Chrome / Edge | 79 |
+| Firefox | 69 |
+| Safari | 13.1 |
+
+Older browsers miss `ResizeObserver`; Lisse falls back to a no-op observer there, so elements render with their initial size but do not re-sync on resize. Drop-shadow filters and SVG mask features require the listed versions. If you need broader coverage, polyfill `ResizeObserver` yourself.
+
+## Gotchas
+
+Lisse applies `clip-path` at the DOM level to carve the squircle shape. Because the clip is enforced by the browser on the clipped element and every descendant, there are three interaction quirks worth knowing before you wire it into an existing design system.
+
+- **Focus outlines are clipped.** `clip-path` crops focus rings at the squircle edge, so the outline you get on `:focus-visible` disappears around the corners. Either push the outline outside the clip with `outline-offset`, replace the outline with a `box-shadow` ring on a parent element, or use the auto-extracted `innerBorder` as the focus indicator so it follows the squircle. See the [wiki Limitations page](https://github.com/JaceThings/Lisse/wiki/Limitations#focus-outlines).
+- **Overflowing descendants are clipped.** Children that paint outside the clipped bounds -- a tooltip popping out of a card, a dropdown menu, a hover lift -- are cropped at the squircle edge. If you need overflow, render the overflowing child in a portal or a sibling that is NOT a descendant of the clipped container. See the [wiki Limitations page](https://github.com/JaceThings/Lisse/wiki/Limitations#overflowing-descendants).
+- **Scrollbars on scrollable children are clipped.** A `<div style="overflow: auto">` inside a Lisse-clipped container has its scrollbar cropped at the corners, which makes the scroll thumb look chopped. Move the scroll container outside the clipped element, or wrap the scroll container itself with Lisse rather than a parent. See the [wiki Limitations page](https://github.com/JaceThings/Lisse/wiki/Limitations#scrollbar-clipping).
+
+## Documentation
+
+Contributor and release docs live in [`docs/`](./docs/). Start with [`docs/publishing.md`](./docs/publishing.md) for the release process and known quirks.
+
+## License
+
+[MIT](./LICENSE)
+
+---
+
+<div align="center">
+
+Built by [Jace](https://ja.mt)
+
+[X](https://ja.mt/x) | [Bluesky](https://ja.mt/bsky) | [Instagram](https://ja.mt/ig) | [Threads](https://ja.mt/threads)
+
+</div>
+
+---
+
+# @lisse/core
+
+# @lisse/core
+
+Framework-agnostic squircle path generation based on [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/). Generate smooth-cornered SVG paths, CSS clip-paths, and SVG effect overlays.
+
+> See [Gotchas](https://github.com/JaceThings/Lisse#gotchas) in the root README for `clip-path` interaction notes (focus outlines, overflow, scrollbars).
+
+[![npm](https://img.shields.io/npm/v/%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
+
+## Installation
+
+```sh
+npm install @lisse/core
+```
+
+## API Reference
+
+### `generatePath(width, height, options)`
+
+Generate an SVG path `d` attribute string for a smooth-cornered rectangle.
+
+```ts
+import { generatePath } from "@lisse/core";
+
+const d = generatePath(300, 200, { radius: 24, smoothing: 0.6 });
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `width` | `number` | Rectangle width in pixels |
+| `height` | `number` | Rectangle height in pixels |
+| `options` | `SmoothCornerOptions` | Corner configuration (uniform or per-corner) |
+
+**Returns:** `string` -- an SVG path `d` attribute.
+
+### `generateClipPath(width, height, options)`
+
+Generate a CSS `clip-path: path(...)` string. Same parameters as `generatePath`.
+
+```ts
+import { generateClipPath } from "@lisse/core";
+
+const clipPath = generateClipPath(300, 200, { radius: 24 });
+element.style.clipPath = clipPath;
+```
+
+**Returns:** `string` -- a CSS `clip-path` value like `path("M 24 0 L 276 0 ...")`.
+
+### `getPathParamsForCorner(params)`
+
+Compute the bezier control point distances for a single corner.
+
+```ts
+import { getPathParamsForCorner } from "@lisse/core";
+
+const params = getPathParamsForCorner({
+  cornerRadius: 24,
+  cornerSmoothing: 0.6,
+  preserveSmoothing: true,
+  roundingAndSmoothingBudget: 150,
+});
+// Returns: { a, b, c, d, p, cornerRadius, arcSectionLength }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `params.cornerRadius` | `number` | The corner radius |
+| `params.cornerSmoothing` | `number` | Smoothing factor (0-1) |
+| `params.preserveSmoothing` | `boolean` | Whether to preserve smoothing at the cost of radius |
+| `params.roundingAndSmoothingBudget` | `number` | Available edge length for this corner |
+
+**Returns:** `CornerPathParams` -- `{ a, b, c, d, p, cornerRadius, arcSectionLength }`.
+
+### `distributeAndNormalize(rect)`
+
+Distribute corner radii across a rectangle, proportionally reducing radii that overlap.
+
+```ts
+import { distributeAndNormalize } from "@lisse/core";
+
+const corners = distributeAndNormalize({
+  topLeftCornerRadius: 40,
+  topRightCornerRadius: 40,
+  bottomRightCornerRadius: 20,
+  bottomLeftCornerRadius: 20,
+  width: 200,
+  height: 100,
+});
+// Returns: { topLeft, topRight, bottomLeft, bottomRight }
+// Each: { radius, roundingAndSmoothingBudget }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `rect.topLeftCornerRadius` | `number` | Top-left radius |
+| `rect.topRightCornerRadius` | `number` | Top-right radius |
+| `rect.bottomRightCornerRadius` | `number` | Bottom-right radius |
+| `rect.bottomLeftCornerRadius` | `number` | Bottom-left radius |
+| `rect.width` | `number` | Rectangle width |
+| `rect.height` | `number` | Rectangle height |
+
+**Returns:** `NormalizedCorners` -- each corner has `{ radius, roundingAndSmoothingBudget }`.
+
+### `getSVGPathFromPathParams(input)`
+
+Assemble a complete SVG path string from pre-computed corner parameters.
+
+```ts
+import { getSVGPathFromPathParams } from "@lisse/core";
+
+const path = getSVGPathFromPathParams({
+  width: 200,
+  height: 100,
+  topLeftCornerParams: cornerParams,
+  topRightCornerParams: cornerParams,
+  bottomLeftCornerParams: cornerParams,
+  bottomRightCornerParams: cornerParams,
+});
+```
+
+**Returns:** `string` -- a complete SVG path `d` attribute.
+
+### `toRadians(degrees)`
+
+Convert degrees to radians.
+
+```ts
+import { toRadians } from "@lisse/core";
+
+const rad = toRadians(90); // 1.5707963...
+```
+
+### `rounded(template)`
+
+Tagged template literal that rounds all interpolated numbers to 4 decimal places for cleaner SVG output.
+
+```ts
+import { rounded } from "@lisse/core";
+
+const x = 3.14159265;
+const y = 2.71828182;
+const segment = rounded`L ${x} ${y}`; // "L 3.1416 2.7183"
+```
+
+### `observeResize(el, callback)`
+
+Observe an element's size changes using a shared `ResizeObserver`. Callbacks are batched with `requestAnimationFrame`.
+
+```ts
+import { observeResize } from "@lisse/core";
+
+const unsubscribe = observeResize(element, () => {
+  // Element was resized, update clip-path
+  const { width, height } = element.getBoundingClientRect();
+  element.style.clipPath = generateClipPath(width, height, options);
+});
+
+// Later:
+unsubscribe();
+```
+
+**Returns:** `() => void` -- an unsubscribe function.
+
+### `createSvgEffects(anchor)`
+
+Create an SVG overlay element for rendering inner/outer borders and inner shadows along a squircle path.
+
+```ts
+import { createSvgEffects } from "@lisse/core";
+
+const effects = createSvgEffects(wrapperElement);
+
+effects.update(
+  { radius: 24, smoothing: 0.6 },
+  {
+    innerBorder: { width: 1, color: "#fff", opacity: 0.2 },
+    outerBorder: { width: 2, color: "#000", opacity: 0.1 },
+    middleBorder: { width: 1, color: "#888", opacity: 0.5 },
+    innerShadow: [
+      { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000", opacity: 0.15 },
+    ],
+    shadow: [
+      { offsetX: 0, offsetY: 4, blur: 12, spread: 0, color: "#000", opacity: 0.1 },
+    ],
+  },
+  300,
+  200,
+);
+
+// Cleanup:
+effects.destroy();
+```
+
+**Returns:** `SvgEffectsHandle` -- `{ update(options, effects, width, height): void; destroy(): void }`.
+
+### `extractAndStripEffects(el)`
+
+Read CSS `border` and `box-shadow` from an element, strip them from inline styles, and return equivalent `EffectsConfig` values along with saved styles for restoration.
+
+```ts
+import { extractAndStripEffects } from "@lisse/core";
+
+const { effects, savedStyles } = extractAndStripEffects(element);
+// effects: { innerBorder?, shadow?, innerShadow? }
+// CSS border and box-shadow are now stripped from the element
+```
+
+**Returns:** `ExtractedEffects` -- `{ effects: EffectsConfig; savedStyles: { border: string; boxShadow: string } }`.
+
+### `restoreStyles(el, saved)`
+
+Restore previously saved inline `border` and `boxShadow` styles. If the saved value was an empty string, this removes the inline override and lets stylesheet rules reassert.
+
+```ts
+import { restoreStyles } from "@lisse/core";
+
+restoreStyles(element, savedStyles);
+```
+
+### `parseColor(raw)`
+
+Parse an `rgb()` or `rgba()` color string (as returned by `getComputedStyle`) into hex and opacity.
+
+```ts
+import { parseColor } from "@lisse/core";
+
+const color = parseColor("rgba(255, 0, 0, 0.5)");
+// { hex: "#ff0000", opacity: 0.5 }
+```
+
+**Returns:** `{ hex: string; opacity: number } | undefined`.
+
+### `parseBorder(el)`
+
+Read the computed border from an element and convert it to a `BorderConfig`. Returns `undefined` if the border is invisible (none/hidden, width 0, or transparent).
+
+```ts
+import { parseBorder } from "@lisse/core";
+
+const border = parseBorder(element);
+// { width: 2, color: "#ff0000", opacity: 1 } or undefined
+```
+
+**Returns:** `BorderConfig | undefined`.
+
+### `parseBoxShadow(raw)`
+
+Parse a computed `box-shadow` string into arrays of outer and inset shadow configs. All shadow layers are extracted and rendered, preserving CSS order.
+
+```ts
+import { parseBoxShadow } from "@lisse/core";
+
+const { shadow, innerShadow } = parseBoxShadow(computedStyle.boxShadow);
+// shadow: ShadowConfig[] | undefined
+// innerShadow: ShadowConfig[] | undefined
+```
+
+**Returns:** `{ shadow?: ShadowConfig[]; innerShadow?: ShadowConfig[] }`.
+
+### `createDropShadow(anchor)`
+
+Create a path-based drop shadow rendered as an SVG element with gaussian blur.
+
+```ts
+import { createDropShadow } from "@lisse/core";
+
+const shadow = createDropShadow(wrapperElement);
+
+shadow.update(
+  { radius: 24, smoothing: 0.6 },
+  { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000", opacity: 0.2 },
+  300,
+  200,
+);
+
+// Cleanup:
+shadow.destroy();
+```
+
+**Returns:** `DropShadowHandle` -- `{ update(options, shadow | shadows[], width, height): void; destroy(): void }`. Accepts a single `ShadowConfig` or an array.
+
+### `nextUid()`
+
+Generate a monotonically increasing unique ID. Used internally for SVG element IDs.
+
+```ts
+import { nextUid } from "@lisse/core";
+
+const id = nextUid(); // 1, 2, 3, ...
+```
+
+### `hexToRgb(hex)`
+
+Convert a hex color string to an `r, g, b` string for use in SVG filters.
+
+```ts
+import { hexToRgb } from "@lisse/core";
+
+const rgb = hexToRgb("#ff6600"); // "255, 102, 0"
+```
+
+### `acquirePosition(anchor)`
+
+Ref-counted helper that sets `position: relative` on an anchor element if it currently has `position: static`. Returns `true` if the position was changed, `false` if it was already non-static. Multiple calls on the same element increment a counter -- the position is only restored when all callers release.
+
+```ts
+import { acquirePosition, releasePosition } from "@lisse/core";
+
+const didSet = acquirePosition(wrapperDiv);
+// wrapperDiv.style.position is now "relative" (if it was "static")
+
+// Later, on cleanup:
+if (didSet) releasePosition(wrapperDiv);
+// position restored to "" only when all acquires are released
+```
+
+### `releasePosition(anchor)`
+
+Decrements the ref count for an anchor element. When the count reaches zero, `position` is cleared (restored to its original value). Safe to call even if `acquirePosition` was never called on this element.
+
+### Constants
+
+```ts
+import {
+  DEFAULT_SMOOTHING,         // 0.6
+  DEFAULT_PRESERVE_SMOOTHING, // true
+  DEFAULT_SHADOW,             // { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 0 }
+  SVG_NS,                    // "http://www.w3.org/2000/svg"
+} from "@lisse/core";
+```
+
+## Types Reference
+
+### `SmoothCornerOptions`
+
+```ts
+type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
+```
+
+### `UniformCornerOptions`
+
+```ts
+interface UniformCornerOptions {
+  radius: number;
+  smoothing?: number;          // Default: 0.6
+  preserveSmoothing?: boolean; // Default: true
+}
+```
+
+### `PerCornerConfig`
+
+```ts
+interface PerCornerConfig {
+  topLeft?: CornerConfig | number;
+  topRight?: CornerConfig | number;
+  bottomRight?: CornerConfig | number;
+  bottomLeft?: CornerConfig | number;
+}
+```
+
+### `CornerConfig`
+
+```ts
+interface CornerConfig {
+  radius: number;
+  smoothing?: number;          // Default: 0.6
+  preserveSmoothing?: boolean; // Default: true
+}
+```
+
+### `GradientStop`
+
+```ts
+interface GradientStop {
+  offset: number;    // 0 to 1
+  color: string;     // hex color (3 or 6 digit)
+  opacity?: number;  // 0 to 1, default 1
+}
+```
+
+### `LinearGradientConfig`
+
+```ts
+interface LinearGradientConfig {
+  type: "linear";
+  angle?: number;    // CSS degrees: 0 = bottom-to-top, 90 = left-to-right. Default: 0
+  stops: GradientStop[];
+}
+```
+
+### `RadialGradientConfig`
+
+```ts
+interface RadialGradientConfig {
+  type: "radial";
+  cx?: number;   // 0-1, default 0.5
+  cy?: number;   // 0-1, default 0.5
+  r?: number;    // 0-1, default 0.5
+  stops: GradientStop[];
+}
+```
+
+### `GradientConfig`
+
+```ts
+type GradientConfig = LinearGradientConfig | RadialGradientConfig;
+```
+
+### `BorderStyle`
+
+```ts
+type BorderStyle = "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge";
+```
+
+### `BorderConfig`
+
+```ts
+interface BorderConfig {
+  width: number;
+  color: string | GradientConfig;
+  opacity: number;
+  style?: BorderStyle;
+  dash?: number;
+  gap?: number;
+  lineCap?: "butt" | "round" | "square";
+}
+```
+
+### `ShadowConfig`
+
+```ts
+interface ShadowConfig {
+  offsetX: number;
+  offsetY: number;
+  blur: number;
+  spread: number;
+  color: string;
+  opacity: number;
+}
+```
+
+### `EffectsConfig`
+
+```ts
+interface EffectsConfig {
+  innerBorder?: BorderConfig;
+  outerBorder?: BorderConfig;
+  middleBorder?: BorderConfig;
+  innerShadow?: ShadowConfig | ShadowConfig[];
+  shadow?: ShadowConfig | ShadowConfig[];
+}
+```
+
+### `ExtractedEffects`
+
+```ts
+interface ExtractedEffects {
+  effects: EffectsConfig;
+  savedStyles: {
+    border: string;
+    boxShadow: string;
+    paddingTop: string;
+    paddingRight: string;
+    paddingBottom: string;
+    paddingLeft: string;
+  };
+}
+```
+
+### `SvgEffectsHandle`
+
+```ts
+interface SvgEffectsHandle {
+  update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
+  destroy(): void;
+}
+```
+
+### `DropShadowHandle`
+
+```ts
+interface DropShadowHandle {
+  update(options: SmoothCornerOptions, shadow: ShadowConfig | ShadowConfig[], width: number, height: number): void;
+  destroy(): void;
+}
+```
+
+### `CornerPathParams`
+
+```ts
+interface CornerPathParams {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  p: number;
+  cornerRadius: number;
+  arcSectionLength: number;
+}
+```
+
+### `CornerParams`
+
+```ts
+interface CornerParams {
+  cornerRadius: number;
+  cornerSmoothing: number;
+  preserveSmoothing: boolean;
+  roundingAndSmoothingBudget: number;
+}
+```
+
+### `NormalizedCorner` / `NormalizedCorners`
+
+```ts
+interface NormalizedCorner {
+  radius: number;
+  roundingAndSmoothingBudget: number;
+}
+
+interface NormalizedCorners {
+  topLeft: NormalizedCorner;
+  topRight: NormalizedCorner;
+  bottomLeft: NormalizedCorner;
+  bottomRight: NormalizedCorner;
+}
+```
+
+## `/path` Subpath Export
+
+The `/path` subpath provides a DOM-free subset of the core API, safe for SSR, Node.js, and edge runtimes.
+
+```ts
+import { generatePath, generateClipPath } from "@lisse/core/path";
+```
+
+### Included
+
+`generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `getSVGPathFromPathParams`, `toRadians`, `rounded`, `nextUid`, `hexToRgb`, `SVG_NS`, `DEFAULT_SHADOW`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`
+
+### Excluded
+
+`createSvgEffects`, `createDropShadow`, `observeResize`, `extractAndStripEffects`, `restoreStyles`, `parseBorder`, `parseBoxShadow`, `parseColor` -- these depend on the DOM and are only available from the main entry point.
+
+### When to use it
+
+- Server-side rendering (Next.js, Nuxt, SvelteKit, Astro)
+- Generating SVG files in Node.js scripts
+- Edge runtime environments (Cloudflare Workers, Vercel Edge)
+- Any context where `document` and `window` are not available
+
+## Auto Effects
+
+The `extractAndStripEffects` and `restoreStyles` functions power the "auto effects" feature used by all framework bindings. When applied to an element, they:
+
+1. Read the element's computed CSS `border` and `box-shadow`
+2. Convert them to equivalent `EffectsConfig` values (`innerBorder`, `shadow`, `innerShadow`)
+3. Strip those CSS properties from the element's inline style (so they don't get clipped by `clip-path`)
+4. Return the extracted effects and saved original styles for later restoration
+
+This is used internally by `@lisse/react`, `@lisse/vue`, and `@lisse/svelte` to make existing CSS borders and shadows "just work" without manual conversion. If you're using the core package directly, you can use these functions to implement the same behaviour:
+
+```ts
+import { extractAndStripEffects, restoreStyles, createSvgEffects, createDropShadow } from "@lisse/core";
+
+const el = document.getElementById("card")!;
+const wrapper = el.parentElement!;
+
+// Extract and strip CSS effects
+const { effects, savedStyles } = extractAndStripEffects(el);
+
+// Use extracted effects with SVG overlay
+const svgEffects = createSvgEffects(wrapper);
+const shadow = createDropShadow(wrapper);
+
+// ... apply effects ...
+
+// Later, on cleanup:
+svgEffects.destroy();
+shadow.destroy();
+restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
+```
+
+### How CSS properties are mapped
+
+| CSS property | SVG effect | Notes |
+|---|---|---|
+| `border` | `innerBorder` | Width, color, opacity, and style extracted from the top edge. |
+| `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
+| `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
+
+### Limitations
+
+**Partial CSS conversion:**
+
+| CSS feature | What happens | Why |
+|---|---|---|
+| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. | The SVG overlay renders a uniform border along a single squircle path; per-side variation is not possible. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. | -- |
+| `inset`, `outset` border styles | Not replicated. Rendered as solid. | -- |
+| `border-image` | Not detected. Use the gradient border API (`GradientConfig`) instead. | `border-image` syntax is too complex to reliably parse from `getComputedStyle`. |
+| `outline` | Not read or stripped. | `outline` does not follow `border-radius` consistently across browsers, so extraction would be unreliable. |
+| Gradient borders | Not auto-extracted from CSS. Use the `GradientConfig` API on `BorderConfig.color` instead. | CSS gradient borders are set via `border-image`, which cannot be reliably parsed (see above). |
+
+**Behavioral notes:**
+
+- **One-time extraction** -- reads CSS once when called. Subsequent dynamic changes won't be reflected. Continuous `getComputedStyle` polling would be expensive, so use explicit `EffectsConfig` values for dynamic effects.
+- **`!important` rules** -- inline style stripping can't override `!important` stylesheet rules. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- stripped properties (`border`, `box-shadow`) are replaced with SVG equivalents that are not animatable via CSS transitions. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double (needs space for two lines plus a gap). Thinner double borders fall back to solid.
+- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **Content-box border compensation** -- when `extractAndStripEffects` removes a border from an element using `box-sizing: content-box`, the content area would expand by the border width (since content-box sizing excludes borders from the content dimensions). To prevent this layout shift, padding is automatically increased by the border width on each side. The original padding values are saved and restored when `restoreStyles` is called.
+- **Wrapper div** -- the SVG overlay is inserted into a wrapper element, which can affect `flex` and `grid` layouts. Account for the wrapper when styling parent containers.
+
+## Examples
+
+### Generate an SVG path
+
+```ts
+import { generatePath } from "@lisse/core";
+
+const d = generatePath(400, 300, {
+  topLeft: { radius: 32, smoothing: 0.8 },
+  topRight: 16,
+  bottomRight: { radius: 24, smoothing: 0.4, preserveSmoothing: false },
+  bottomLeft: 0,
+});
+
+const svg = `<svg width="400" height="300"><path d="${d}" fill="#3b82f6" /></svg>`;
+```
+
+### Apply clip-path to a DOM element
+
+```ts
+import { generateClipPath, observeResize } from "@lisse/core";
+
+const el = document.getElementById("card")!;
+const options = { radius: 24, smoothing: 0.6 };
+
+function applyClipPath() {
+  const { width, height } = el.getBoundingClientRect();
+  el.style.clipPath = generateClipPath(width, height, options);
+}
+
+applyClipPath();
+const unsubscribe = observeResize(el, applyClipPath);
+```
+
+### Create effects overlay
+
+```ts
+import { createSvgEffects, createDropShadow, generateClipPath, observeResize } from "@lisse/core";
+
+const wrapper = document.getElementById("card-wrapper")!;
+const card = document.getElementById("card")!;
+const options = { radius: 24, smoothing: 0.6 };
+
+const effects = createSvgEffects(wrapper);
+const shadow = createDropShadow(wrapper);
+
+function update() {
+  const { width, height } = card.getBoundingClientRect();
+  card.style.clipPath = generateClipPath(width, height, options);
+  effects.update(options, { innerBorder: { width: 1, color: "#fff", opacity: 0.2 } }, width, height);
+  shadow.update(options, { offsetX: 0, offsetY: 4, blur: 16, spread: 0, color: "#000", opacity: 0.15 }, width, height);
+}
+
+update();
+const unsubscribe = observeResize(card, update);
+```
+
+### Multiple outer shadows
+
+```ts
+import { createDropShadow } from "@lisse/core";
+
+const shadow = createDropShadow(wrapperElement);
+
+shadow.update(
+  { radius: 24, smoothing: 0.6 },
+  [
+    { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000", opacity: 0.1 },
+    { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000", opacity: 0.15 },
+    { offsetX: 0, offsetY: 20, blur: 48, spread: -8, color: "#000", opacity: 0.1 },
+  ],
+  300,
+  200,
+);
+```
+
+### Multiple inner shadows
+
+```ts
+import { createSvgEffects } from "@lisse/core";
+
+const effects = createSvgEffects(wrapperElement);
+
+effects.update(
+  { radius: 24, smoothing: 0.6 },
+  {
+    innerShadow: [
+      { offsetX: 0, offsetY: 1, blur: 2, spread: 0, color: "#000", opacity: 0.1 },
+      { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.08 },
+    ],
+  },
+  300,
+  200,
+);
+```
+
+Shadows are rendered in CSS order: the first shadow in the array is topmost (closest to the element). Each shadow gets its own SVG filter and path element.
+
+### Linear gradient border
+
+```ts
+import { createSvgEffects } from "@lisse/core";
+
+const effects = createSvgEffects(wrapperElement);
+
+effects.update(
+  { radius: 24, smoothing: 0.6 },
+  {
+    outerBorder: {
+      width: 2,
+      color: {
+        type: "linear",
+        angle: 135,
+        stops: [
+          { offset: 0, color: "#ff0080" },
+          { offset: 1, color: "#7928ca" },
+        ],
+      },
+      opacity: 1,
+    },
+  },
+  300,
+  200,
+);
+```
+
+### Radial gradient border
+
+```ts
+import { createSvgEffects } from "@lisse/core";
+
+const effects = createSvgEffects(wrapperElement);
+
+effects.update(
+  { radius: 24, smoothing: 0.6 },
+  {
+    innerBorder: {
+      width: 1.5,
+      color: {
+        type: "radial",
+        cx: 0.5,
+        cy: 0,
+        r: 0.7,
+        stops: [
+          { offset: 0, color: "#ffffff", opacity: 0.8 },
+          { offset: 1, color: "#ffffff", opacity: 0.1 },
+        ],
+      },
+      opacity: 1,
+    },
+  },
+  300,
+  200,
+);
+```
+
+## License
+
+[MIT](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
+
+---
+
+# @lisse/react
+
+# @lisse/react
+
+React hook and component for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
+
+> See [Gotchas](https://github.com/JaceThings/Lisse#gotchas) in the root README for `clip-path` interaction notes (focus outlines, overflow, scrollbars).
+
+[![npm](https://img.shields.io/npm/v/%40lisse%2Freact)](https://www.npmjs.com/package/@lisse/react)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
+
+## Installation
+
+```sh
+npm install @lisse/react
+```
+
+**Peer dependency:** `react >= 18.0.0`
+
+## Which API Should I Use?
+
+- **`SmoothCorners` component** -- Renders its own element with smooth corners applied. Handles effects and wrapper creation automatically. Use this when building new UI or when you want a drop-in replacement for a `<div>`.
+- **`useSmoothCorners` hook** -- Applies smooth corners to an existing element via a ref. Use this when you already have an element and don't want to change your DOM structure.
+
+## Quick Start
+
+```tsx
+import { SmoothCorners } from "@lisse/react";
+
+function Card() {
+  return (
+    <SmoothCorners corners={{ radius: 20, smoothing: 0.6 }} style={{ background: "#fff", padding: 24 }}>
+      <h2>Hello, squircle</h2>
+    </SmoothCorners>
+  );
+}
+```
+
+## `useSmoothCorners` Hook
+
+Apply smooth corners to any element via a ref.
+
+### Signature
+
+```ts
+function useSmoothCorners(
+  ref: React.RefObject<HTMLElement | null>,
+  options: SmoothCornerOptions,
+  effectsOptions?: UseEffectsOptions,
+): void;
+```
+
+### Basic Usage
+
+```tsx
+import { useRef } from "react";
+import { useSmoothCorners } from "@lisse/react";
+
+function Card() {
+  const ref = useRef<HTMLDivElement>(null);
+  useSmoothCorners(ref, { radius: 20, smoothing: 0.6 });
+  return <div ref={ref} style={{ background: "#fff", padding: 24 }}>Hello</div>;
+}
+```
+
+### Per-Corner Configuration
+
+```tsx
+import { useRef } from "react";
+import { useSmoothCorners } from "@lisse/react";
+
+function Card() {
+  const ref = useRef<HTMLDivElement>(null);
+  useSmoothCorners(ref, {
+    topLeft: { radius: 32, smoothing: 0.8 },
+    topRight: 16,
+    bottomRight: 0,
+    bottomLeft: { radius: 24, smoothing: 0.4, preserveSmoothing: false },
+  });
+  return <div ref={ref} style={{ background: "#f0f0f0", padding: 24 }}>Mixed corners</div>;
+}
+```
+
+### With Effects
+
+When using effects with the hook, you need to provide a wrapper ref for the SVG overlay:
+
+```tsx
+import { useRef } from "react";
+import { useSmoothCorners } from "@lisse/react";
+
+function Card() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useSmoothCorners(ref, { radius: 24, smoothing: 0.6 }, {
+    wrapperRef,
+    effects: {
+      innerBorder: { width: 1, color: "#ffffff", opacity: 0.2 },
+      shadow: { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 },
+    },
+  });
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <div ref={ref} style={{ background: "#3b82f6", padding: 32, color: "#fff" }}>
+        Card with effects
+      </div>
+    </div>
+  );
+}
+```
+
+### `UseEffectsOptions`
+
+```ts
+interface UseEffectsOptions {
+  wrapperRef?: React.RefObject<HTMLElement | null>;
+  effects?: EffectsConfig;
+  autoEffects?: boolean; // Default: true
+}
+```
+
+## `SmoothCorners` Component
+
+A ready-to-use component that handles clip-path, resize observation, ref forwarding, and effects automatically.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `as` | `React.ElementType` | `"div"` | The HTML element or component to render. Other props are typed against this element. |
+| `asChild` | `boolean` | `false` | If `true`, clone the single child element and merge SmoothCorners onto it instead of rendering its own element. Mutually exclusive with `as`. |
+| `corners` | `SmoothCornerOptions` | -- | Corner configuration: uniform `{ radius, smoothing, preserveSmoothing? }` or per-corner `{ topLeft, topRight, bottomRight, bottomLeft }`. Each corner is a number or `CornerConfig`. |
+| `innerBorder` | `BorderConfig` | -- | Inner border effect |
+| `outerBorder` | `BorderConfig` | -- | Outer border effect |
+| `middleBorder` | `BorderConfig` | -- | Middle border effect (centred on shape edge) |
+| `innerShadow` | `ShadowConfig \| ShadowConfig[]` | -- | Inner shadow effect (single or multiple) |
+| `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or multiple) |
+| `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
+| `shadowStrategy` | `"svg" \| "box-shadow"` | `"svg"` | How the `shadow` prop is rendered. `"svg"` follows the squircle silhouette; `"box-shadow"` bypasses the SVG filter pipeline and renders a CSS `box-shadow` instead. See [Shadow Strategy](#shadow-strategy). |
+
+All other HTML attributes (e.g. `className`, `style`, `onClick`, `href` when `as="a"`) are forwarded to the rendered element and typed against the chosen element.
+
+### Styling Hooks
+
+The rendered (or cloned) element gets `data-slot="smooth-corners"` and `data-state="pending" | "ready"` attributes. The `data-state` flips to `"ready"` after the first successful clip-path application — useful for masking the first paint:
+
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
+[data-slot="smooth-corners"][data-state="ready"]   { opacity: 1; transition: opacity 100ms; }
+```
+
+### `asChild`
+
+When you don't want SmoothCorners to render its own element, pass `asChild` and a single child:
+
+```tsx
+import { SmoothCorners } from "@lisse/react";
+
+function Cta({ children }: { children: React.ReactNode }) {
+  return (
+    <SmoothCorners asChild corners={{ radius: 12 }} className="shadow">
+      <a href="/signup" className="cta">{children}</a>
+    </SmoothCorners>
+  );
+}
+```
+
+The child receives the internal ref. Class names merge (parent first, child second). Event handlers compose: the child handler runs first, and the parent handler runs next unless the child called `event.preventDefault()`. When using `asChild`, the `as` prop is ignored.
+
+#### Standalone `Slot`
+
+`Slot` is exported for advanced composition. It is generic over the element type it will merge onto, so you can opt into element-specific attributes by passing a type parameter:
+
+```tsx
+import { Slot } from "@lisse/react";
+
+<Slot<"a"> href="/x" className="underline">
+  <a>link</a>
+</Slot>;
+
+<Slot<"button"> type="submit" onClick={handleClick}>
+  <button>submit</button>
+</Slot>;
+```
+
+Without a type parameter, `Slot` accepts the common `HTMLAttributes<HTMLElement>` surface via the `SlotProps` type. Use `SlotPropsFor<E>` (re-exported alongside `SlotProps`) to compose element-specific shapes yourself.
+
+At runtime every prop is forwarded to the cloned child regardless of type. The generic parameter is a type-level hint only.
+
+### Basic Usage
+
+```tsx
+import { SmoothCorners } from "@lisse/react";
+
+function Card() {
+  return (
+    <SmoothCorners corners={{ radius: 24 }} style={{ background: "#f8fafc", padding: 32 }}>
+      <h2>Card Title</h2>
+      <p>Card content goes here.</p>
+    </SmoothCorners>
+  );
+}
+```
+
+### Custom Element
+
+```tsx
+<SmoothCorners as="section" corners={{ radius: 16 }} className="hero">
+  <h1>Hero Section</h1>
+</SmoothCorners>
+
+{/* Element-specific attributes are typed against `as` */}
+<SmoothCorners as="a" href="/signup" corners={{ radius: 12 }}>
+  Sign up
+</SmoothCorners>
+```
+
+### Per-Corner
+
+```tsx
+<SmoothCorners
+  corners={{
+    topLeft: { radius: 40, smoothing: 0.8 },
+    topRight: 20,
+    bottomRight: 0,
+    bottomLeft: 0,
+  }}
+  style={{ background: "#e2e8f0", padding: 24 }}
+>
+  Asymmetric corners
+</SmoothCorners>
+```
+
+### All Effects
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  innerBorder={{ width: 1, color: "#ffffff", opacity: 0.2 }}
+  outerBorder={{ width: 2, color: "#000000", opacity: 0.1 }}
+  innerShadow={{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.15 }}
+  shadow={{ offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 }}
+  style={{ background: "linear-gradient(135deg, #667eea, #764ba2)", padding: 32 }}
+>
+  <p style={{ color: "#fff" }}>Card with all effects</p>
+</SmoothCorners>
+```
+
+### Shadow Strategy
+
+The `shadow` prop is rendered as an SVG filter by default. The filter draws a squircle path, fills it with the shadow color, offsets it, and blurs it -- so the shadow silhouette matches the smooth corners exactly.
+
+WebKit has a long-standing rasterisation bug where SVG filter output is biased toward heavier or lighter rendering depending on the filtered element's device-pixel Y position. The library tightens the filter region to reduce one source of drift, but **the consumer is responsible for placing the shadowed element on integer device pixels**. The bug only manifests in Safari, only on the `shadow` prop (not `clip-path`, not `innerShadow`, not borders), and only when the element happens to sit at a fractional device-pixel position. See [docs/safari-shadow-rendering.md](../../docs/safari-shadow-rendering.md) for the worked-example walkthrough and the manual layout recipe.
+
+If you can't reliably control the layout or you don't need the shadow to trace the squircle silhouette exactly, pass `shadowStrategy="box-shadow"` and the component renders the shadow as a native CSS `box-shadow` on a sibling `<div>`, side-stepping the WebKit filter pipeline entirely.
+
+| Strategy | Shadow silhouette | Render path | When to use |
+|---|---|---|---|
+| `"svg"` (default) | Squircle, matches the element | SVG `<filter>` over a path | Default. Use unless you have a specific Safari artefact you can't resolve. |
+| `"box-shadow"` | Rounded rectangle, follows ordinary `border-radius` | Native CSS `box-shadow` on a sibling div | Use to bypass the WebKit filter bug when exact silhouette matching isn't required. |
+
+The trade-off is silhouette: `"svg"` gives you a squircle shadow but goes through the filter pipeline; `"box-shadow"` is unaffected by the filter bug but the shadow halo is a rounded rectangle rather than a squircle. The element's clip-path, content, and any border effects remain squircle-shaped either way. `innerShadow` is unaffected by this prop -- it lives inside the clipped element and is not subject to the WebKit bug.
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  shadow={{ offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 }}
+  shadowStrategy="box-shadow"
+  style={{ background: "#fff", padding: 32 }}
+>
+  Card with CSS box-shadow
+</SmoothCorners>
+```
+
+When `shadowStrategy="box-shadow"`, the SVG drop-shadow handle is skipped entirely -- no extra `<svg>` element. Multiple shadows in an array compose into a single CSS `box-shadow` chain in CSS order (first listed is topmost).
+
+> **Affected by the Safari shadow bug?** The diagnostic is one line in
+> the Safari console:
+>
+> ```js
+> document.querySelector('YOUR_CARD_SELECTOR').getBoundingClientRect().top * window.devicePixelRatio
+> ```
+>
+> If the result is fractional, your element will exhibit the bias.
+> Add a small `padding-top` or `top` offset to nudge it to the
+> nearest integer. The full walkthrough is in
+> [docs/safari-shadow-rendering.md](../../docs/safari-shadow-rendering.md).
+
+> **Scaling a `SmoothCorners` element via an ancestor `transform: scale()`?**
+> Safari caches the clip-path raster at the element's layout size and
+> upsamples it when the ancestor scales up, producing visibly
+> pixelated corners under zoom. Invert the scale baseline: render at
+> the largest size your animation reaches and CSS-scale *down* by
+> default. Not Lisse-specific; affects any SVG-backed shape rendered
+> through a CSS scale. See
+> [docs/safari-svg-scale-rendering.md](../../docs/safari-svg-scale-rendering.md).
+
+### Ref Forwarding
+
+The component forwards refs to the underlying element:
+
+```tsx
+import { useRef } from "react";
+import { SmoothCorners } from "@lisse/react";
+
+function Card() {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <SmoothCorners ref={ref} corners={{ radius: 20 }} style={{ background: "#fff", padding: 24 }}>
+      Content
+    </SmoothCorners>
+  );
+}
+```
+
+## Auto Effects (enabled by default)
+
+Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect props -- extra work that's easy to forget.
+
+**Auto effects removes that step.** On mount, the library automatically:
+
+1. Reads the element's computed `border` and `box-shadow`
+2. Converts them to equivalent SVG effects (`innerBorder`, `shadow`, `innerShadow`)
+3. Strips the CSS properties so they don't get clipped
+4. Restores the original CSS on unmount (cleanup)
+
+This is enabled by default -- existing CSS borders and shadows just work.
+
+```tsx
+{/* The CSS border is automatically converted to an SVG inner border */}
+<SmoothCorners corners={{ radius: 24 }} style={{ border: "2px solid red", padding: 24 }}>
+  Content with auto border
+</SmoothCorners>
+```
+
+### Explicit props win
+
+If you pass effect props like `innerBorder` or `shadow`, they take priority over auto-extracted values per key:
+
+```tsx
+{/* Explicit innerBorder overrides the CSS border; CSS box-shadow is still auto-extracted */}
+<SmoothCorners
+  corners={{ radius: 24 }}
+  style={{ border: "2px solid red", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}
+  innerBorder={{ width: 1, color: "#00ff00", opacity: 1 }}
+>
+  Content
+</SmoothCorners>
+```
+
+### Disabling auto effects
+
+With the component:
+
+```tsx
+<SmoothCorners corners={{ radius: 24 }} autoEffects={false}>
+  Content
+</SmoothCorners>
+```
+
+With the hook:
+
+```tsx
+useSmoothCorners(ref, { radius: 24 }, { autoEffects: false });
+```
+
+When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behaviour.
+
+### How CSS properties are mapped
+
+| CSS property | SVG effect | Notes |
+|---|---|---|
+| `border` | `innerBorder` | Width, color, opacity, and style extracted from the top edge. |
+| `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
+| `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
+
+### Limitations
+
+**Partial CSS conversion:**
+
+| CSS feature | What happens |
+|---|---|
+| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
+| `inset`, `outset` border styles | Not replicated. Rendered as solid. |
+| Multiple `box-shadow` layers | All shadow layers are extracted and rendered. Each outer shadow becomes a `shadow` entry and each inset shadow becomes an `innerShadow` entry. |
+| `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. |
+| Gradient borders via CSS | CSS gradient borders (e.g. `border-image`) cannot be auto-extracted because `getComputedStyle` does not expose gradient data as structured values. Use the `GradientConfig` type on `BorderConfig.color` instead. |
+| `outline` | Not read or stripped. Outlines are painted outside the border box and are not part of `clip-path`, so they remain visible but follow the rectangular bounding box rather than the squircle shape. |
+
+**Behavioral notes:**
+
+- **One-time extraction** -- CSS is read once on mount. Use explicit effect props for dynamic values.
+- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
+- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **Wrapper div** -- The `SmoothCorners` component always renders a wrapper `<div>` with `position: relative` around the inner element for SVG overlay positioning. This can affect flex/grid layouts and CSS child selectors (`:first-child`, `>`). Use the `useSmoothCorners` hook to avoid the wrapper -- you provide your own element and control the layout.
+
+## CSS Borders and Shadows
+
+Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` props directly -- these render as SVG overlays that correctly follow the squircle path.
+
+## Effects Configuration
+
+### `BorderConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `width` | `number` | Border width in pixels |
+| `color` | `string \| GradientConfig` | Border color -- a hex string or a gradient configuration |
+| `opacity` | `number` | Border opacity (0-1) |
+| `style` | `BorderStyle` | Border style: `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, or `"ridge"`. Default: `"solid"` |
+| `dash` | `number` | Custom dash length for dashed/dotted styles |
+| `gap` | `number` | Custom gap length for dashed/dotted styles |
+| `lineCap` | `"butt" \| "round" \| "square"` | Line cap for dashed/dotted strokes. Default: `"butt"` for dashed, `"round"` for dotted |
+
+### `ShadowConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `offsetX` | `number` | Horizontal offset in pixels |
+| `offsetY` | `number` | Vertical offset in pixels |
+| `blur` | `number` | Blur radius in pixels |
+| `spread` | `number` | Spread distance in pixels |
+| `color` | `string` | Shadow color (hex) |
+| `opacity` | `number` | Shadow opacity (0-1) |
+
+### `GradientStop`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `offset` | `number` | Position within the gradient (0 to 1) |
+| `color` | `string` | Stop color (hex) |
+| `opacity` | `number` | Stop opacity (0-1). Default: `1` |
+
+### `LinearGradientConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `"linear"` | Discriminant -- must be `"linear"` |
+| `angle` | `number` | Angle in degrees (CSS convention). Default: `0` (bottom to top) |
+| `stops` | `GradientStop[]` | Array of color stops |
+
+### `RadialGradientConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `"radial"` | Discriminant -- must be `"radial"` |
+| `cx` | `number` | Horizontal center (0-1 relative). Default: `0.5` |
+| `cy` | `number` | Vertical center (0-1 relative). Default: `0.5` |
+| `r` | `number` | Radius (0-1 relative). Default: `0.5` |
+| `stops` | `GradientStop[]` | Array of color stops |
+
+### `GradientConfig`
+
+```ts
+type GradientConfig = LinearGradientConfig | RadialGradientConfig;
+```
+
+A union of `LinearGradientConfig` and `RadialGradientConfig`. Use the `type` discriminant to select between them.
+
+## Examples
+
+### Multiple Shadows
+
+Pass an array of `ShadowConfig` objects to render layered shadows:
+
+```tsx
+import { useRef } from "react";
+import { useSmoothCorners } from "@lisse/react";
+
+function ElevatedCard() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useSmoothCorners(ref, { radius: 24, smoothing: 0.6 }, {
+    wrapperRef,
+    effects: {
+      shadow: [
+        { offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: "#000000", opacity: 0.12 },
+        { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000000", opacity: 0.15 },
+      ],
+    },
+  });
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <div ref={ref} style={{ background: "#fff", padding: 32 }}>
+        Layered shadow
+      </div>
+    </div>
+  );
+}
+```
+
+Or with the component:
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  shadow={[
+    { offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: "#000000", opacity: 0.12 },
+    { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: "#000000", opacity: 0.15 },
+  ]}
+  style={{ background: "#fff", padding: 32 }}
+>
+  Layered shadow
+</SmoothCorners>
+```
+
+### Gradient Border
+
+Use a `GradientConfig` for the border `color` to render a gradient stroke:
+
+```tsx
+<SmoothCorners
+  corners={{ radius: 24 }}
+  innerBorder={{
+    width: 2,
+    color: {
+      type: "linear",
+      angle: 135,
+      stops: [
+        { offset: 0, color: "#667eea" },
+        { offset: 1, color: "#764ba2" },
+      ],
+    },
+    opacity: 1,
+  }}
+  style={{ background: "#fff", padding: 32 }}
+>
+  Gradient border
+</SmoothCorners>
+```
+
+## Server Components
+
+The `SmoothCorners` component and `useSmoothCorners` hook use browser APIs (`ResizeObserver`, DOM manipulation). In Next.js App Router or other RSC environments, use them in Client Components:
+
+```tsx
+"use client";
+
+import { SmoothCorners } from "@lisse/react";
+
+export function Card() {
+  return (
+    <SmoothCorners corners={{ radius: 20 }} style={{ background: "#fff", padding: 24 }}>
+      Client-side squircle
+    </SmoothCorners>
+  );
+}
+```
+
+For server-side path generation, use `@lisse/core/path` instead.
+
+## License
+
+[MIT](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
+
+---
+
+# @lisse/vue
+
+# @lisse/vue
+
+Vue composable and component for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
+
+> See [Gotchas](https://github.com/JaceThings/Lisse#gotchas) in the root README for `clip-path` interaction notes (focus outlines, overflow, scrollbars).
+
+[![npm](https://img.shields.io/npm/v/%40lisse%2Fvue)](https://www.npmjs.com/package/@lisse/vue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
+
+## Installation
+
+```sh
+npm install @lisse/vue
+```
+
+**Peer dependency:** `vue >= 3.3.0`
+
+## Which API Should I Use?
+
+- **`SmoothCorners` component** -- Renders its own element with smooth corners applied. Handles effects and wrapper creation automatically. Use this when building new UI or when you want a drop-in replacement for a `<div>`.
+- **`useSmoothCorners` composable** -- Applies smooth corners to an existing element via a template ref. Use this when you already have an element and don't want to change your DOM structure.
+
+## Quick Start
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { useSmoothCorners } from "@lisse/vue";
+
+const el = ref(null);
+useSmoothCorners(el, { radius: 20, smoothing: 0.6 });
+</script>
+
+<template>
+  <div ref="el" style="background: #fff; padding: 24px">Hello, squircle</div>
+</template>
+```
+
+## `useSmoothCorners` Composable
+
+Apply smooth corners to any element via a template ref. Options can be reactive.
+
+### Signature
+
+```ts
+function useSmoothCorners(
+  target: Ref<HTMLElement | null>,
+  options: MaybeRef<SmoothCornerOptions>,
+  effectsOptions?: UseEffectsOptions,
+): void;
+```
+
+### Basic Usage
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { useSmoothCorners } from "@lisse/vue";
+
+const el = ref(null);
+useSmoothCorners(el, { radius: 24, smoothing: 0.6 });
+</script>
+
+<template>
+  <div ref="el" style="background: #f8fafc; padding: 32px">
+    <h2>Card Title</h2>
+    <p>Card content goes here.</p>
+  </div>
+</template>
+```
+
+### Reactive Options
+
+Pass a `ref` or `computed` as the options argument to reactively update the corners:
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { useSmoothCorners } from "@lisse/vue";
+
+const el = ref(null);
+const radius = ref(20);
+useSmoothCorners(el, ref({ radius: radius.value, smoothing: 0.6 }));
+</script>
+
+<template>
+  <input type="range" min="0" max="60" v-model.number="radius" />
+  <div ref="el" style="background: #3b82f6; padding: 24px; color: #fff">
+    Radius: {{ radius }}
+  </div>
+</template>
+```
+
+Or with `computed`:
+
+```vue
+<script setup>
+import { ref, computed } from "vue";
+import { useSmoothCorners } from "@lisse/vue";
+
+const el = ref(null);
+const radius = ref(20);
+const options = computed(() => ({ radius: radius.value, smoothing: 0.6 }));
+useSmoothCorners(el, options);
+</script>
+
+<template>
+  <input type="range" min="0" max="60" v-model.number="radius" />
+  <div ref="el" style="background: #3b82f6; padding: 24px; color: #fff">
+    Radius: {{ radius }}
+  </div>
+</template>
+```
+
+### With Effects
+
+When using effects with the composable, provide a wrapper ref for the SVG overlay:
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { useSmoothCorners } from "@lisse/vue";
+
+const wrapper = ref(null);
+const el = ref(null);
+
+useSmoothCorners(el, { radius: 24, smoothing: 0.6 }, {
+  wrapper,
+  effects: {
+    innerBorder: { width: 1, color: "#ffffff", opacity: 0.2 },
+    shadow: { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 },
+  },
+});
+</script>
+
+<template>
+  <div ref="wrapper" style="position: relative">
+    <div ref="el" style="background: #3b82f6; padding: 32px; color: #fff">
+      Card with effects
+    </div>
+  </div>
+</template>
+```
+
+### `UseEffectsOptions`
+
+```ts
+interface UseEffectsOptions {
+  wrapper?: Ref<HTMLElement | null>;
+  effects?: MaybeRef<EffectsConfig>;
+  autoEffects?: MaybeRef<boolean>; // Default: true
+}
+```
+
+## `SmoothCorners` Component
+
+A ready-to-use component that handles clip-path, resize observation, and effects automatically.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `as` | `keyof HTMLElementTagNameMap \| keyof SVGElementTagNameMap` | `"div"` | The HTML element tag to render |
+| `asChild` | `boolean` | `false` | If `true`, clone the single default-slot child and apply SmoothCorners to it instead of rendering its own element. |
+| `corners` | `SmoothCornerOptions` | -- | Corner configuration: `{ radius, smoothing?, preserveSmoothing? }` or `{ topLeft, topRight, bottomRight, bottomLeft }`. |
+| `innerBorder` | `BorderConfig` | -- | Inner border effect |
+| `outerBorder` | `BorderConfig` | -- | Outer border effect |
+| `middleBorder` | `BorderConfig` | -- | Middle border effect (centred on shape edge) |
+| `innerShadow` | `ShadowConfig \| ShadowConfig[]` | -- | Inner shadow effect (single or array) |
+| `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or array) |
+| `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
+
+All other attributes and event listeners are forwarded to the rendered element.
+
+The component exposes `el` and `wrapper` template refs via `defineExpose`, e.g.:
+
+```vue
+<script setup>
+import { ref, onMounted } from "vue";
+import { SmoothCorners } from "@lisse/vue";
+
+const card = ref(null);
+onMounted(() => console.log(card.value.el)); // the inner element
+</script>
+
+<template>
+  <SmoothCorners ref="card" :corners="{ radius: 16 }">Hello</SmoothCorners>
+</template>
+```
+
+### Styling Hooks
+
+The rendered (or cloned) element gets `data-slot="smooth-corners"` and `data-state="pending" | "ready"`. The state flips to `"ready"` after the first clip-path application:
+
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
+```
+
+### `asChild`
+
+Pass `asChild` with a single default-slot child to apply SmoothCorners onto that element instead of rendering a `<div>`:
+
+```vue
+<template>
+  <SmoothCorners as-child :corners="{ radius: 12 }" class="shadow">
+    <a href="/signup" class="cta">Sign up</a>
+  </SmoothCorners>
+</template>
+```
+
+Class names and other attrs merge onto the child. When using `asChild`, the `as` prop is ignored.
+
+### Basic Usage
+
+```vue
+<script setup>
+import { SmoothCorners } from "@lisse/vue";
+</script>
+
+<template>
+  <SmoothCorners :corners="{ radius: 24 }" style="background: #f8fafc; padding: 32px">
+    <h2>Card Title</h2>
+    <p>Card content goes here.</p>
+  </SmoothCorners>
+</template>
+```
+
+### Custom Element
+
+```vue
+<template>
+  <SmoothCorners as="section" :corners="{ radius: 16 }" class="hero">
+    <h1>Hero Section</h1>
+  </SmoothCorners>
+</template>
+```
+
+### Per-Corner
+
+```vue
+<template>
+  <SmoothCorners
+    :corners="{
+      topLeft: { radius: 40, smoothing: 0.8 },
+      topRight: 20,
+      bottomRight: 0,
+      bottomLeft: 0,
+    }"
+    style="background: #e2e8f0; padding: 24px"
+  >
+    Asymmetric corners
+  </SmoothCorners>
+</template>
+```
+
+### All Effects
+
+```vue
+<template>
+  <SmoothCorners
+    :corners="{ radius: 24 }"
+    :inner-border="{ width: 1, color: '#ffffff', opacity: 0.2 }"
+    :outer-border="{ width: 2, color: '#000000', opacity: 0.1 }"
+    :inner-shadow="{ offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: '#000000', opacity: 0.15 }"
+    :shadow="{ offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: '#000000', opacity: 0.2 }"
+    style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 32px"
+  >
+    <p style="color: #fff">Card with all effects</p>
+  </SmoothCorners>
+</template>
+```
+
+### Multiple Shadows
+
+Pass an array to `shadow` or `innerShadow` to layer multiple shadows:
+
+```vue
+<template>
+  <SmoothCorners
+    :corners="{ radius: 24 }"
+    :shadow="[
+      { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: '#000000', opacity: 0.1 },
+      { offsetX: 0, offsetY: 8, blur: 24, spread: -4, color: '#000000', opacity: 0.15 },
+      { offsetX: 0, offsetY: 20, blur: 48, spread: -8, color: '#000000', opacity: 0.1 },
+    ]"
+    style="background: #fff; padding: 32px"
+  >
+    Layered drop shadows
+  </SmoothCorners>
+</template>
+```
+
+With the composable:
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { useSmoothCorners } from "@lisse/vue";
+
+const wrapper = ref(null);
+const el = ref(null);
+
+useSmoothCorners(el, { radius: 24, smoothing: 0.6 }, {
+  wrapper,
+  effects: {
+    shadow: [
+      { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.1 },
+      { offsetX: 0, offsetY: 12, blur: 32, spread: -4, color: "#000000", opacity: 0.2 },
+    ],
+  },
+});
+</script>
+
+<template>
+  <div ref="wrapper" style="position: relative">
+    <div ref="el" style="background: #fff; padding: 32px">
+      Layered shadows via composable
+    </div>
+  </div>
+</template>
+```
+
+### Gradient Border
+
+Pass a `GradientConfig` object as the border `color` to render a gradient border:
+
+```vue
+<template>
+  <SmoothCorners
+    :corners="{ radius: 24 }"
+    :inner-border="{
+      width: 2,
+      color: {
+        type: 'linear',
+        angle: 135,
+        stops: [
+          { offset: 0, color: '#667eea' },
+          { offset: 1, color: '#764ba2' },
+        ],
+      },
+      opacity: 1,
+    }"
+    style="background: #fff; padding: 32px"
+  >
+    Gradient border
+  </SmoothCorners>
+</template>
+```
+
+## Auto Effects (enabled by default)
+
+Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect props -- extra work that's easy to forget.
+
+**Auto effects removes that step.** On mount, the library automatically:
+
+1. Reads the element's computed `border` and `box-shadow`
+2. Converts them to equivalent SVG effects (`innerBorder`, `shadow`, `innerShadow`)
+3. Strips the CSS properties so they don't get clipped
+4. Restores the original CSS on unmount (cleanup)
+
+This is enabled by default -- existing CSS borders and shadows just work.
+
+```vue
+<!-- The CSS border is automatically converted to an SVG inner border -->
+<template>
+  <SmoothCorners :corners="{ radius: 24 }" style="border: 2px solid red; padding: 24px">
+    Content with auto border
+  </SmoothCorners>
+</template>
+```
+
+### Explicit props win
+
+If you pass effect props like `inner-border` or `shadow`, they take priority over auto-extracted values per key:
+
+```vue
+<!-- Explicit inner-border overrides the CSS border; CSS box-shadow is still auto-extracted -->
+<template>
+  <SmoothCorners
+    :corners="{ radius: 24 }"
+    style="border: 2px solid red; box-shadow: 0 4px 12px rgba(0,0,0,0.2)"
+    :inner-border="{ width: 1, color: '#00ff00', opacity: 1 }"
+  >
+    Content
+  </SmoothCorners>
+</template>
+```
+
+### Disabling auto effects
+
+With the component:
+
+```vue
+<template>
+  <SmoothCorners :corners="{ radius: 24 }" :auto-effects="false">
+    Content
+  </SmoothCorners>
+</template>
+```
+
+With the composable:
+
+```ts
+useSmoothCorners(el, { radius: 24 }, { autoEffects: false });
+```
+
+When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behaviour.
+
+### How CSS properties are mapped
+
+| CSS property | SVG effect | Notes |
+|---|---|---|
+| `border` | `innerBorder` | Width, color, opacity, and style extracted from the top edge. |
+| `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
+| `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
+
+### Limitations
+
+**Partial CSS conversion:**
+
+| CSS feature | What happens |
+|---|---|
+| Per-side borders | Only the top border is read. `getComputedStyle` returns per-side values but a squircle path has no distinct sides, so all four sides are stripped and only the top edge values are used. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
+| `inset`, `outset` border styles | Not replicated -- rendered as solid. These styles rely on rectangular per-side shading that has no meaningful squircle equivalent. |
+| Multiple `box-shadow` layers | All shadow layers are extracted and rendered. Each outer shadow becomes a `shadow` entry and each inset shadow becomes an `innerShadow` entry. |
+| `border-image` | Not detected. `getComputedStyle` does not expose `border-image` in a way that can be reliably parsed, so it may be misread as a solid border and stripped incorrectly. |
+| Gradient borders (CSS) | CSS gradient borders (`border-image`) cannot be auto-extracted. Use the `innerBorder` or `outerBorder` prop with a `GradientConfig` color instead. |
+| `outline` | Not read or stripped. `outline` is not clipped by `clip-path`, so it continues to render as a rectangle around the squircle. |
+
+**Behavioral notes:**
+
+- **One-time extraction** -- CSS is read once on mount. Use explicit effect props for dynamic values.
+- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
+- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **Wrapper div** -- The `SmoothCorners` component renders a wrapper `<div>` with `position: relative` when effects are active (either via explicit props or `autoEffects`). When no effects are needed, the wrapper is omitted. This can affect flex/grid layouts and CSS child selectors. Use the `useSmoothCorners` composable to avoid the wrapper.
+
+## CSS Borders and Shadows
+
+Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` props directly -- these render as SVG overlays that correctly follow the squircle path.
+
+## Effects Configuration
+
+### `BorderConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `width` | `number` | Border width in pixels |
+| `color` | `string \| GradientConfig` | Border color -- a hex string or a gradient configuration |
+| `opacity` | `number` | Border opacity (0-1) |
+| `style` | `BorderStyle` | Border style: `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, or `"ridge"`. Default: `"solid"` |
+| `dash` | `number` | Custom dash length for dashed/dotted styles |
+| `gap` | `number` | Custom gap length for dashed/dotted styles |
+| `lineCap` | `"butt" \| "round" \| "square"` | Line cap for dashed/dotted strokes. Default: `"butt"` for dashed, `"round"` for dotted |
+
+### `ShadowConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `offsetX` | `number` | Horizontal offset in pixels |
+| `offsetY` | `number` | Vertical offset in pixels |
+| `blur` | `number` | Blur radius in pixels |
+| `spread` | `number` | Spread distance in pixels |
+| `color` | `string` | Shadow color (hex) |
+| `opacity` | `number` | Shadow opacity (0-1) |
+
+### `GradientStop`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `offset` | `number` | Position within the gradient (0 to 1) |
+| `color` | `string` | Stop color (hex) |
+| `opacity` | `number` | Stop opacity (0-1). Default: `1` |
+
+### `LinearGradientConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `"linear"` | Discriminator -- must be `"linear"` |
+| `angle` | `number` | Angle in degrees (CSS convention). Default: `0` (bottom to top) |
+| `stops` | `GradientStop[]` | Array of color stops |
+
+### `RadialGradientConfig`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `"radial"` | Discriminator -- must be `"radial"` |
+| `cx` | `number` | Horizontal center (0-1 relative). Default: `0.5` |
+| `cy` | `number` | Vertical center (0-1 relative). Default: `0.5` |
+| `r` | `number` | Radius (0-1 relative). Default: `0.5` |
+| `stops` | `GradientStop[]` | Array of color stops |
+
+### `GradientConfig`
+
+```ts
+type GradientConfig = LinearGradientConfig | RadialGradientConfig;
+```
+
+A union of `LinearGradientConfig` and `RadialGradientConfig`. Pass either to `BorderConfig.color` to render a gradient border.
+
+## SSR
+
+The composable and component use browser APIs (`ResizeObserver`, DOM manipulation). In Nuxt or other SSR frameworks, they are safe to use in components that only render on the client. For server-side path generation, use `@lisse/core/path`:
+
+```ts
+import { generatePath } from "@lisse/core/path";
+```
+
+## License
+
+[MIT](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
+
+---
+
+# @lisse/svelte
+
+# @lisse/svelte
+
+Svelte action for smooth-cornered (squircle) elements, powered by [Figma's smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/).
+
+> See [Gotchas](https://github.com/JaceThings/Lisse#gotchas) in the root README for `clip-path` interaction notes (focus outlines, overflow, scrollbars).
+
+[![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte)](https://www.npmjs.com/package/@lisse/svelte)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
+
+## Installation
+
+```sh
+npm install @lisse/svelte
+```
+
+Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
+
+## Quick Start
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+</script>
+
+<div
+  use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }}
+  style="background: #fff; padding: 24px"
+>
+  Hello, squircle
+</div>
+```
+
+> **Why an action instead of a component?** Svelte actions are the idiomatic way to attach behaviour to existing elements. Unlike React or Vue, there is no wrapper `<div>` -- the action attaches directly to your element and inserts the SVG overlay into its parent. This gives you full control over your DOM structure.
+
+## `smoothCorners` Action
+
+The action takes a single `SmoothCornersConfig` parameter: `{ corners, effects?, autoEffects? }`. The `corners` property is required and accepts a `SmoothCornerOptions` object — uniform or per-corner.
+
+### Uniform Corners
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+</script>
+
+<div use:smoothCorners={{ corners: { radius: 24, smoothing: 0.6 } }}>
+  Content
+</div>
+```
+
+### Per-Corner
+
+```svelte
+<div use:smoothCorners={{
+  corners: {
+    topLeft: { radius: 40, smoothing: 0.8 },
+    topRight: 20,
+    bottomRight: { radius: 30, smoothing: 0.4, preserveSmoothing: false },
+    bottomLeft: 0,
+  },
+}}>
+  Different corners
+</div>
+```
+
+### Effects
+
+```svelte
+<div use:smoothCorners={{
+  corners: { radius: 24, smoothing: 0.6 },
+  effects: {
+    innerBorder: { width: 1, color: "#ffffff", opacity: 0.2 },
+    shadow: { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 },
+  },
+}}>
+  Content
+</div>
+```
+
+### Reactive Updates
+
+The action responds to parameter changes automatically. Use reactive declarations to update options:
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+
+  let radius = $state(20);
+</script>
+
+<input type="range" min="0" max="60" bind:value={radius} />
+<div
+  use:smoothCorners={{ corners: { radius, smoothing: 0.6 } }}
+  style="background: #3b82f6; padding: 24px; color: #fff"
+>
+  Radius: {radius}
+</div>
+```
+
+### Styling Hooks
+
+The action sets `data-slot="smooth-corners"` and `data-state="pending" | "ready"` on the host element. The state flips to `"ready"` after the first clip-path application:
+
+```css
+[data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
+```
+
+The `preserveSmoothing` option controls how corners behave when adjacent corners compete for space. When `true` (default), the smoothing curve is preserved even when adjacent corners compete for space -- the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced.
+
+## Auto Effects (enabled by default)
+
+Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect config -- extra work that's easy to forget.
+
+**Auto effects removes that step.** When the action initialises, the library automatically:
+
+1. Reads the element's computed `border` and `box-shadow`
+2. Converts them to equivalent SVG effects (`innerBorder`, `shadow`, `innerShadow`)
+3. Strips the CSS properties so they don't get clipped
+4. Sets `position: relative` on the parent element if needed
+5. Restores the original CSS and parent position on destroy
+
+This is enabled by default — existing CSS borders and shadows just work.
+
+```svelte
+<!-- The CSS border is automatically converted to an SVG inner border -->
+<div
+  use:smoothCorners={{ corners: { radius: 24 } }}
+  style="border: 2px solid red; padding: 24px"
+>
+  Content with auto border
+</div>
+```
+
+### Explicit effects win
+
+If you pass `effects`, they take priority over auto-extracted values per key:
+
+```svelte
+<!-- Explicit innerBorder overrides the CSS border; CSS box-shadow is still auto-extracted -->
+<div
+  use:smoothCorners={{
+    corners: { radius: 24 },
+    effects: { innerBorder: { width: 1, color: '#00ff00', opacity: 1 } },
+  }}
+  style="border: 2px solid red; box-shadow: 0 4px 12px rgba(0,0,0,0.2)"
+>
+  Content
+</div>
+```
+
+### Disabling auto effects
+
+Set `autoEffects: false`:
+
+```svelte
+<div use:smoothCorners={{ corners: { radius: 24 }, autoEffects: false }}>
+  Content
+</div>
+```
+
+When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behaviour. You will need to ensure the parent has `position: relative` yourself if using manual effects.
+
+### How CSS properties are mapped
+
+| CSS property | SVG effect | Notes |
+|---|---|---|
+| `border` | `innerBorder` | Width, color, opacity, and style extracted from the top edge. |
+| `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
+| `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
+
+### Limitations
+
+**Partial CSS conversion:**
+
+| CSS feature | What happens | Why |
+|---|---|---|
+| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. | SVG strokes follow a single path and cannot vary width/color per side. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. | -- |
+| `inset`, `outset` border styles | Not replicated. Rendered as solid. | These styles rely on per-side light/dark shading that has no SVG equivalent on a continuous path. |
+| Multiple `box-shadow` layers | All shadow layers are extracted and rendered. | -- |
+| `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. | `getComputedStyle` does not expose `border-image` in a way that can be reliably parsed into SVG. |
+| `outline` | Not read or stripped. | `outline` is not clipped by `clip-path`, so it continues to work -- but it renders as a rectangle, not a squircle. |
+| Gradient borders from CSS | Not auto-extracted. CSS gradient borders must be set manually via the `GradientConfig` API. | CSS border colors are returned as flat `rgb()`/`rgba()` values by `getComputedStyle`, so gradient information is lost. |
+
+**Behavioral notes:**
+
+- **One-time extraction** -- CSS is read once on init (not re-evaluated on `update()`). This avoids repeated `getComputedStyle` calls on every resize. Use explicit effects in config mode for dynamic values.
+- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. This is a fundamental limitation of inline style specificity. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. The library removes these properties to prevent clipped artifacts. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid. This matches CSS behaviour where the three lines of a `double` border need minimum space to be visible.
+- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles) because SVG strokes follow a single continuous path without per-segment color control.
+
+## CSS Borders and Shadows
+
+Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` effect config directly -- these render as SVG overlays that correctly follow the squircle path.
+
+## Effects
+
+Effects are rendered as SVG overlays. When using effects, the parent element must have `position: relative` for correct overlay positioning.
+
+The SVG overlays are absolutely positioned inside the parent element. The library automatically sets `position: relative` on the parent if it currently has `position: static`. If you already set `position: relative` (or `absolute`/`fixed`) on the parent, the library leaves it unchanged. When the action is destroyed, the position is restored to its original value -- and if multiple Lisse instances share the same parent, the position is only restored when the last one unmounts.
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+</script>
+
+<div style="position: relative">
+  <div use:smoothCorners={{
+    corners: { radius: 24, smoothing: 0.6 },
+    effects: {
+      innerBorder: { width: 1, color: "#ffffff", opacity: 0.3 },
+      outerBorder: { width: 2, color: "#000000", opacity: 0.1 },
+      innerShadow: { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.15 },
+      shadow: { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 },
+    },
+  }} style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 32px; color: #fff">
+    Card with all effects
+  </div>
+</div>
+```
+
+### Multiple Shadows
+
+Pass an array of `ShadowConfig` objects to `shadow` or `innerShadow` to render multiple shadow layers:
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+</script>
+
+<div style="position: relative">
+  <div use:smoothCorners={{
+    corners: { radius: 24, smoothing: 0.6 },
+    effects: {
+      shadow: [
+        { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.1 },
+        { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.15 },
+        { offsetX: 0, offsetY: 24, blur: 48, spread: 0, color: "#000000", opacity: 0.1 },
+      ],
+    },
+  }} style="background: #fff; padding: 32px">
+    Layered shadow
+  </div>
+</div>
+```
+
+### Gradient Borders
+
+Use a `GradientConfig` object for the border `color` property to render a gradient border:
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+</script>
+
+<div style="position: relative">
+  <div use:smoothCorners={{
+    corners: { radius: 24, smoothing: 0.6 },
+    effects: {
+      innerBorder: {
+        width: 2,
+        color: {
+          type: "linear",
+          angle: 135,
+          stops: [
+            { offset: 0, color: "#667eea" },
+            { offset: 1, color: "#764ba2" },
+          ],
+        },
+        opacity: 1,
+      },
+    },
+  }} style="background: #fff; padding: 32px">
+    Gradient border
+  </div>
+</div>
+```
+
+### Effect Types
+
+**`BorderConfig`**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `width` | `number` | Border width in pixels |
+| `color` | `string \| GradientConfig` | Border color -- hex string or a gradient configuration |
+| `opacity` | `number` | Border opacity (0-1) |
+| `style` | `BorderStyle` | Border style (default: `"solid"`). One of `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, `"ridge"`. |
+| `dash` | `number` | Custom dash length for dashed/dotted styles |
+| `gap` | `number` | Custom gap length for dashed/dotted styles |
+| `lineCap` | `"butt" \| "round" \| "square"` | Line cap for dashed/dotted strokes. Default: `"butt"` for dashed, `"round"` for dotted. |
+
+**`ShadowConfig`**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `offsetX` | `number` | Horizontal offset in pixels |
+| `offsetY` | `number` | Vertical offset in pixels |
+| `blur` | `number` | Blur radius in pixels |
+| `spread` | `number` | Spread distance in pixels |
+| `color` | `string` | Shadow color (hex) |
+| `opacity` | `number` | Shadow opacity (0-1) |
+
+## Types
+
+### `SmoothCornersAction`
+
+```ts
+interface SmoothCornersAction {
+  update(options: SmoothCornersConfig): void;
+  destroy(): void;
+}
+```
+
+### `SmoothCornersConfig`
+
+```ts
+interface SmoothCornersConfig {
+  corners: SmoothCornerOptions;
+  effects?: EffectsConfig;
+  autoEffects?: boolean; // Default: true
+}
+```
+
+The action also re-exports all core types: `SmoothCornerOptions`, `UniformCornerOptions`, `PerCornerConfig`, `CornerConfig`, `BorderConfig`, `ShadowConfig`, `EffectsConfig`, `GradientStop`, `LinearGradientConfig`, `RadialGradientConfig`, `GradientConfig`.
+
+### `EffectsConfig`
+
+```ts
+interface EffectsConfig {
+  innerBorder?: BorderConfig;
+  outerBorder?: BorderConfig;
+  middleBorder?: BorderConfig;
+  innerShadow?: ShadowConfig | ShadowConfig[];
+  shadow?: ShadowConfig | ShadowConfig[];
+}
+```
+
+### Gradient Types
+
+```ts
+interface GradientStop {
+  offset: number;    // 0 to 1
+  color: string;     // hex color
+  opacity?: number;  // 0 to 1, default 1
+}
+
+interface LinearGradientConfig {
+  type: "linear";
+  angle?: number;       // degrees (CSS convention), default 0 (bottom to top)
+  stops: GradientStop[];
+}
+
+interface RadialGradientConfig {
+  type: "radial";
+  cx?: number;  // 0-1 relative, default 0.5
+  cy?: number;  // 0-1 relative, default 0.5
+  r?: number;   // 0-1 relative, default 0.5
+  stops: GradientStop[];
+}
+
+type GradientConfig = LinearGradientConfig | RadialGradientConfig;
+```
+
+## SSR / SvelteKit
+
+The `smoothCorners` action uses browser APIs (`ResizeObserver`, DOM manipulation) and only runs on the client. In SvelteKit, actions are automatically client-only -- they run after the element is mounted in the DOM, so no special handling is needed.
+
+For server-side path generation (e.g., generating SVG paths in a `+page.server.ts` load function), use the DOM-free subpath:
+
+```ts
+import { generatePath } from "@lisse/core/path";
+
+const d = generatePath(200, 100, { radius: 20, smoothing: 0.6 });
+```
+
+This entry point exports only pure functions with no DOM dependencies.
+
+## License
+
+[MIT](https://github.com/JaceThings/Lisse/blob/main/LICENSE)
