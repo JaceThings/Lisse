@@ -32,9 +32,12 @@ COPY apps/website/package.json apps/website/
 
 RUN pnpm install --frozen-lockfile
 
-# Now bring in the rest of the source.
+# Now bring in the rest of the source. README.md is read by the
+# website's prebuild script (scripts/build-llms-full.ts) when generating
+# public/llms-full.txt, so it has to be present in the build context.
 COPY packages packages
 COPY apps/website apps/website
+COPY README.md ./
 
 # Build the workspace packages so the website resolves @lisse/react via
 # their `dist/` outputs, then build the website itself.
