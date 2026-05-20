@@ -142,16 +142,16 @@ export function ShadowSection({ title, description, kind }: ShadowSectionProps) 
         </div>
         <Collapse show={preset === "custom"}>
           <div className="flex w-full flex-wrap items-start">
-            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center p-figma-4 ${ROW_DIVIDER}`}>
+            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
               <Slider label="X" value={x} min={-20} max={20} onChange={onXChange} />
             </div>
-            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-figma-4 py-figma-4 ${ROW_DIVIDER}`}>
+            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4 ${ROW_DIVIDER} max-[560px]:shadow-none`}>
               <Slider label="Y" value={y} min={-20} max={20} onChange={onYChange} />
             </div>
-            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center p-figma-4">
+            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center p-4">
               <Slider label="Blur" value={blur} min={0} max={40} onChange={onBlurChange} />
             </div>
-            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-figma-4 py-figma-4">
+            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4">
               <Slider label="Spread" value={spread} min={-20} max={40} onChange={onSpreadChange} />
             </div>
           </div>

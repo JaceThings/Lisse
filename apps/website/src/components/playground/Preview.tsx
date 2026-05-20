@@ -86,7 +86,7 @@ export function Preview({
 }: PreviewProps) {
   return (
     <div
-      className="flex w-full items-center justify-center overflow-hidden p-figma-3"
+      className="flex w-full items-center justify-center overflow-hidden p-3"
       style={{ height: CANVAS_HEIGHT }}
     >
       <div className="relative" style={{ width: size, height: size }}>

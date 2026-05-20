@@ -156,7 +156,7 @@ export function Demo() {
       </p>
 
       <div
-        className="absolute left-1/2 flex -translate-x-1/2 items-center gap-figma-4"
+        className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4"
         // Empirical 0.25 CSS px nudge to land the pills on an integer
         // device-pixel Y (2× Retina) so Safari's SVG drop-shadow raster
         // lands clean — otherwise the column's natural flow puts them

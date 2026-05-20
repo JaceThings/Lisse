@@ -101,7 +101,7 @@ export function PerCornerSection() {
   return (
     <Section
       title="Per-Corner Radius"
-      description="Each corner can have its own radius and smoothing, independently controlled."
+      description="Each corner can have its own radius and smoothing, independently controlled. Useful for asymmetric shapes like tabs and chips."
     >
       <FigureCard>
         <Preview corners={corners} />
@@ -111,20 +111,21 @@ export function PerCornerSection() {
             options={PER_CORNER_PRESETS}
             value={preset}
             onChange={onPresetChange}
+            pillBasis="max-[560px]:basis-[calc(50%-6px)]"
           />
         </div>
         <Collapse show={preset === "custom"}>
           <div className="flex w-full flex-wrap items-start">
-            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-figma-4 pr-[14px] py-figma-4 ${ROW_DIVIDER}`}>
+            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-4 pr-[14px] py-4 ${ROW_DIVIDER}`}>
               <Slider label="Top Left" value={tl} min={0} max={50} onChange={onTlChange} />
             </div>
-            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-figma-4 py-figma-4 ${ROW_DIVIDER}`}>
+            <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4 ${ROW_DIVIDER} max-[560px]:shadow-none`}>
               <Slider label="Top Right" value={tr} min={0} max={50} onChange={onTrChange} />
             </div>
-            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-figma-4 pr-[14px] py-figma-4">
+            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-4 pr-[14px] py-4">
               <Slider label="Bottom Left" value={bl} min={0} max={50} onChange={onBlChange} />
             </div>
-            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-figma-4 py-figma-4">
+            <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4">
               <Slider label="Bottom Right" value={br} min={0} max={50} onChange={onBrChange} />
             </div>
           </div>

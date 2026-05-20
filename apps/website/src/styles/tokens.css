@@ -43,15 +43,6 @@
   --color-divider-from: rgba(115, 87, 74, 0.08);
   --color-divider-to: rgba(115, 87, 74, 0);
 
-  /* Spacing scale (matches Figma --p-* variables) */
-  --spacing-figma-2: 8px;
-  --spacing-figma-3: 12px;
-  --spacing-figma-4: 16px;
-  --spacing-figma-5: 20px;
-  --spacing-figma-6: 24px;
-  --spacing-figma-9: 36px;
-  --spacing-figma-20: 80px;
-
   /* Type */
   --font-sans: "Inter Variable", system-ui, -apple-system, BlinkMacSystemFont,
     sans-serif;
