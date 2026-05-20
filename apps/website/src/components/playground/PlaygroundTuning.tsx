@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 export interface PlaygroundTuning {
-  // stretch (dialkit width-based rubber band)
+  // Slider rubber-band stretch
   maxStretchPx: number;
   deadZonePx: number;
   cursorRangePx: number;

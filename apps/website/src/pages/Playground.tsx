@@ -1,6 +1,3 @@
-import { useEffect } from "react";
-import { DialRoot, useDialKit } from "dialkit";
-import "dialkit/styles.css";
 import { Stagger } from "../components/Stagger.tsx";
 import {
   DEFAULT_TUNING,
@@ -11,48 +8,11 @@ import { CornerShapeSection } from "../components/playground/sections/CornerShap
 import { PerCornerSection } from "../components/playground/sections/PerCornerSection.tsx";
 import { RadiusSection } from "../components/playground/sections/RadiusSection.tsx";
 import { ShadowSection } from "../components/playground/sections/ShadowSection.tsx";
-import { soundConfig } from "../lib/sounds.ts";
 
 const BORDER_DESC =
   "Stroke borders that follow the smooth corner path. Solid, dashed, dotted, double, groove, ridge — the standard CSS line styles.";
 
 export function Playground() {
-  // Spring/cursor/track values are baked in at DEFAULT_TUNING — the dial
-  // now drives sound tuning. `pitch` is the audio playback rate (>1
-  // raises pitch + shortens; <1 lowers + lengthens).
-  const dial = useDialKit("Sounds", {
-    click: {
-      volume: [soundConfig.click.volume, 0, 1, 0.05],
-      pitch: [soundConfig.click.pitch, 0.5, 2.0, 0.05],
-    },
-    pill: {
-      volume: [soundConfig.pill.volume, 0, 1, 0.05],
-      pitch: [soundConfig.pill.pitch, 0.5, 2.0, 0.05],
-    },
-    tick: {
-      volume: [soundConfig.tick.volume, 0, 1, 0.01],
-      pitch: [soundConfig.tick.pitch, 0.5, 2.0, 0.05],
-    },
-    copy: {
-      volume: [soundConfig.copy.volume, 0, 1, 0.05],
-      pitch: [soundConfig.copy.pitch, 0.5, 2.0, 0.05],
-    },
-  });
-
-  // Mirror dial values into the mutable sound config so play() reads the
-  // latest values without re-rendering anything that uses sounds.
-  useEffect(() => {
-    (["click", "pill", "tick", "copy"] as const).forEach((k) => {
-      soundConfig[k].volume = dial[k].volume;
-      soundConfig[k].pitch = dial[k].pitch;
-    });
-  }, [
-    dial.click.volume, dial.click.pitch,
-    dial.pill.volume, dial.pill.pitch,
-    dial.tick.volume, dial.tick.pitch,
-    dial.copy.volume, dial.copy.pitch,
-  ]);
-
   return (
     <PlaygroundTuningProvider value={DEFAULT_TUNING}>
       {/* Indices 0–5 are reserved for the Header; body starts at 6.
@@ -91,10 +51,6 @@ export function Playground() {
           <BorderSection title="Center Border" description={BORDER_DESC} position="middle" />
         </Stagger>
       </div>
-      {/* DialRoot lives inside the Playground so dialkit + its CSS only load
-          on this route. `productionEnabled` defaults to false — dialkit hides
-          itself in production builds. */}
-      <DialRoot position="bottom-right" defaultOpen={false} />
     </PlaygroundTuningProvider>
   );
 }
