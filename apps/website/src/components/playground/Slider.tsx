@@ -133,10 +133,9 @@ export function Slider({
     },
   });
 
-  // Haptic-style tick on every step crossing during a drag — feels
-  // continuous on integer-step sliders (every step ticks) AND on
-  // fine-step sliders like smoothing 0–1 step 0.01 (rapid drag reads
-  // as a metallic scrape).
+  // Tick on every step crossing during a drag. Integer-step sliders
+  // click discretely; fine sub-integer steps read as a scrape on rapid
+  // drag (smoothing slider, step 0.01).
   const lastSteppedRef = useRef<number>(clamp(snap(value, step), min, max));
   useMotionValueEvent(reported, "change", (latest) => {
     if (!drag.isDraggingRef.current) return;

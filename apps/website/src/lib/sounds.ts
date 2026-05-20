@@ -4,10 +4,9 @@
 // triggers (slider drags fire dozens per second).
 
 // === File-based sounds =====================================================
-// Spawns a new Audio per play so rapid triggers can overlap instead of
-// cutting each other off. The first call to each source primes the HTTP
-// cache; subsequent plays reuse it. play() rejects under autoplay policy
-// until first user interaction — swallowed.
+// Fresh Audio per play so rapid triggers overlap instead of cutting each
+// other off. play() rejects under autoplay policy until first interaction
+// — swallowed.
 
 const primed = new Set<string>();
 
@@ -65,7 +64,7 @@ export function playTick() {
   master.gain.value = TICK_VOLUME;
   master.connect(c.destination);
 
-  // Sine partial — 5.5 kHz, exp decay over 12 ms.
+  // Sine partial.
   const osc = c.createOscillator();
   osc.type = "sine";
   osc.frequency.value = TICK_FREQ;
@@ -76,8 +75,7 @@ export function playTick() {
   osc.start(now);
   osc.stop(now + TICK_DECAY_SEC + 0.02);
 
-  // Noise burst — 3 ms, exp-faded, rung through a high-Q bandpass at
-  // the same 5.5 kHz so it tracks the sine partial's pitch.
+  // Noise burst — rung through a bandpass at the partial's pitch.
   const noise = c.createBufferSource();
   noise.buffer = getNoise(c);
   const nGain = c.createGain();
