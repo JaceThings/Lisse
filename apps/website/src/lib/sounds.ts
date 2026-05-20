@@ -1,12 +1,13 @@
-// UI sound playback. Three sounds (click, copy, pill) play short Opus
-// files; the fourth (tick) is synthesised at runtime via Web Audio so
-// it can be sub-millisecond-tight and stays consistent across rapid
-// triggers (slider drags fire dozens per second).
+// UI sounds. Short Opus files for discrete events (click, copy, pill,
+// toggle), a Web Audio synth for the slider tick (sub-millisecond timing,
+// fires dozens per second during drags), and a silent looper that keeps
+// iOS Safari on the media audio session so the synth ignores the silent
+// switch.
 
 // === File-based sounds =====================================================
-// Fresh Audio per play so rapid triggers overlap instead of cutting each
-// other off. play() rejects under autoplay policy until first interaction
-// — swallowed.
+// Fresh `Audio` per play so rapid triggers overlap instead of cutting each
+// other off. play() rejects under autoplay policy until first interaction;
+// the rejection is swallowed.
 
 const SOUND_FILES = [
   "/click.webm",
@@ -16,13 +17,12 @@ const SOUND_FILES = [
   "/compare-exit.webm",
   "/smoothing-enter.webm",
   "/smoothing-exit.webm",
+  "/silent.webm",
 ] as const;
 
-// Eager prefetch at module load. Total ~61 KB across the 7 files;
-// small enough to fetch up front without competing with critical path.
-// Each `new Audio()` with `preload = "auto"` issues an HTTP fetch and
-// populates the browser cache, so the first user interaction plays
-// without a cold-cache wait.
+// Eager prefetch at module load (~62 KB total). `preload = "auto"` issues
+// an HTTP fetch and populates the browser cache so the first user
+// interaction plays without a cold-cache wait.
 for (const src of SOUND_FILES) {
   const a = new Audio(src);
   a.preload = "auto";
@@ -43,10 +43,9 @@ export const playSmoothingEnter = () => playFile("/smoothing-enter.webm", 0.35);
 export const playSmoothingExit = () => playFile("/smoothing-exit.webm", 0.35);
 
 // === Tick (synthesised) ====================================================
-// A 5.5 kHz sine partial (exp decay over 12 ms) plus a 3 ms white-noise
-// burst rung through a Q=18 bandpass at 5.5 kHz. The resonant filter
-// rings like a small rigid object — recipe for a ratchet-pawl / comb-
-// tooth click.
+// 5.5 kHz sine partial (12 ms exp decay) + 3 ms white-noise burst through
+// a Q=18 bandpass at 5.5 kHz. The resonant filter rings like a small rigid
+// object — ratchet-pawl / comb-tooth click.
 
 const TICK_VOLUME = 0.075;
 const TICK_FREQ = 5500;
@@ -61,7 +60,49 @@ function audio() {
   return ctx;
 }
 
-// 0.5 s of pre-generated white noise reused across every fire.
+// iOS Safari quirks the synth has to navigate, both fixed on first user
+// gesture:
+//   1. AudioContext starts suspended; the slider tick fires inside a
+//      framer-motion listener, well past the gesture's call stack — too
+//      late for an in-handler resume() to take effect. Resume + schedule
+//      a 1-sample silent buffer here to fully unlock.
+//   2. WebAudio defaults to the "ringer" audio session, which the hardware
+//      silent switch mutes. `navigator.audioSession.type = "playback"`
+//      requests the media session; iOS only honours it while an HTML5
+//      audio source is live, so a silent looping `<audio>` keeps the
+//      page glued to the media session and the synth rides on it.
+if (typeof window !== "undefined") {
+  const unlock = () => {
+    try {
+      const c = audio();
+      c.resume().catch(() => {});
+      const src = c.createBufferSource();
+      src.buffer = c.createBuffer(1, 1, 22050);
+      src.connect(c.destination);
+      src.start(0);
+
+      const nav = navigator as Navigator & { audioSession?: { type: string } };
+      if (nav.audioSession) {
+        try { nav.audioSession.type = "playback"; } catch {}
+      }
+
+      const silent = new Audio("/silent.webm");
+      silent.loop = true;
+      silent.setAttribute("playsinline", "");
+      silent.volume = 0.0001;
+      silent.play().catch(() => {});
+    } catch {
+      // Let the next gesture retry — don't strip the listeners.
+      return;
+    }
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("keydown", unlock);
+  };
+  window.addEventListener("pointerdown", unlock);
+  window.addEventListener("keydown", unlock);
+}
+
+// 0.5 s of pre-generated white noise, reused across every fire.
 let noiseBuffer: AudioBuffer | null = null;
 function getNoise(c: AudioContext) {
   if (noiseBuffer) return noiseBuffer;
@@ -72,11 +113,10 @@ function getNoise(c: AudioContext) {
   return noiseBuffer;
 }
 
+// Wrapped in try/catch: fine-step slider drags call this 100+/sec; a
+// throw on a broken AudioContext would spam the console for the whole
+// drag. Audio is non-essential — drop the tick.
 export function playTick() {
-  // Wrapped in try/catch because slider drags call this 100+ times per
-  // second on fine-step sliders; if the AudioContext enters a broken
-  // state (resource pressure, exotic browser), an unhandled throw on
-  // every step crossing would spam the console for the whole drag.
   try {
     const c = audio();
     c.resume().catch(() => {});
@@ -86,7 +126,6 @@ export function playTick() {
     master.gain.value = TICK_VOLUME;
     master.connect(c.destination);
 
-    // Sine partial.
     const osc = c.createOscillator();
     osc.type = "sine";
     osc.frequency.value = TICK_FREQ;
@@ -97,7 +136,6 @@ export function playTick() {
     osc.start(now);
     osc.stop(now + TICK_DECAY_SEC + 0.02);
 
-    // Noise burst — rung through a bandpass at the partial's pitch.
     const noise = c.createBufferSource();
     noise.buffer = getNoise(c);
     const nGain = c.createGain();
@@ -110,7 +148,5 @@ export function playTick() {
     noise.connect(nGain).connect(filter).connect(master);
     noise.start(now);
     noise.stop(now + NOISE_DURATION_SEC + 0.01);
-  } catch {
-    // Audio is non-essential; if the context is broken, drop the tick.
-  }
+  } catch {}
 }
