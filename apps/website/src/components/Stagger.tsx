@@ -1,11 +1,5 @@
 import { motion } from "framer-motion";
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useMemo, type ReactNode } from "react";
 
 interface StaggerProps {
   /** Stagger slot — child entrance is delayed by `index × STEP` seconds. */
@@ -19,20 +13,20 @@ interface StaggerProps {
 // matches the rest of the site's preference for spatial calm.
 const ENTRANCE_BLUR_PX = 4;
 
-// Global app-mount timestamp — used as the fallback anchor when a Stagger
-// is rendered outside any StaggerScope (e.g. Header, Footer). Captured once
-// at module load so route-change remounts of those persistent components
-// see delays already in the past and animate immediately.
+// App-mount timestamp captured once at module load. Every Stagger
+// schedules against this anchor, so on first paint the cascade plays
+// (targets are in the future); on later navigations those targets are
+// in the past and the skip-gate below makes the items render at their
+// final state with no entrance.
 const APP_MOUNT_MS =
   typeof performance !== "undefined" ? performance.now() : 0;
 
 // Tracks whether the app has produced its first paint. The skip-when-past
-// gate uses this so that on the FIRST app load every Stagger animates,
-// even if bundle parse and React mount pushed `performance.now()` past
-// some early targetMs values. After first paint the flag flips to true,
-// and any Stagger that later mounts (e.g. a fresh route body) with a
-// past target legitimately skips its entrance animation. Double-rAF is
-// the standard "next frame after the first painted frame" trick.
+// gate uses this so that on first app load every Stagger animates, even
+// if bundle parse and React mount pushed `performance.now()` past some
+// early targetMs values. Without this guard a slow first paint would
+// suppress the body cascade entirely. Double-rAF is the standard "next
+// frame after the first painted frame" trick.
 let hasFirstPainted = false;
 if (typeof requestAnimationFrame !== "undefined") {
   requestAnimationFrame(() => {
@@ -53,50 +47,20 @@ const STEP = 0.08;
 const DURATION = 0.7;
 const EASE: [number, number, number, number] = [0.22, 0.61, 0.36, 1];
 
-// Per-scope anchor. A page wraps itself in <StaggerScope> so that its
-// stagger cascade restarts each time the page mounts — critical for
-// lazy-loaded routes, where the module loads long before the page actually
-// renders. Header/Footer don't wrap in a scope; they fall back to
-// APP_MOUNT_MS and so don't re-animate on subsequent navigations.
-const StaggerAnchorContext = createContext<number | null>(null);
-
-interface StaggerScopeProps {
-  children: ReactNode;
-}
-
-export function StaggerScope({ children }: StaggerScopeProps) {
-  const [anchor] = useState(() =>
-    typeof performance !== "undefined" ? performance.now() : 0,
-  );
-  return (
-    <StaggerAnchorContext.Provider value={anchor}>
-      {children}
-    </StaggerAnchorContext.Provider>
-  );
-}
-
 export function Stagger({ index, children }: StaggerProps) {
-  const scopedAnchor = useContext(StaggerAnchorContext);
-  const anchor = scopedAnchor ?? APP_MOUNT_MS;
   // Compute skip + delay exactly once, at mount. If a parent re-renders
   // mid-cascade (e.g., a sibling state change), we don't want a fresh
   // `performance.now()` reading to flip skip true on items that were
   // already animating — framer-motion would interpret the new transition
-  // and snap them to their final state. useMemo with stable deps keeps
-  // these values frozen at the instant this component first rendered.
-  //
-  // Skip only fires AFTER first paint has happened. Without this guard,
-  // a slow bundle parse on first load pushes `now` past targetMs for
-  // early indices, and they skip their entrance — exactly the "body
-  // doesn't stagger at all" bug we kept hitting.
+  // and snap them to their final state.
   const { skip, delay } = useMemo(() => {
-    const targetMs = anchor + (INITIAL_DELAY + index * STEP) * 1000;
+    const targetMs = APP_MOUNT_MS + (INITIAL_DELAY + index * STEP) * 1000;
     const now = typeof performance !== "undefined" ? performance.now() : 0;
     return {
       skip: hasFirstPainted && targetMs <= now,
       delay: Math.max(0, (targetMs - now) / 1000),
     };
-  }, [anchor, index]);
+  }, [index]);
 
   return (
     <motion.div

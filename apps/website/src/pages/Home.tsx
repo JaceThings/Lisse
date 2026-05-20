@@ -3,12 +3,10 @@ import { Install } from "../components/Install.tsx";
 import { Intro } from "../components/Intro.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 
-// Body Staggers share the global APP_MOUNT_MS anchor (no StaggerScope
-// here). On first app load their delays are still in the future, so the
-// cascade plays. On navigation those delays are far in the past, so
-// items animate immediately at full opacity — the route-level fade in
-// App.tsx is what carries the visible transition between routes.
-// Indices 0–5 are header; body starts at 6.
+// Indices 0–5 are header; body starts at 6. On first app load these
+// targets are in the future so the cascade plays; on later navigations
+// they're in the past and Stagger's skip-gate renders items at their
+// final state — the route-level fade in App.tsx carries the transition.
 const INTRO_FIRST = 6;
 const DEMO_INDEX = 9;
 const INSTALL_FIRST = 10;
