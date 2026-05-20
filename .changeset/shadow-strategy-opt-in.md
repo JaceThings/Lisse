@@ -1,5 +1,5 @@
 ---
-"@lisse/react": minor
+"@lisse/react": patch
 ---
 
 Adds `shadowStrategy?: "svg" | "box-shadow"` to `<SmoothCorners>`. Default is `"svg"`, so existing apps are unchanged.
