@@ -55,7 +55,7 @@ function describeState(smoothing: boolean, comparing: boolean): string {
 
 export function Demo() {
   const [smoothing, setSmoothing] = useState(true);
-  const [comparing, setComparing] = useState(false);
+  const [comparing, setComparing] = useState(true);
   const toggleSmoothing = () => {
     if (smoothing) playSmoothingExit();
     else playSmoothingEnter();
