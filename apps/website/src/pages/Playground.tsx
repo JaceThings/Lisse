@@ -13,6 +13,9 @@ import { RadiusSection } from "../components/playground/sections/RadiusSection.t
 import { ShadowSection } from "../components/playground/sections/ShadowSection.tsx";
 import { soundConfig } from "../lib/sounds.ts";
 
+const BORDER_DESC =
+  "Stroke borders that follow the smooth corner path. Solid, dashed, dotted, double, groove, ridge — the standard CSS line styles.";
+
 export function Playground() {
   // Spring/cursor/track values are baked in at DEFAULT_TUNING — the dial
   // now lives for sound tweaking instead. Each entry is [default, min,
@@ -84,25 +87,13 @@ export function Playground() {
           />
         </Stagger>
         <Stagger index={11}>
-          <BorderSection
-            title="Outer Border"
-            description="Stroke borders that follow the smooth corner path. Solid, dashed, dotted, double, groove, ridge — the standard CSS line styles."
-            position="outer"
-          />
+          <BorderSection title="Outer Border" description={BORDER_DESC} position="outer" />
         </Stagger>
         <Stagger index={12}>
-          <BorderSection
-            title="Inner Border"
-            description="Stroke borders that follow the smooth corner path. Solid, dashed, dotted, double, groove, ridge — the standard CSS line styles."
-            position="inner"
-          />
+          <BorderSection title="Inner Border" description={BORDER_DESC} position="inner" />
         </Stagger>
         <Stagger index={13}>
-          <BorderSection
-            title="Center Border"
-            description="Stroke borders that follow the smooth corner path. Solid, dashed, dotted, double, groove, ridge — the standard CSS line styles."
-            position="middle"
-          />
+          <BorderSection title="Center Border" description={BORDER_DESC} position="middle" />
         </Stagger>
       </div>
       {/* DialRoot lives inside the Playground so dialkit + its CSS only load
