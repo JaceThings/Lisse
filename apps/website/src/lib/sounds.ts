@@ -161,20 +161,19 @@ function scheduleOneTick(c: AudioContext, when: number) {
 
 // Cancel any tick still in the future. The currently-firing tick (if any)
 // keeps its decay — cutting an in-flight click sounds like a glitch. Past
-// entries get garbage-collected from the queue on the same pass.
+// entries already have a scheduled `.stop()` and will GC themselves once
+// the sources finish; we drop their refs here so `pending` doesn't grow
+// across drags.
 export function cancelPendingTicks() {
   if (!ctx) return;
   const now = ctx.currentTime;
-  const surviving: PendingTick[] = [];
   for (const p of pending) {
     if (p.when > now) {
       try { p.osc.stop(); } catch {}
       try { p.noise.stop(); } catch {}
-    } else {
-      surviving.push(p);
     }
   }
-  pending = surviving;
+  pending = [];
   nextTickTime = now;
 }
 

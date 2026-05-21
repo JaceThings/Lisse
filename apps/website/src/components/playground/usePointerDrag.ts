@@ -125,17 +125,16 @@ export function usePointerDrag({
     draggingRef.current = true;
     isClickRef.current = true;
     pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
-    // Seed with the click target so the first pointermove past CLICK_THRESHOLD
-    // ticks only if it actually advances past the tap's stepped position.
-    const seedRatio = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    lastDragSteppedRef.current = clamp(snap(seedRatio * range + min, step), min, max);
 
     // Tween toward the tapped position. If the user drags, the move handler
     // cancels this tween and switches to direct pointer tracking; otherwise
-    // it plays out as a tap-to-jump.
+    // it plays out as a tap-to-jump. The same stepped value seeds
+    // lastDragSteppedRef so the first crossing past CLICK_THRESHOLD only
+    // ticks if it actually advances past the tap's position.
     const ratio = clamp((e.clientX - rect.left) / rect.width, 0, 1);
     const raw = ratio * range + min;
     const targetValue = clamp(snap(raw, step), min, max);
+    lastDragSteppedRef.current = targetValue;
     if (prefersReducedMotion()) {
       reported.set(targetValue);
     } else {
