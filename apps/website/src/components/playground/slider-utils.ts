@@ -9,6 +9,13 @@ export const READOUT_TRANSITION = { duration: 300 };
 
 export const CLICK_THRESHOLD = 3;
 
+// Snap-between-steps ease. circOut accelerates from rest then settles — the
+// fill bar reads as a magnetic snap to the next integer, and the audio tick
+// lands inside the deceleration so any output-buffer latency hides under
+// motion rather than against a frozen bar.
+export const STEP_SNAP_DURATION = 0.08;
+export const STEP_SNAP_EASE: [number, number, number, number] = [0.0, 0.55, 0.45, 1.0];
+
 export const clamp = (n: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, n));
 

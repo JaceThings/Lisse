@@ -49,14 +49,14 @@ export const playSmoothingExit = () => playFile("/smoothing-exit.webm", 0.35);
 
 const TICK_VOLUME = 0.075;
 const TICK_FREQ = 5500;
-const TICK_DECAY_SEC = 0.012;
-const NOISE_DURATION_SEC = 0.003;
+const TICK_DECAY_SEC = 0.006;
+const NOISE_DURATION_SEC = 0.002;
 const NOISE_LEVEL = 0.85;
 const NOISE_Q = 18;
 
 let ctx: AudioContext | null = null;
 function audio() {
-  if (!ctx) ctx = new AudioContext();
+  if (!ctx) ctx = new AudioContext({ latencyHint: "interactive" });
   return ctx;
 }
 
@@ -113,40 +113,80 @@ function getNoise(c: AudioContext) {
   return noiseBuffer;
 }
 
-// Wrapped in try/catch: fine-step slider drags call this 100+/sec; a
-// throw on a broken AudioContext would spam the console for the whole
-// drag. Audio is non-essential — drop the tick.
+// Audio cap at ~25 Hz. Faster than that, the ear stops resolving individual
+// clicks and they smear into a buzz. 40 ms gap keeps every tick its own
+// event; the matching queue-ahead means at most ~1 tick is ever pending,
+// so a release feels sharp even before cancelPendingTicks() runs.
+const TICK_MIN_GAP_SEC = 0.04;
+const MAX_QUEUE_AHEAD_SEC = 0.04;
+let nextTickTime = 0;
+
+interface PendingTick {
+  when: number;
+  osc: OscillatorNode;
+  noise: AudioBufferSourceNode;
+}
+let pending: PendingTick[] = [];
+
+function scheduleOneTick(c: AudioContext, when: number) {
+  const master = c.createGain();
+  master.gain.value = TICK_VOLUME;
+  master.connect(c.destination);
+
+  const osc = c.createOscillator();
+  osc.type = "sine";
+  osc.frequency.value = TICK_FREQ;
+  const oscEnv = c.createGain();
+  oscEnv.gain.setValueAtTime(1, when);
+  oscEnv.gain.exponentialRampToValueAtTime(0.0005, when + TICK_DECAY_SEC);
+  osc.connect(oscEnv).connect(master);
+  osc.start(when);
+  osc.stop(when + TICK_DECAY_SEC + 0.02);
+
+  const noise = c.createBufferSource();
+  noise.buffer = getNoise(c);
+  const nGain = c.createGain();
+  nGain.gain.setValueAtTime(NOISE_LEVEL, when);
+  nGain.gain.exponentialRampToValueAtTime(0.0005, when + NOISE_DURATION_SEC);
+  const filter = c.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = TICK_FREQ;
+  filter.Q.value = NOISE_Q;
+  noise.connect(nGain).connect(filter).connect(master);
+  noise.start(when);
+  noise.stop(when + NOISE_DURATION_SEC + 0.01);
+
+  pending.push({ when, osc, noise });
+}
+
+// Cancel any tick still in the future. The currently-firing tick (if any)
+// keeps its decay — cutting an in-flight click sounds like a glitch. Past
+// entries get garbage-collected from the queue on the same pass.
+export function cancelPendingTicks() {
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const surviving: PendingTick[] = [];
+  for (const p of pending) {
+    if (p.when > now) {
+      try { p.osc.stop(); } catch {}
+      try { p.noise.stop(); } catch {}
+    } else {
+      surviving.push(p);
+    }
+  }
+  pending = surviving;
+  nextTickTime = now;
+}
+
 export function playTick() {
   try {
     const c = audio();
-    c.resume().catch(() => {});
     const now = c.currentTime;
-
-    const master = c.createGain();
-    master.gain.value = TICK_VOLUME;
-    master.connect(c.destination);
-
-    const osc = c.createOscillator();
-    osc.type = "sine";
-    osc.frequency.value = TICK_FREQ;
-    const oscEnv = c.createGain();
-    oscEnv.gain.setValueAtTime(1, now);
-    oscEnv.gain.exponentialRampToValueAtTime(0.0005, now + TICK_DECAY_SEC);
-    osc.connect(oscEnv).connect(master);
-    osc.start(now);
-    osc.stop(now + TICK_DECAY_SEC + 0.02);
-
-    const noise = c.createBufferSource();
-    noise.buffer = getNoise(c);
-    const nGain = c.createGain();
-    nGain.gain.setValueAtTime(NOISE_LEVEL, now);
-    nGain.gain.exponentialRampToValueAtTime(0.0005, now + NOISE_DURATION_SEC);
-    const filter = c.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = TICK_FREQ;
-    filter.Q.value = NOISE_Q;
-    noise.connect(nGain).connect(filter).connect(master);
-    noise.start(now);
-    noise.stop(now + NOISE_DURATION_SEC + 0.01);
+    // Schedule into the earliest free slot. If the queue already runs
+    // past our look-ahead, drop this tick rather than trailing the cursor.
+    const when = Math.max(now, nextTickTime);
+    if (when - now > MAX_QUEUE_AHEAD_SEC) return;
+    scheduleOneTick(c, when);
+    nextTickTime = when + TICK_MIN_GAP_SEC;
   } catch {}
 }

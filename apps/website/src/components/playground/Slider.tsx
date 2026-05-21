@@ -21,7 +21,6 @@ import {
 import { useEditableValue } from "./useEditableValue.ts";
 import { usePointerDrag } from "./usePointerDrag.ts";
 import { useRubberBand } from "./useRubberBand.ts";
-import { playTick } from "../../lib/sounds.ts";
 
 interface SliderProps {
   label: string;
@@ -131,20 +130,6 @@ export function Slider({
         propAnimRef.current = null;
       }
     },
-  });
-
-  // Tick on every step crossing during a drag. Integer-step sliders
-  // click discretely; fine sub-integer steps read as a scrape on rapid
-  // drag (smoothing slider, step 0.01). The ref tracks the snapped
-  // value across ALL changes (drag + preset tweens) so the first tick
-  // of a fresh drag doesn't fire against a stale baseline.
-  const lastSteppedRef = useRef<number>(clamp(snap(value, step), min, max));
-  useMotionValueEvent(reported, "change", (latest) => {
-    const stepped = clamp(snap(latest, step), min, max);
-    if (stepped !== lastSteppedRef.current) {
-      lastSteppedRef.current = stepped;
-      if (drag.isDraggingRef.current) playTick();
-    }
   });
 
   // Tween `reported` toward the controlled prop on non-drag changes
