@@ -4,10 +4,13 @@ import {
   CLICK_THRESHOLD,
   PROP_CHANGE_DURATION,
   PROP_CHANGE_EASE,
+  STEP_SNAP_DURATION,
+  STEP_SNAP_EASE,
   clamp,
   prefersReducedMotion,
   snap,
 } from "./slider-utils.ts";
+import { cancelPendingTicks, playTick } from "../../lib/sounds.ts";
 
 interface RubberBandApi {
   updateStretch: (clientX: number, rect: DOMRect) => void;
@@ -48,6 +51,13 @@ export function usePointerDrag({
   // updates in response to that same pointerdown — wiping the tween
   // would freeze the fill at its pre-tap position.
   const pointerAnimRef = useRef<ReturnType<typeof animate> | null>(null);
+  // Snap-tween that eases the fill from its current visual position into
+  // the freshly-stepped integer. Held separately from the click-tween so a
+  // mid-drag crossing can replace just the snap without killing the rest.
+  const stepAnimRef = useRef<ReturnType<typeof animate> | null>(null);
+  // Last integer the drag committed to. null between drags so the first
+  // crossing of a fresh drag doesn't tick against a stale baseline.
+  const lastDragSteppedRef = useRef<number | null>(null);
   // Distinguishes a track tap from the start of a drag. A pointerdown
   // begins as a click; the first pointermove past CLICK_THRESHOLD flips
   // it to a drag and starts feeding `applyPointer`. Until then, the
@@ -68,10 +78,29 @@ export function usePointerDrag({
     const ratio = clamp((cx - rect.left) / rect.width, 0, 1);
     const raw = ratio * range + min;
     const stepped = clamp(snap(raw, step), min, max);
-    // Drive the fill bar from the continuous raw position so the visual
-    // follows the pointer between steps; the readout's transform re-applies
-    // `snap()`. On release, the prop-tween snaps the fill to the legal value.
-    reported.set(clamp(raw, min, max));
+
+    if (stepped !== lastDragSteppedRef.current) {
+      // `prev` is non-null inside applyPointer: onPointerDown always seeds
+      // lastDragSteppedRef, and applyPointer only runs during a drag.
+      const prev = lastDragSteppedRef.current!;
+      const stepsCrossed = Math.round(Math.abs(stepped - prev) / step);
+      playTick();
+      lastDragSteppedRef.current = stepped;
+
+      if (stepAnimRef.current) stepAnimRef.current.stop();
+      // Slow drag (one detent crossed): magnetic circOut snap. Fast drag
+      // (multi-detent): hard set so the bar tracks the cursor instead of
+      // trailing through an 80 ms tween it can't keep up with.
+      if (prefersReducedMotion() || stepsCrossed > 1) {
+        reported.set(stepped);
+      } else {
+        stepAnimRef.current = animate(reported, stepped, {
+          type: "tween",
+          duration: STEP_SNAP_DURATION,
+          ease: STEP_SNAP_EASE,
+        });
+      }
+    }
     if (stepped !== value) onChange(stepped, true);
   };
 
@@ -87,6 +116,10 @@ export function usePointerDrag({
       pointerAnimRef.current.stop();
       pointerAnimRef.current = null;
     }
+    if (stepAnimRef.current) {
+      stepAnimRef.current.stop();
+      stepAnimRef.current = null;
+    }
     track.setPointerCapture(e.pointerId);
     pointerIdRef.current = e.pointerId;
     draggingRef.current = true;
@@ -95,10 +128,13 @@ export function usePointerDrag({
 
     // Tween toward the tapped position. If the user drags, the move handler
     // cancels this tween and switches to direct pointer tracking; otherwise
-    // it plays out as a tap-to-jump.
+    // it plays out as a tap-to-jump. The same stepped value seeds
+    // lastDragSteppedRef so the first crossing past CLICK_THRESHOLD only
+    // ticks if it actually advances past the tap's position.
     const ratio = clamp((e.clientX - rect.left) / rect.width, 0, 1);
     const raw = ratio * range + min;
     const targetValue = clamp(snap(raw, step), min, max);
+    lastDragSteppedRef.current = targetValue;
     if (prefersReducedMotion()) {
       reported.set(targetValue);
     } else {
@@ -159,6 +195,14 @@ export function usePointerDrag({
     }
     isClickRef.current = true;
     pointerDownPosRef.current = null;
+    lastDragSteppedRef.current = null;
+    if (stepAnimRef.current) {
+      stepAnimRef.current.stop();
+      stepAnimRef.current = null;
+    }
+    // Kill any tick scheduled for the future. Without this, a fast flick
+    // that queued ~40 ms of ticks would keep clicking after release.
+    cancelPendingTicks();
   };
 
   return {
