@@ -1,0 +1,86 @@
+// Snapshot-based morph state for the math demo page. Holds the
+// "currently displayed" samples + overlay as live refs, and on each
+// call to `snapshotForMorph()` captures that live state as the
+// animation's starting point before the curveType state change
+// triggers a fresh geometry render.
+//
+// The key trick is that `snapshotForMorph()` must be called from the
+// curve-type click handler *before* `setCurveType(...)` queues a
+// re-render. By the time React's useEffect fires the refs have already
+// been overwritten with the new target — too late to snapshot the
+// previous frame.
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { animate } from "framer-motion";
+import { type CurveSamples, lerpSamples } from "../lib/curves.ts";
+import { lerpOverlay, type MorphedOverlay } from "../lib/overlay.ts";
+
+const EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
+
+export interface MorphedCurve {
+  displaySamples: CurveSamples;
+  displayOverlay: MorphedOverlay;
+  /** Call from your click handler *before* updating the underlying
+   *  state that drives `targetKey` — snapshots the visible-on-screen
+   *  geometry so the next morph starts from there instead of jumping. */
+  snapshotForMorph: () => void;
+}
+
+/**
+ * `targetKey` is the discriminator — typically the curveType string.
+ * When it changes, the hook tweens from whatever the consumer last
+ * snapshotted to the new `target` over `durationMs`.
+ */
+export function useMorphedCurve(
+  targetKey: unknown,
+  target: { samples: CurveSamples; overlay: MorphedOverlay },
+  durationMs = 450,
+): MorphedCurve {
+  const [snapshotSamples, setSnapshotSamples] = useState<CurveSamples>(() => target.samples);
+  const [snapshotOverlay, setSnapshotOverlay] = useState<MorphedOverlay>(() => target.overlay);
+  const [morph, setMorph] = useState(1);
+
+  // Mirror the live computed values so `snapshotForMorph` can read
+  // them without re-running the lerp from React state.
+  const displaySamplesRef = useRef<CurveSamples>(target.samples);
+  const displayOverlayRef = useRef<MorphedOverlay>(target.overlay);
+
+  // Avoid an animation on the first mount — the initial snapshot is
+  // already equal to the target.
+  const lastKeyRef = useRef<unknown>(targetKey);
+
+  useEffect(() => {
+    if (lastKeyRef.current === targetKey) return;
+    lastKeyRef.current = targetKey;
+    const controls = animate(0, 1, {
+      type: "tween",
+      duration: durationMs / 1000,
+      ease: EASE,
+      onUpdate: (v) => setMorph(v),
+      onComplete: () => setMorph(1),
+    });
+    return () => controls.stop();
+  }, [targetKey, durationMs]);
+
+  const displaySamples = useMemo(() => {
+    if (morph >= 1) return target.samples;
+    return lerpSamples(snapshotSamples, target.samples, morph);
+  }, [snapshotSamples, target.samples, morph]);
+
+  const displayOverlay = useMemo(() => {
+    if (morph >= 1) return target.overlay;
+    return lerpOverlay(snapshotOverlay, target.overlay, morph);
+  }, [snapshotOverlay, target.overlay, morph]);
+
+  displaySamplesRef.current = displaySamples;
+  displayOverlayRef.current = displayOverlay;
+
+  const snapshotForMorph = useCallback(() => {
+    setSnapshotSamples(displaySamplesRef.current);
+    setSnapshotOverlay(displayOverlayRef.current);
+    setMorph(0);
+  }, []);
+
+  return { displaySamples, displayOverlay, snapshotForMorph };
+}
+

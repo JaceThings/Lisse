@@ -12,7 +12,9 @@ import { Layout } from "./components/Layout.tsx";
 import { SelectionHighlight } from "./components/SelectionHighlight.tsx";
 import { Stagger } from "./components/Stagger.tsx";
 import { Footer } from "./components/playground/Footer.tsx";
+import { CurvesTest } from "./pages/CurvesTest.tsx";
 import { Home } from "./pages/Home.tsx";
+import { MathPage } from "./pages/Math.tsx";
 import { Playground } from "./pages/Playground.tsx";
 import { What } from "./pages/What.tsx";
 
@@ -45,7 +47,7 @@ const EASE = [0.4, 0, 0.2, 1] as const;
 // Unknown paths fall back to "/" to match the catch-all route, which
 // renders <Home /> — otherwise crawlers could index /typo as a
 // duplicate-content URL.
-const CANONICAL_PATHS = new Set(["/", "/what", "/playground"]);
+const CANONICAL_PATHS = new Set(["/", "/what", "/playground", "/math"]);
 function CanonicalUpdater() {
   const location = useLocation();
   useEffect(() => {
@@ -90,6 +92,8 @@ function AnimatedBody() {
         <Routes location={location}>
           <Route path="/" element={<Home />} />
           <Route path="/playground" element={<Playground />} />
+          <Route path="/math" element={<MathPage />} />
+          <Route path="/curves-test" element={<CurvesTest />} />
           <Route path="/what" element={<What />} />
           <Route path="*" element={<Home />} />
         </Routes>
