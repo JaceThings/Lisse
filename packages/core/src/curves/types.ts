@@ -1,5 +1,6 @@
-/** Corner curve family. Default is `'squircle'` — the Figma curve. */
-export type CurveType = "arc" | "squircle" | "superellipse" | "clothoid";
+import type { CurveType } from "../types.js";
+
+export type { CurveType };
 
 /**
  * One of four corner orientations as the path traverses the rectangle

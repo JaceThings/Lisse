@@ -17,6 +17,26 @@ const baseInput = (overrides: Partial<CurveBuilderInput> = {}): CurveBuilderInpu
   ...overrides,
 });
 
+// Walk a relative-coordinate path segment and accumulate the endpoint
+// deltas of every `c` (cubic Bézier — endpoint at offset +5/+6) and `a`
+// (elliptical arc — endpoint at offset +6/+7) command. Used to verify
+// that each builder's TR quadrant terminates at (p, p).
+function sumEndpointDeltas(seg: string): { x: number; y: number } {
+  const tokens = seg.split(/\s+/);
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] === "c") {
+      x += parseFloat(tokens[i + 5]);
+      y += parseFloat(tokens[i + 6]);
+    } else if (tokens[i] === "a") {
+      x += parseFloat(tokens[i + 6]);
+      y += parseFloat(tokens[i + 7]);
+    }
+  }
+  return { x, y };
+}
+
 describe("buildArc", () => {
   it("emits a single relative arc command for each orient", () => {
     const out = buildArc(baseInput());
@@ -68,37 +88,15 @@ describe("buildSuperellipse", () => {
 
   it("path reaches the exit tangency point exactly", () => {
     const out = buildSuperellipse(baseInput({ cornerRadius: 40 }));
-    const seg = out.pathSegment("TR");
-    // Sum the third (endpoint) delta of each cubic; should land on (40, 40).
-    const tokens = seg.split(/\s+/);
-    let x = 0;
-    let y = 0;
-    for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i] === "c") {
-        // Six values follow: B1x B1y B2x B2y B3x B3y (relative).
-        x += parseFloat(tokens[i + 5]);
-        y += parseFloat(tokens[i + 6]);
-      }
-    }
+    const { x, y } = sumEndpointDeltas(out.pathSegment("TR"));
     expect(Math.abs(x - 40)).toBeLessThan(1e-3);
     expect(Math.abs(y - 40)).toBeLessThan(1e-3);
   });
 
   it("approximates a circle when exponent = 2", () => {
     const out = buildSuperellipse(baseInput({ exponent: 2, cornerRadius: 100 }));
-    // Sample the curve at t = 0.5 on each of the three cubics; each
-    // sample should be within ~0.3 px of the true unit-circle parameterisation.
     // Just sanity-check that the endpoint is at (100, 100).
-    const seg = out.pathSegment("TR");
-    const tokens = seg.split(/\s+/);
-    let x = 0;
-    let y = 0;
-    for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i] === "c") {
-        x += parseFloat(tokens[i + 5]);
-        y += parseFloat(tokens[i + 6]);
-      }
-    }
+    const { x, y } = sumEndpointDeltas(out.pathSegment("TR"));
     expect(Math.abs(x - 100)).toBeLessThan(1e-3);
     expect(Math.abs(y - 100)).toBeLessThan(1e-3);
   });
@@ -134,19 +132,7 @@ describe("buildClothoid", () => {
 
   it("path reaches the exit tangency point exactly", () => {
     const out = buildClothoid(baseInput({ smoothing: 0.6 }));
-    const seg = out.pathSegment("TR");
-    const tokens = seg.split(/\s+/);
-    let x = 0;
-    let y = 0;
-    for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i] === "c") {
-        x += parseFloat(tokens[i + 5]);
-        y += parseFloat(tokens[i + 6]);
-      } else if (tokens[i] === "a") {
-        x += parseFloat(tokens[i + 6]);
-        y += parseFloat(tokens[i + 7]);
-      }
-    }
+    const { x, y } = sumEndpointDeltas(out.pathSegment("TR"));
     expect(Math.abs(x - out.p)).toBeLessThan(1e-3);
     expect(Math.abs(y - out.p)).toBeLessThan(1e-3);
   });

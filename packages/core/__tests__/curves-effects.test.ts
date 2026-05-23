@@ -8,7 +8,7 @@
 // fail to invalidate caches (risk #4). The actual cubic-arc-cubic
 // content is unit-tested in curves.test.ts; here we look at the
 // rendered DOM and the path strings that the effects pipeline emits.
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createDropShadow } from "../src/drop-shadow.js";
 import { createSvgEffects } from "../src/svg-effects.js";
 import { generatePath } from "../src/generate-path.js";
@@ -28,10 +28,11 @@ beforeEach(() => {
   vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
   anchor = document.createElement("div");
   document.body.appendChild(anchor);
-  return () => {
-    vi.restoreAllMocks();
-    document.body.innerHTML = "";
-  };
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  document.body.innerHTML = "";
 });
 
 describe("drop shadow per curve type", () => {

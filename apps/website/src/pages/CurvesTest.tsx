@@ -1,4 +1,5 @@
 import { SmoothCorners, type CurveType } from "@lisse/react";
+import type { BorderConfig, ShadowConfig } from "@lisse/core";
 
 // Dev-only visual verification harness for the four curve types.
 // Mounted at /curves-test. Renders each curve at the same radius
@@ -12,90 +13,58 @@ const SIZE = 140;
 const RADIUS = 40;
 const SMOOTHING = 0.6;
 
-type Effect =
-  | "none"
-  | "drop"
-  | "inner"
-  | "innerBorder"
-  | "outerBorder"
-  | "thickBorder"
-  | "all";
-
-const EFFECT_LABELS: Record<Effect, string> = {
-  none: "fill only",
-  drop: "drop shadow",
-  inner: "inner shadow",
-  innerBorder: "4 px inner border",
-  outerBorder: "4 px outer border",
-  thickBorder: "12 px border",
-  all: "shadow + border",
-};
-
-const EFFECTS: Effect[] = ["none", "drop", "inner", "innerBorder", "outerBorder", "thickBorder", "all"];
-
-function Cell({ curve, effect }: { curve: CurveType; effect: Effect }) {
-  const corners = { radius: RADIUS, curve, smoothing: SMOOTHING };
-  switch (effect) {
-    case "drop":
-      return (
-        <SmoothCorners
-          corners={corners}
-          shadow={{ offsetX: 0, offsetY: 6, blur: 12, spread: 0, color: "#000", opacity: 0.35 }}
-          style={{ width: SIZE, height: SIZE, background: "#4a5b6b" }}
-        />
-      );
-    case "inner":
-      return (
-        <SmoothCorners
-          corners={corners}
-          innerShadow={{ offsetX: 0, offsetY: 4, blur: 10, spread: 0, color: "#000", opacity: 0.45 }}
-          style={{ width: SIZE, height: SIZE, background: "#7e8c98" }}
-        />
-      );
-    case "innerBorder":
-      return (
-        <SmoothCorners
-          corners={corners}
-          innerBorder={{ width: 4, color: "#c1666b", opacity: 1 }}
-          style={{ width: SIZE, height: SIZE, background: "#4a5b6b" }}
-        />
-      );
-    case "outerBorder":
-      return (
-        <SmoothCorners
-          corners={corners}
-          outerBorder={{ width: 4, color: "#c1666b", opacity: 1 }}
-          style={{ width: SIZE, height: SIZE, background: "#4a5b6b" }}
-        />
-      );
-    case "thickBorder":
-      return (
-        <SmoothCorners
-          corners={corners}
-          middleBorder={{ width: 12, color: "#c1666b", opacity: 1 }}
-          style={{ width: SIZE, height: SIZE, background: "#4a5b6b" }}
-        />
-      );
-    case "all":
-      return (
-        <SmoothCorners
-          corners={corners}
-          shadow={{ offsetX: 0, offsetY: 6, blur: 12, spread: 0, color: "#000", opacity: 0.35 }}
-          innerBorder={{ width: 2, color: "#c1666b", opacity: 1 }}
-          innerShadow={{ offsetX: 0, offsetY: 2, blur: 6, spread: 0, color: "#000", opacity: 0.3 }}
-          style={{ width: SIZE, height: SIZE, background: "#7e8c98" }}
-        />
-      );
-    case "none":
-    default:
-      return (
-        <SmoothCorners
-          corners={corners}
-          style={{ width: SIZE, height: SIZE, background: "#4a5b6b" }}
-        />
-      );
-  }
+interface EffectConfig {
+  id: string;
+  label: string;
+  background: string;
+  shadow?: ShadowConfig;
+  innerShadow?: ShadowConfig;
+  innerBorder?: BorderConfig;
+  outerBorder?: BorderConfig;
+  middleBorder?: BorderConfig;
 }
+
+const EFFECTS: EffectConfig[] = [
+  { id: "none", label: "fill only", background: "#4a5b6b" },
+  {
+    id: "drop",
+    label: "drop shadow",
+    background: "#4a5b6b",
+    shadow: { offsetX: 0, offsetY: 6, blur: 12, spread: 0, color: "#000", opacity: 0.35 },
+  },
+  {
+    id: "inner",
+    label: "inner shadow",
+    background: "#7e8c98",
+    innerShadow: { offsetX: 0, offsetY: 4, blur: 10, spread: 0, color: "#000", opacity: 0.45 },
+  },
+  {
+    id: "innerBorder",
+    label: "4 px inner border",
+    background: "#4a5b6b",
+    innerBorder: { width: 4, color: "#c1666b", opacity: 1 },
+  },
+  {
+    id: "outerBorder",
+    label: "4 px outer border",
+    background: "#4a5b6b",
+    outerBorder: { width: 4, color: "#c1666b", opacity: 1 },
+  },
+  {
+    id: "thickBorder",
+    label: "12 px border",
+    background: "#4a5b6b",
+    middleBorder: { width: 12, color: "#c1666b", opacity: 1 },
+  },
+  {
+    id: "all",
+    label: "shadow + border",
+    background: "#7e8c98",
+    shadow: { offsetX: 0, offsetY: 6, blur: 12, spread: 0, color: "#000", opacity: 0.35 },
+    innerShadow: { offsetX: 0, offsetY: 2, blur: 6, spread: 0, color: "#000", opacity: 0.3 },
+    innerBorder: { width: 2, color: "#c1666b", opacity: 1 },
+  },
+];
 
 export function CurvesTest() {
   return (
@@ -111,17 +80,21 @@ export function CurvesTest() {
           <tr>
             <th />
             {EFFECTS.map((e) => (
-              <th key={e} style={{ fontSize: 12, fontWeight: 400, textAlign: "left" }}>{EFFECT_LABELS[e]}</th>
+              <th key={e.id} style={{ fontSize: 12, fontWeight: 400, textAlign: "left" }}>{e.label}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {CURVES.map((c) => (
-            <tr key={c}>
-              <th style={{ fontSize: 13, fontWeight: 500, textAlign: "right", paddingRight: 8 }}>{c}</th>
-              {EFFECTS.map((e) => (
-                <td key={e} style={{ padding: 12 }}>
-                  <Cell curve={c} effect={e} />
+          {CURVES.map((curve) => (
+            <tr key={curve}>
+              <th style={{ fontSize: 13, fontWeight: 500, textAlign: "right", paddingRight: 8 }}>{curve}</th>
+              {EFFECTS.map(({ id, background, ...effectProps }) => (
+                <td key={id} style={{ padding: 12 }}>
+                  <SmoothCorners
+                    corners={{ radius: RADIUS, curve, smoothing: SMOOTHING }}
+                    {...effectProps}
+                    style={{ width: SIZE, height: SIZE, background }}
+                  />
                 </td>
               ))}
             </tr>
