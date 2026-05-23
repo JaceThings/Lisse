@@ -15,8 +15,9 @@ const ANGLE_EPSILON = 1e-6;
  * circle; s = 1 is the pure Cornu corner.
  *
  * One cubic Bézier per half-fillet + one native SVG `a` for the arc.
- * Walton & Meek (2005) bound the cubic Hausdorff error by (Δθ)⁵·L / 1920
- * — sub-pixel across all Lisse-realistic R / smoothing.
+ * The cubic uses the midpoint-match scheme (see the comment above the
+ * `h0` / `h1` solve below) — Hausdorff error stays sub-pixel across
+ * R ∈ [10, 200] and smoothing ∈ [0, 1].
  */
 export const buildClothoid: CurveBuilder = ({
   cornerRadius,

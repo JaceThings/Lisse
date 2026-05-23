@@ -29,7 +29,10 @@ export const buildSuperellipse: CurveBuilder = ({
   if (p <= 0) {
     return { p: 0, pathSegment: () => "" };
   }
-  const n = exponent;
+  // Clamp n to a safe range. n = 2 is a quarter-circle; n < 2 would
+  // produce an inward-bulging concave corner; non-finite n produces
+  // NaN through Math.pow downstream. Clamp before computing e = 2/n.
+  const n = Number.isFinite(exponent) ? Math.max(2, exponent) : 4;
   const e = 2 / n;
 
   const thetas = [0, Math.PI / 6, Math.PI / 3, Math.PI / 2];

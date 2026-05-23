@@ -148,6 +148,55 @@ describe("buildClothoid", () => {
   });
 });
 
+// Risk #5 from the curve-type blueprint: the clothoid cubic Bézier's
+// endpoint must match the Simpson-integrated clothoid endpoint within
+// tight tolerance across the R / smoothing range. Otherwise the cubic
+// silently drifts from the true clothoid shape — visible as the corner
+// not closing cleanly.
+describe("buildClothoid — cubic endpoint property", () => {
+  const sumEndpointDeltas = (seg: string): { x: number; y: number } => {
+    const tokens = seg.split(/\s+/);
+    let x = 0;
+    let y = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i] === "c") {
+        x += parseFloat(tokens[i + 5]);
+        y += parseFloat(tokens[i + 6]);
+      } else if (tokens[i] === "a") {
+        x += parseFloat(tokens[i + 6]);
+        y += parseFloat(tokens[i + 7]);
+      }
+    }
+    return { x, y };
+  };
+
+  for (const cornerRadius of [10, 40, 100, 200]) {
+    for (const smoothing of [0.2, 0.4, 0.6, 0.8, 1.0]) {
+      it(`R=${cornerRadius} s=${smoothing}: endpoint lands at (p, p) within 1e-3`, () => {
+        const out = buildClothoid(baseInput({ cornerRadius, smoothing }));
+        const { x, y } = sumEndpointDeltas(out.pathSegment("TR"));
+        expect(Math.abs(x - out.p)).toBeLessThan(1e-3);
+        expect(Math.abs(y - out.p)).toBeLessThan(1e-3);
+      });
+    }
+  }
+});
+
+describe("buildSuperellipse — input validation", () => {
+  it("clamps exponent < 2 to a quarter-circle equivalent (no NaN)", () => {
+    const out = buildSuperellipse(baseInput({ exponent: 1 }));
+    expect(out.pathSegment("TR")).not.toContain("NaN");
+  });
+  it("falls back to safe default for non-finite exponent (NaN)", () => {
+    const out = buildSuperellipse(baseInput({ exponent: NaN }));
+    expect(out.pathSegment("TR")).not.toContain("NaN");
+  });
+  it("falls back to safe default for Infinity exponent", () => {
+    const out = buildSuperellipse(baseInput({ exponent: Infinity }));
+    expect(out.pathSegment("TR")).not.toContain("NaN");
+  });
+});
+
 describe("getCurveBuilder", () => {
   it("dispatches each curve type to its builder", () => {
     expect(getCurveBuilder("arc")).toBe(buildArc);

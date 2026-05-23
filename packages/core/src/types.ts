@@ -34,7 +34,11 @@ export type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
 
 // --- Internal types ---
 
-/** Resolved arc parameters for drawing a single corner of the smooth path. */
+/** Squircle-only resolved parameters (`a, b, c, d, p, arcSectionLength`).
+ *  Implementation detail of the Figma squircle curve — not meaningful
+ *  for arc / superellipse / clothoid. New code should treat this as
+ *  the return shape of `getPathParamsForCorner` rather than
+ *  constructing it directly. */
 export interface CornerPathParams {
   a: number;
   b: number;

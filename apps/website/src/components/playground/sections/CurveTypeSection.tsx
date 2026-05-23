@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { animate } from "framer-motion";
 import { generatePath } from "@lisse/core";
 import type { CurveType } from "@lisse/react";
@@ -72,26 +72,35 @@ export function CurveTypeSection() {
   );
   const animationRef = useRef<ReturnType<typeof animate> | null>(null);
 
+  // Track current curve in a ref so the click handler can read it
+  // without taking the state as a callback dep (keeps onCurveChange
+  // stable across renders).
+  const curveRef = useRef(curve);
+  curveRef.current = curve;
+
   const onCurveChange = useCallback((next: CurveType) => {
-    setCurve((prev) => {
-      if (next === prev) return prev;
-      // Snapshot before the curve update — the live displayed samples
-      // still belong to the old curve at this exact moment, so this
-      // captures the right starting point.
-      snapshot();
-      setMorphT(0);
-      animationRef.current?.stop();
-      animationRef.current = animate(0, 1, {
-        type: "tween",
-        duration: MORPH_DURATION_S,
-        ease: MORPH_EASE,
-        onUpdate: (v) => setMorphT(v),
-        onComplete: () => setMorphT(1),
-      });
-      setFromDrag(false);
-      return next;
+    if (next === curveRef.current) return;
+    // Snapshot the live displayed samples — they still belong to the
+    // old curve at this point — before the curve update flushes. Side
+    // effects live OUTSIDE the setState updater so StrictMode dev
+    // double-renders don't double-trigger the animation.
+    snapshot();
+    setMorphT(0);
+    setFromDrag(false);
+    animationRef.current?.stop();
+    animationRef.current = animate(0, 1, {
+      type: "tween",
+      duration: MORPH_DURATION_S,
+      ease: MORPH_EASE,
+      onUpdate: (v) => setMorphT(v),
+      onComplete: () => setMorphT(1),
     });
+    setCurve(next);
   }, [snapshot]);
+
+  // Stop any in-flight morph on unmount so the animation doesn't try
+  // to setState on a dead component.
+  useEffect(() => () => animationRef.current?.stop(), []);
 
   const onRadius = useCallback((v: number, drag = false) => {
     setFromDrag(drag);

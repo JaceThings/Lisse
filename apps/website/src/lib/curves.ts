@@ -371,7 +371,12 @@ function resampleByArcLength(segments: Segment[], N: number = SAMPLE_COUNT): Cur
       prev = [x, y];
     }
   }
-  const total = cum > CURVATURE_EPSILON ? cum : 1;
+  // Degenerate (zero-length) segments produce no meaningful samples —
+  // return empty arrays rather than fabricating N copies of one point.
+  if (cum <= CURVATURE_EPSILON || dense.length === 0) {
+    return { xs: [], ys: [], ks: [] };
+  }
+  const total = cum;
 
   // Second pass: pick N samples at uniformly-spaced cumulative-length
   // targets, linearly interpolating between the dense samples.
@@ -582,12 +587,10 @@ function buildClothoid(R: number, smoothing: number, cornerX: number, cornerY: n
   // Mean-value Δθ = (1/2)(0 + 1/R)·L ⇒ L = 2RΔθ = πR·s/2.
   const L = (Math.PI / 2) * R * s;
 
-  // Integrate the first clothoid in a *local frame* where P0 sits at
-  // the origin with tangent along +x. The same tables drive both
-  // (a) the geometry calculation below — we need the endpoint
-  // (x_cloth, y_cloth) to know where the arc starts — and (b) the
-  // `cloth1` segment further down. Previously these were separate
-  // integrations with different N; one Simpson at N=80 here serves both.
+  // Integrate cloth1 in a local frame (P0 at origin, tangent along +x).
+  // The tables drive both the geometry math below (needs the endpoint
+  // (x_cloth, y_cloth) to position the arc) and the cloth1 segment
+  // sampling later — one Simpson pass at N = 80 serves both.
   const N_INTEGRATE = 80;
   const A = L > 0 ? 1 / (R * L) : 0;
   const cloth1Tables = integrateClothoid(0, 0, A, L, N_INTEGRATE);

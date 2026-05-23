@@ -58,9 +58,15 @@ const EXPONENT_MIN = 2.5;
 const EXPONENT_MAX = 8;
 const EXPONENT_DEFAULT = 5;
 
-const COMB_DENSITY_MIN = 12;
-const COMB_DENSITY_MAX = 200;
+// Comb density: 0 means "no whiskers, just the smooth envelope curve".
+const COMB_DENSITY_MIN = 0;
+const COMB_DENSITY_MAX = 400;
 const COMB_DENSITY_DEFAULT = 100;
+
+// Shape-slider slot animation timing (shared between marginTop and the
+// slider's blur+opacity fade).
+const SLOT_TRANSITION_DURATION = 0.45;
+const SLOT_TRANSITION_EASE = [0.32, 0.72, 0, 1] as const;
 
 interface Geometry {
   curve: Curve;
@@ -283,8 +289,8 @@ function Diagram({
         strokeLinecap="round"
       />
 
-      {overlay.points.map((pt, i) => (
-        <LabelledPoint key={`${pt.label}-${i}`} {...pt} opacity={pt.opacity} />
+      {overlay.points.map((pt) => (
+        <LabelledPoint key={pt.label} {...pt} opacity={pt.opacity} />
       ))}
 
       {overlay.arcRadiusReadout ? (
@@ -331,6 +337,10 @@ const BODY =
 const formatSmoothing = (v: number) => v.toFixed(2);
 const formatRadius = (v: number) => `${Math.round(v)} px`;
 const formatExponent = (v: number) => v.toFixed(2);
+const formatCombDensity = (v: number) => {
+  const n = Math.round(v);
+  return n === 0 ? "smooth curve" : `${n} whiskers`;
+};
 
 const CURVE_LABELS: Record<CurveType, { label: string; gn: "G1" | "G2"; sub: string }> = {
   arc: { label: "Arc", gn: "G1", sub: "CSS border-radius" },
@@ -483,6 +493,7 @@ export function MathPage() {
 
   const showSmoothing = curveType === "squircle" || curveType === "clothoid";
   const showExponent = curveType === "superellipse";
+  const hasShape = showSmoothing || showExponent;
   // One DOM-stable Slider for both smoothing and exponent, fed a
   // normalised [0, 1] value so e.g. squircle → superellipse glides the
   // thumb from 60 % (smoothing 0.6) to 45 % (exponent 5).
@@ -580,69 +591,62 @@ export function MathPage() {
         </Stagger>
 
         <Stagger index={9}>
-          {(() => {
-            const hasShape = showSmoothing || showExponent;
-            const ease = [0.32, 0.72, 0, 1] as const;
-            const duration = 0.45;
-            // One concurrent 450 ms motion: marginTop opens the slot,
-            // slider fades opacity 0→1 and de-blurs 8px→0. Initial blur
-            // is heavy enough that the slider reads as fog (no
-            // recognisable content) while it's still geometrically
-            // overlapping the rising radius slider; by the time the
-            // slot clears its height (~t = 0.6, ease-out) it's mostly
-            // de-blurred and the overlap is gone.
-            return (
-              <div className="relative flex w-full flex-col px-1">
-                <AnimatePresence initial={false}>
-                  {hasShape ? (
-                    <motion.div
-                      key="shape-slider"
-                      initial={{ opacity: 0, filter: "blur(8px)" }}
-                      animate={{ opacity: 1, filter: "blur(0px)" }}
-                      exit={{ opacity: 0, filter: "blur(8px)" }}
-                      transition={{ duration, ease }}
-                      style={{ position: "absolute", top: 0, left: 4, right: 4 }}
-                    >
-                      <Slider
-                        label={shapeLabel}
-                        value={shapeValue}
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        onChange={onShapeChange}
-                        format={shapeFormat}
-                      />
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
+          {/* One concurrent 450 ms motion: marginTop opens the slot,
+              slider fades opacity 0→1 and de-blurs 8px→0. Initial blur
+              is heavy enough that the slider reads as fog (no
+              recognisable content) while it's geometrically overlapping
+              the rising radius slider; by the time the slot clears its
+              height (~t = 0.6 with ease-out) the slider is mostly
+              de-blurred and the overlap is gone. */}
+          <div className="relative flex w-full flex-col px-1">
+            <AnimatePresence initial={false}>
+              {hasShape ? (
                 <motion.div
-                  initial={false}
-                  animate={{ marginTop: hasShape ? 53 : 0 }}
-                  transition={{ duration, ease }}
-                  className="flex flex-col gap-5"
+                  key="shape-slider"
+                  initial={{ opacity: 0, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, filter: "blur(8px)" }}
+                  transition={{ duration: SLOT_TRANSITION_DURATION, ease: SLOT_TRANSITION_EASE }}
+                  style={{ position: "absolute", top: 0, left: 4, right: 4 }}
                 >
                   <Slider
-                    label="Corner radius"
-                    value={radius}
-                    min={RADIUS_MIN}
-                    max={RADIUS_MAX}
-                    step={1}
-                    onChange={onRadius}
-                    format={formatRadius}
-                  />
-                  <Slider
-                    label="Comb density"
-                    value={combDensity}
-                    min={COMB_DENSITY_MIN}
-                    max={COMB_DENSITY_MAX}
-                    step={1}
-                    onChange={onCombDensity}
-                    format={(v) => `${Math.round(v)} whiskers`}
+                    label={shapeLabel}
+                    value={shapeValue}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onChange={onShapeChange}
+                    format={shapeFormat}
                   />
                 </motion.div>
-              </div>
-            );
-          })()}
+              ) : null}
+            </AnimatePresence>
+            <motion.div
+              initial={false}
+              animate={{ marginTop: hasShape ? 53 : 0 }}
+              transition={{ duration: SLOT_TRANSITION_DURATION, ease: SLOT_TRANSITION_EASE }}
+              className="flex flex-col gap-5"
+            >
+              <Slider
+                label="Corner radius"
+                value={radius}
+                min={RADIUS_MIN}
+                max={RADIUS_MAX}
+                step={1}
+                onChange={onRadius}
+                format={formatRadius}
+              />
+              <Slider
+                label="Comb density"
+                value={combDensity}
+                min={COMB_DENSITY_MIN}
+                max={COMB_DENSITY_MAX}
+                step={1}
+                onChange={onCombDensity}
+                format={formatCombDensity}
+              />
+            </motion.div>
+          </div>
         </Stagger>
 
         <Stagger index={10}>
