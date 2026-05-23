@@ -1,4 +1,4 @@
-// Curve constructions for the math demo page. See docs/g2-curves.md
+// Curve constructions for the math demo page. See docs/curves.md
 // for the full derivations — this file is the implementation half.
 //
 // Each builder produces a `Curve` containing:

@@ -650,7 +650,7 @@ export function MathPage() {
           <p className={`${BODY} text-text-secondary`}>
             Math derivations and source citations live in{" "}
             <code className="text-[13px]" style={{ fontFamily: "var(--font-mono)" }}>
-              docs/g2-curves.md
+              docs/curves.md
             </code>
             .
           </p>
