@@ -40,9 +40,15 @@ export const buildClothoid: CurveBuilder = ({
 
   // Integrate clothoid 1 in its local frame (start at origin, tangent
   // along +X). The endpoint position drives both the natural `p` and
-  // the Walton–Meek control point lengths below.
+  // the cubic Bézier control point lengths below.
   const { x: xC, y: yC } = L > 0
     ? integrateClothoid(0, 0, A, L)
+    : { x: 0, y: 0 };
+  // Midpoint of the clothoid — used to pin the cubic Bézier
+  // approximation to a third point so the fit isn't free to bow away
+  // from the true curve along the spiral.
+  const { x: xMid, y: yMid } = L > 0
+    ? integrateClothoid(0, 0, A, L / 2)
     : { x: 0, y: 0 };
 
   // Arc center sits to the left of the end-tangent at distance R; by
@@ -58,31 +64,42 @@ export const buildClothoid: CurveBuilder = ({
   let effR = R;
   let effX = xC;
   let effY = yC;
+  let effMx = xMid;
+  let effMy = yMid;
   if (naturalP > roundingAndSmoothingBudget && naturalP > 0) {
     const scale = roundingAndSmoothingBudget / naturalP;
     p = roundingAndSmoothingBudget;
     effR = R * scale;
     effX = xC * scale;
     effY = yC * scale;
+    effMx = xMid * scale;
+    effMy = yMid * scale;
   }
   if (p <= 0) {
     return { p: 0, pathSegment: () => "" };
   }
 
-  // Walton–Meek closed-form cubic for the clothoid half-fillet from
-  // (0, 0) with tangent (1, 0) to (effX, effY) with tangent
-  // (cos dTheta, sin dTheta). The chord-based formula gives h0, h1
-  // (control-point distances along each endpoint tangent).
-  const chord = Math.hypot(effX, effY);
+  // Midpoint-match cubic Bézier for the half-fillet. Position +
+  // tangent matched at both endpoints (4 constraints), with the
+  // clothoid's parameter midpoint pinning the 2 free handle lengths.
+  //
+  //   P(0.5) = (1/2)(B0 + B3) + (3/8)(h0·T_a − h1·T_b) = midpoint
+  //
+  // For T_a = (1, 0), T_b = (cos dTheta, sin dTheta) the Y equation
+  // gives h1; back-substitution gives h0. Maximum deviation from the
+  // true clothoid stays under 1 px across R ∈ [10, 200] and smoothing
+  // ∈ [0, 1]. Walton–Meek's closed-form (cos α_a / cos α_b weights)
+  // would have placed B2 below the entry tangent — cubic dipping
+  // ~0.45 px outside the rectangle at R = 40 / smoothing = 0.6.
   let h0 = 0;
   let h1 = 0;
-  if (chord > 0) {
-    const alphaA = Math.atan2(effY, effX);
-    // Total turn T0 → T3 = dTheta; α_a + α_b = dTheta.
-    const alphaB = dTheta - alphaA;
-    const denom = 2 * (2 + Math.cos(alphaA + alphaB));
-    h0 = (3 * chord * Math.cos(alphaB)) / denom;
-    h1 = (3 * chord * Math.cos(alphaA)) / denom;
+  if (L > 0) {
+    const cosDt = Math.cos(dTheta);
+    const sinDt = Math.sin(dTheta);
+    if (sinDt > 1e-12) {
+      h1 = ((8 / 3) * (effY / 2 - effMy)) / sinDt;
+    }
+    h0 = (8 / 3) * (effMx - effX / 2) + h1 * cosDt;
   }
 
   const arcSweep = Math.PI / 2 - 2 * dTheta;

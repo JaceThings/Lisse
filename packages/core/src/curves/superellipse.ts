@@ -37,7 +37,14 @@ export const buildSuperellipse: CurveBuilder = ({
   const e = 2 / n;
 
   const thetas = [0, Math.PI / 6, Math.PI / 3, Math.PI / 2];
-  const points: Array<[number, number]> = thetas.map((th) => {
+  // Pin the endpoints to (0, 0) and (p, p) — otherwise Math.cos(π/2)
+  // returns 6.123e-17 (not exactly zero) and the curve exits at
+  // (p, p − ε·p) instead of (p, p). The skeleton's `L width br.p` then
+  // draws a sub-pixel stub from the curve exit to the actual tangency
+  // point, visible as a tiny mismatch under thick borders.
+  const points: Array<[number, number]> = thetas.map((th, i) => {
+    if (i === 0) return [0, 0];
+    if (i === thetas.length - 1) return [p, p];
     const sinTh = Math.sin(th);
     const cosTh = Math.cos(th);
     return [p * Math.pow(sinTh, e), p * (1 - Math.pow(cosTh, e))];

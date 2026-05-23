@@ -37,6 +37,7 @@ Lisse implements [Figma's corner smoothing algorithm](https://www.figma.com/blog
 ## Features
 
 - Pixel-perfect reproduction of Figma's squircle algorithm
+- Four corner curves: `arc`, `squircle` (default), `superellipse`, `clothoid` — see [docs/curves.md](docs/curves.md)
 - Per-corner radius and smoothing control
 - Inner, outer, and middle borders with style variants (solid, dashed, dotted, double, groove, ridge)
 - Inner shadow and drop shadow effects
