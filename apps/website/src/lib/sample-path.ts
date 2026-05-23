@@ -1,8 +1,8 @@
-// Sample an SVG path into N evenly-spaced (by arc length) points using
-// the browser's native getPointAtLength. Used by the playground curve-
-// type preview to morph between curve families — path-string interpolation
-// isn't possible (different command lists), but per-index lerp of two
-// equal-length sample arrays produces a smooth tween.
+// Arc-length-uniform sampling of any SVG path via the browser's native
+// getPointAtLength. Lets the playground curve-type preview morph between
+// curve families: path-string interpolation is impossible (different
+// command sets), but per-index lerp of two equal-length sample arrays
+// tweens smoothly.
 
 export type SampledPath = ReadonlyArray<readonly [number, number]>;
 

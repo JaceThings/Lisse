@@ -47,10 +47,9 @@ export function CurveTypeSection() {
   const animatedSmoothing = useStateSpring(smoothing, fromDrag);
   const animatedExponent = useStateSpring(exponent, fromDrag);
 
-  // Latest samples — re-computed every render from the current
-  // (animated) values + current curve. The morph hook keeps a ref
-  // mirror so `snapshot()` can capture the live display in the click
-  // handler before setCurve fires.
+  // Re-sample every render so spring-driven prop changes flow through.
+  // The morph hook's `snapshot()` captures the live displayed samples
+  // when called from the click handler before setCurve fires.
   const latestSamples = useMemo<SampledPath>(
     () =>
       samplePath(
@@ -76,9 +75,9 @@ export function CurveTypeSection() {
   const onCurveChange = useCallback((next: CurveType) => {
     setCurve((prev) => {
       if (next === prev) return prev;
-      // Snapshot BEFORE the curve update — snapshot() captures the
-      // live displayed samples, which at this moment still belong to
-      // the old curve (the last render had curve = prev).
+      // Snapshot before the curve update — the live displayed samples
+      // still belong to the old curve at this exact moment, so this
+      // captures the right starting point.
       snapshot();
       setMorphT(0);
       animationRef.current?.stop();
@@ -109,9 +108,9 @@ export function CurveTypeSection() {
 
   const d = useMemo(() => pathFromSamples(displaySamples), [displaySamples]);
 
-  // Unified shape-parameter slider: smoothing for squircle / clothoid,
-  // exponent for superellipse, hidden for arc. Same DOM-stable Slider
-  // throughout — value/label/format swap instead of mounting two.
+  // One DOM-stable Slider for the shape parameter — value, label, and
+  // format swap based on curve so the thumb glides between e.g.
+  // squircle smoothing 0.6 (60 %) and superellipse n = 5 (45 %).
   const showShape = curve !== "arc";
   const showExponent = curve === "superellipse";
   const shapeValue = showExponent
