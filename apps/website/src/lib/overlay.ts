@@ -238,8 +238,8 @@ export function lerpOverlay(from: MorphedOverlay, to: MorphedOverlay, t: number)
     }
   }
 
-  // === Reference arc — lerp start/end/R per-number when both sides
-  // expose one; fade in/out otherwise. ===
+  // === Reference arc — lerp endpoints + R per number; fade if only
+  // one side has it. ===
   let referenceArc: MorphedOverlay["referenceArc"];
   if (from.referenceArc && to.referenceArc) {
     referenceArc = {

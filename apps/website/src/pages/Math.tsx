@@ -50,11 +50,10 @@ const RADIUS_MIN = 30;
 const RADIUS_MAX = 200;
 const RADIUS_DEFAULT = 160;
 const SMOOTHING_DEFAULT = 0.6;
-// Superellipse exponent. n = 2 is an ellipse (curvature blows up at
-// the seam — G0 only with a straight edge). n > 2 gives κ = 0 at the
-// crossings (G2). n = 4 is the CSS `corner-shape: squircle` default;
-// numerical fits to Figma 0.6 / iOS land near n ≈ 5 — picked as the
-// /math default for cross-curve visual parity with the Figma squircle.
+// Superellipse exponent. n = 2 = ellipse (κ blows up at the seam, G0).
+// n > 2 ⇒ κ = 0 at the axis crossings (G2). n = 4 is the CSS
+// `corner-shape: squircle` value; n ≈ 5 is the closest numerical fit
+// to Figma 0.6 / iOS — picked as the /math default for visual parity.
 const EXPONENT_MIN = 2.5;
 const EXPONENT_MAX = 8;
 const EXPONENT_DEFAULT = 5;
@@ -484,11 +483,9 @@ export function MathPage() {
 
   const showSmoothing = curveType === "squircle" || curveType === "clothoid";
   const showExponent = curveType === "superellipse";
-  // Unified "shape parameter" slider: one DOM-stable Slider for both
-  // smoothing and exponent, mapped through a normalised [0, 1] value so
-  // switching from squircle → superellipse glides the thumb from
-  // (smoothing 0.6 = 60% along) to (exponent 5 = 45% along) rather than
-  // mounting / unmounting two separate sliders.
+  // One DOM-stable Slider for both smoothing and exponent, fed a
+  // normalised [0, 1] value so e.g. squircle → superellipse glides the
+  // thumb from 60 % (smoothing 0.6) to 45 % (exponent 5).
   const shapeValue = showExponent
     ? (exponent - EXPONENT_MIN) / (EXPONENT_MAX - EXPONENT_MIN)
     : smoothing;
@@ -587,16 +584,13 @@ export function MathPage() {
             const hasShape = showSmoothing || showExponent;
             const ease = [0.32, 0.72, 0, 1] as const;
             const duration = 0.45;
-            // Everything runs concurrently across one 450 ms window:
-            // slot opens (marginTop tweens), slider fades in (opacity
-            // rises) and de-blurs (filter ramps from blur(8px) to 0).
-            // The high initial blur diffuses the slider into a fog
-            // while it's in the overlap zone — there's no recognisable
-            // content to "overlap" with the radius slider until the
-            // slot has cleared the slider's height (~ t = 0.6 with
-            // ease-out, by which point the slider is mostly de-blurred
-            // and the radius is already past). Reads as one motion,
-            // not slot → slider.
+            // One concurrent 450 ms motion: marginTop opens the slot,
+            // slider fades opacity 0→1 and de-blurs 8px→0. Initial blur
+            // is heavy enough that the slider reads as fog (no
+            // recognisable content) while it's still geometrically
+            // overlapping the rising radius slider; by the time the
+            // slot clears its height (~t = 0.6, ease-out) it's mostly
+            // de-blurred and the overlap is gone.
             return (
               <div className="relative flex w-full flex-col px-1">
                 <AnimatePresence initial={false}>

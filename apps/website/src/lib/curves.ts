@@ -86,9 +86,9 @@ export interface Curve {
   /** Off-curve control polygons drawn dashed (Bézier handles). Each
    *  inner array is one polyline. */
   controlPolygons?: Pt[][];
-  /** Optional reference quarter-circle drawn dashed for comparison.
-   *  Structured (start, end, R) rather than a baked path string so the
-   *  overlay can lerp the numbers when morphing between curve types. */
+  /** Reference quarter-circle drawn dashed for comparison. Structured
+   *  rather than a path string so the overlay can lerp the numbers
+   *  during a morph. */
   referenceArc?: { start: Pt; end: Pt; R: number };
   /** Spokes drawn from the arc centre to the arc tangency points. Each
    *  inner array is [from, to]. */
