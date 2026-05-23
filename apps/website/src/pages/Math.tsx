@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Divider } from "../components/Divider.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 import {
@@ -582,37 +583,62 @@ export function MathPage() {
         </Stagger>
 
         <Stagger index={9}>
-          <div className="flex w-full flex-col gap-5 px-1">
-            {showSmoothing || showExponent ? (
+          <motion.div className="flex w-full flex-col px-1" layout>
+            {/* Shape slider blurs in from above when switching from arc
+                to any curve type that exposes smoothing or exponent;
+                blurs out on the reverse. Sibling sliders ride the parent
+                layout animation downward to make room. The
+                gap is on the slider wrapper rather than the column so
+                it collapses with the shape slot. */}
+            <AnimatePresence initial={false}>
+              {showSmoothing || showExponent ? (
+                <motion.div
+                  key="shape-slider"
+                  layout
+                  initial={{ opacity: 0, filter: "blur(4px)", height: 0 }}
+                  animate={{
+                    opacity: 1,
+                    filter: "blur(0px)",
+                    height: "auto",
+                    marginBottom: 20,
+                  }}
+                  exit={{ opacity: 0, filter: "blur(4px)", height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <Slider
+                    label={shapeLabel}
+                    value={shapeValue}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onChange={onShapeChange}
+                    format={shapeFormat}
+                  />
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+            <motion.div layout className="flex flex-col gap-5">
               <Slider
-                label={shapeLabel}
-                value={shapeValue}
-                min={0}
-                max={1}
-                step={0.01}
-                onChange={onShapeChange}
-                format={shapeFormat}
+                label="Corner radius"
+                value={radius}
+                min={RADIUS_MIN}
+                max={RADIUS_MAX}
+                step={1}
+                onChange={onRadius}
+                format={formatRadius}
               />
-            ) : null}
-            <Slider
-              label="Corner radius"
-              value={radius}
-              min={RADIUS_MIN}
-              max={RADIUS_MAX}
-              step={1}
-              onChange={onRadius}
-              format={formatRadius}
-            />
-            <Slider
-              label="Comb density"
-              value={combDensity}
-              min={COMB_DENSITY_MIN}
-              max={COMB_DENSITY_MAX}
-              step={1}
-              onChange={onCombDensity}
-              format={(v) => `${Math.round(v)} whiskers`}
-            />
-          </div>
+              <Slider
+                label="Comb density"
+                value={combDensity}
+                min={COMB_DENSITY_MIN}
+                max={COMB_DENSITY_MAX}
+                step={1}
+                onChange={onCombDensity}
+                format={(v) => `${Math.round(v)} whiskers`}
+              />
+            </motion.div>
+          </motion.div>
         </Stagger>
 
         <Stagger index={10}>
