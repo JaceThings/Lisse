@@ -9,6 +9,7 @@ import { Section } from "../Section.tsx";
 import { Slider } from "../Slider.tsx";
 import { useStateSpring } from "../springs.ts";
 import { ROW_DIVIDER } from "../styles.ts";
+import { useMorphedValue } from "../../../hooks/useMorphedValue.ts";
 import {
   lerpSampledPaths,
   pathFromSamples,
@@ -47,9 +48,9 @@ export function CurveTypeSection() {
   const animatedExponent = useStateSpring(exponent, fromDrag);
 
   // Latest samples — re-computed every render from the current
-  // (animated) values + current curve. The latest curve's samples
-  // are always available; whenever radius / smoothing / exponent
-  // changes (e.g. spring frame), this re-computes naturally.
+  // (animated) values + current curve. The morph hook keeps a ref
+  // mirror so `snapshot()` can capture the live display in the click
+  // handler before setCurve fires.
   const latestSamples = useMemo<SampledPath>(
     () =>
       samplePath(
@@ -63,24 +64,22 @@ export function CurveTypeSection() {
       ),
     [animatedRadius, animatedSmoothing, curve, animatedExponent],
   );
-  // Mirror to a ref so the click handler can snapshot the CURRENT
-  // samples (still belonging to the OLD curve) before setCurve fires.
-  const latestRef = useRef<SampledPath>(latestSamples);
-  latestRef.current = latestSamples;
 
-  const [snapshot, setSnapshot] = useState<SampledPath | null>(null);
   const [morphT, setMorphT] = useState(1);
+  const { display: displaySamples, snapshot } = useMorphedValue(
+    latestSamples,
+    lerpSampledPaths,
+    morphT,
+  );
   const animationRef = useRef<ReturnType<typeof animate> | null>(null);
 
   const onCurveChange = useCallback((next: CurveType) => {
     setCurve((prev) => {
       if (next === prev) return prev;
-      // Snapshot the CURRENT displayed samples *before* React applies
-      // the curve update. At this exact moment latestRef.current is
-      // still the old curve's samples (the render that produced them
-      // had curve = prev), so this captures the right starting point
-      // for the morph.
-      setSnapshot(latestRef.current);
+      // Snapshot BEFORE the curve update — snapshot() captures the
+      // live displayed samples, which at this moment still belong to
+      // the old curve (the last render had curve = prev).
+      snapshot();
       setMorphT(0);
       animationRef.current?.stop();
       animationRef.current = animate(0, 1, {
@@ -88,15 +87,12 @@ export function CurveTypeSection() {
         duration: MORPH_DURATION_S,
         ease: MORPH_EASE,
         onUpdate: (v) => setMorphT(v),
-        onComplete: () => {
-          setMorphT(1);
-          setSnapshot(null);
-        },
+        onComplete: () => setMorphT(1),
       });
       setFromDrag(false);
       return next;
     });
-  }, []);
+  }, [snapshot]);
 
   const onRadius = useCallback((v: number, drag = false) => {
     setFromDrag(drag);
@@ -111,11 +107,6 @@ export function CurveTypeSection() {
     setExponent(v);
   }, []);
 
-  // Display samples: lerp snapshot → latest while a morph is in
-  // flight, otherwise straight through.
-  const displaySamples = snapshot
-    ? lerpSampledPaths(snapshot, latestSamples, morphT)
-    : latestSamples;
   const d = useMemo(() => pathFromSamples(displaySamples), [displaySamples]);
 
   // Unified shape-parameter slider: smoothing for squircle / clothoid,
