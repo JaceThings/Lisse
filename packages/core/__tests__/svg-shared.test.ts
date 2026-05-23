@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { SVG_NS, nextUid, hexToRgb, DEFAULT_SHADOW, darkenHex, darkenGradient, angleToCoords } from "../src/svg-shared.js";
-import type { LinearGradientConfig, RadialGradientConfig } from "../src/types.js";
+import { SVG_NS, nextUid, hexToRgb, DEFAULT_SHADOW, darkenHex, darkenGradient, angleToCoords, adjustOptions, createPathCache } from "../src/svg-shared.js";
+import type { LinearGradientConfig, RadialGradientConfig, CornerConfig } from "../src/types.js";
 
 describe("SVG_NS", () => {
   it("equals the SVG namespace URI", () => {
@@ -148,5 +148,70 @@ describe("angleToCoords", () => {
     expect(round(c.y1)).toBe(0.5);
     expect(round(c.x2)).toBe(0);
     expect(round(c.y2)).toBe(0.5);
+  });
+});
+
+// Risk #1 from the curve-type blueprint: `adjustOptions` rebuilds each
+// per-corner object via a `{...v, radius}` spread. If a future refactor
+// dropped to picking known keys, the `curve` and `exponent` fields would
+// silently disappear — the main path would render the requested curve
+// while the shadow rendered a squircle. Lock the spread behavior with
+// explicit tests so a future change can't regress this quietly.
+describe("adjustOptions — curve-type preservation", () => {
+  it("preserves curve and exponent on a uniform CornerConfig", () => {
+    const result = adjustOptions(
+      { radius: 20, curve: "clothoid", smoothing: 0.7, preserveSmoothing: false },
+      4,
+    );
+    expect(result).toMatchObject({
+      radius: 24,
+      curve: "clothoid",
+      smoothing: 0.7,
+      preserveSmoothing: false,
+    });
+  });
+
+  it("preserves curve and exponent on per-corner CornerConfig branches", () => {
+    const result = adjustOptions(
+      {
+        topLeft: { radius: 20, curve: "clothoid" },
+        topRight: { radius: 16, curve: "superellipse", exponent: 6 },
+        bottomRight: { radius: 12, curve: "arc" },
+        bottomLeft: 8,
+      },
+      4,
+    );
+    expect(result).toMatchObject({
+      topLeft: { radius: 24, curve: "clothoid" },
+      topRight: { radius: 20, curve: "superellipse", exponent: 6 },
+      bottomRight: { radius: 16, curve: "arc" },
+      bottomLeft: 12,
+    });
+  });
+
+  it("clamps radius to zero rather than going negative on tight cutouts", () => {
+    const result = adjustOptions(
+      { topLeft: { radius: 10, curve: "clothoid" } as CornerConfig },
+      -100,
+    );
+    expect(result).toMatchObject({
+      topLeft: { radius: 0, curve: "clothoid" },
+    });
+  });
+});
+
+// Risk #4 from the curve-type blueprint: the per-dispatch path cache
+// keys on `JSON.stringify(options)`. Since `curve` lives inside the
+// options object it should be included in the key automatically — lock
+// that with an explicit test.
+describe("createPathCache — curve invalidation", () => {
+  it("returns different paths for different curve types at the same dimensions", () => {
+    const baseSquircle = { radius: 40, curve: "squircle" as const };
+    const baseClothoid = { radius: 40, curve: "clothoid" as const };
+    const getSq = createPathCache(baseSquircle);
+    const getCl = createPathCache(baseClothoid);
+    const sqPath = getSq(200, 200, baseSquircle, 0);
+    const clPath = getCl(200, 200, baseClothoid, 0);
+    expect(sqPath).not.toBe(clPath);
   });
 });

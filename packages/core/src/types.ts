@@ -1,8 +1,17 @@
+/** Corner curve family. Default: `'squircle'` (the Figma curve). */
+export type CurveType = "arc" | "squircle" | "superellipse" | "clothoid";
+
 /** Configuration for a single corner. */
 export interface CornerConfig {
   radius: number;
-  /** Smoothing amount from 0 (sharp) to 1 (maximum). Default: 0.6 */
+  /** Corner construction. Default: 'squircle'. */
+  curve?: CurveType;
+  /** Smoothing amount from 0 (sharp) to 1 (maximum). Used by 'squircle'
+   *  and 'clothoid'; ignored by 'arc' and 'superellipse'. Default: 0.6 */
   smoothing?: number;
+  /** Superellipse exponent. Used only when `curve === 'superellipse'`.
+   *  Default: 4 (the CSS `corner-shape: squircle` value). */
+  exponent?: number;
   /** When true, preserves smoothing even when space is limited. Default: true */
   preserveSmoothing?: boolean;
 }
@@ -18,8 +27,14 @@ export interface PerCornerConfig {
 /** Uniform corner options — all corners share the same values. */
 export interface UniformCornerOptions {
   radius: number;
-  /** Smoothing amount from 0 (sharp) to 1 (maximum). Default: 0.6 */
+  /** Corner construction. Default: 'squircle'. */
+  curve?: CurveType;
+  /** Smoothing amount from 0 (sharp) to 1 (maximum). Used by 'squircle'
+   *  and 'clothoid'; ignored by 'arc' and 'superellipse'. Default: 0.6 */
   smoothing?: number;
+  /** Superellipse exponent. Used only when `curve === 'superellipse'`.
+   *  Default: 4 (the CSS `corner-shape: squircle` value). */
+  exponent?: number;
   /** When true, preserves smoothing even when space is limited. Default: true */
   preserveSmoothing?: boolean;
 }

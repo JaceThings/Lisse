@@ -1,10 +1,10 @@
-import type { SmoothCornerOptions, CornerConfig } from "./types.js";
+import type { SmoothCornerOptions, CornerConfig, CurveType } from "./types.js";
 import { distributeAndNormalize } from "./distribute.js";
-import { getPathParamsForCorner } from "./corner-params.js";
-import { getSVGPathFromPathParams } from "./draw.js";
+import { getCurveBuilder, DEFAULT_EXPONENT } from "./curves/index.js";
 
 export const DEFAULT_SMOOTHING = 0.6;
 export const DEFAULT_PRESERVE_SMOOTHING = true;
+export const DEFAULT_CURVE: CurveType = "squircle";
 
 type Resolved = Required<CornerConfig>;
 
@@ -18,7 +18,9 @@ interface ResolvedCorners {
 function withDefaults(c: CornerConfig): Resolved {
   return {
     radius: c.radius,
+    curve: c.curve ?? DEFAULT_CURVE,
     smoothing: c.smoothing ?? DEFAULT_SMOOTHING,
+    exponent: c.exponent ?? DEFAULT_EXPONENT,
     preserveSmoothing: c.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
   };
 }
@@ -79,22 +81,45 @@ export function generatePath(
     height,
   });
 
-  const paramsFor = (name: keyof ResolvedCorners) =>
-    getPathParamsForCorner({
+  const builderOutFor = (name: keyof ResolvedCorners) => {
+    const corner = corners[name];
+    const builder = getCurveBuilder(corner.curve);
+    return builder({
       cornerRadius: normalized[name].radius,
-      cornerSmoothing: corners[name].smoothing,
-      preserveSmoothing: corners[name].preserveSmoothing,
+      smoothing: corner.smoothing,
+      exponent: corner.exponent,
+      preserveSmoothing: corner.preserveSmoothing,
       roundingAndSmoothingBudget: normalized[name].roundingAndSmoothingBudget,
     });
+  };
 
-  return getSVGPathFromPathParams({
-    width,
-    height,
-    topLeftPathParams: paramsFor("topLeft"),
-    topRightPathParams: paramsFor("topRight"),
-    bottomRightPathParams: paramsFor("bottomRight"),
-    bottomLeftPathParams: paramsFor("bottomLeft"),
-  });
+  const tl = builderOutFor("topLeft");
+  const tr = builderOutFor("topRight");
+  const br = builderOutFor("bottomRight");
+  const bl = builderOutFor("bottomLeft");
+
+  // The "next corner's p" pattern in the redundant L commands matches
+  // the original draw.ts byte-for-byte. Each pair of L commands ends at
+  // the next corner's entry tangency; the first L is geometrically a
+  // no-op when adjacent radii match, and a harmless back-and-forth
+  // otherwise — same shape, identical string in the snapshot tests.
+  return `
+    M ${tl.p} 0
+    L ${width - tr.p} 0
+    ${tr.pathSegment("TR")}
+    L ${width} ${br.p}
+    L ${width} ${height - br.p}
+    ${br.pathSegment("BR")}
+    L ${width - bl.p} ${height}
+    L ${bl.p} ${height}
+    ${bl.pathSegment("BL")}
+    L 0 ${height - tl.p}
+    L 0 ${tl.p}
+    ${tl.pathSegment("TL")}
+    Z
+  `
+    .replace(/[\t\s\n]+/g, " ")
+    .trim();
 }
 
 /**
