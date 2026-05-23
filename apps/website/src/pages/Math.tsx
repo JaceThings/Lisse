@@ -583,18 +583,18 @@ export function MathPage() {
         </Stagger>
 
         <Stagger index={9}>
-          <motion.div className="flex w-full flex-col px-1" layout>
-            {/* Shape slider blurs in from above when switching from arc
-                to any curve type that exposes smoothing or exponent;
-                blurs out on the reverse. Sibling sliders ride the parent
-                layout animation downward to make room. The
-                gap is on the slider wrapper rather than the column so
-                it collapses with the shape slot. */}
+          <div className="flex w-full flex-col px-1">
+            {/* Shape slider blurs in/out at the top when toggling
+                between arc and the other three curves. The AnimatePresence
+                + height-tweening motion.div handles its own slot;
+                flex column flow pushes the sliders below it down
+                naturally as the height tweens — no `layout` motion
+                needed (which would force per-frame measurement
+                during the 60fps morph animation and tank perf). */}
             <AnimatePresence initial={false}>
               {showSmoothing || showExponent ? (
                 <motion.div
                   key="shape-slider"
-                  layout
                   initial={{ opacity: 0, filter: "blur(4px)", height: 0 }}
                   animate={{
                     opacity: 1,
@@ -618,7 +618,7 @@ export function MathPage() {
                 </motion.div>
               ) : null}
             </AnimatePresence>
-            <motion.div layout className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5">
               <Slider
                 label="Corner radius"
                 value={radius}
@@ -637,8 +637,8 @@ export function MathPage() {
                 onChange={onCombDensity}
                 format={(v) => `${Math.round(v)} whiskers`}
               />
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </Stagger>
 
         <Stagger index={10}>
