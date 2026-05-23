@@ -2,7 +2,7 @@
 "@lisse/core": minor
 ---
 
-Add curve-type option to `CornerConfig`. Existing consumers keep byte-identical output; the new option opts into one of four corner constructions.
+Add a `curve` option to `CornerConfig`. Existing consumers keep byte-identical output; the option opts into one of four corner constructions.
 
 ```ts
 import { generatePath } from "@lisse/core";
@@ -17,9 +17,9 @@ const d = generatePath(200, 200, {
 - `arc` — quarter circle (CSS `border-radius`).
 - `squircle` — cubic shoulders + central arc, the Lisse / Figma curve. **Default.**
 - `superellipse` — `|x/R|^n + |y/R|^n = 1`. Set `exponent` (default `4`, matching CSS `corner-shape: squircle`).
-- `clothoid` — Euler-spiral blend from straight edge to central circular arc. G2 everywhere.
+- `clothoid` — Euler-spiral blend from straight edge to central arc. G2 everywhere.
 
-Per-corner mixing supported: `{ topLeft: { radius: 40, curve: "clothoid" }, topRight: { radius: 40, curve: "arc" }, ... }`. Drop shadows, inner shadows, and borders all track the requested curve — no per-effect changes required.
+Per-corner mixing works: `{ topLeft: { radius: 40, curve: "clothoid" }, topRight: { radius: 40, curve: "arc" }, ... }`. Drop shadows, inner shadows, and borders track the requested curve — no per-effect changes required.
 
 Math reference: [docs/curves.md](https://github.com/JaceThings/Lisse/blob/main/docs/curves.md). Interactive demo: [corne.rs/math](https://corne.rs/math).
 

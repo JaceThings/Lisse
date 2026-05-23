@@ -4,20 +4,14 @@ import type { CornerPathParams } from "../types.js";
 import type { CurveBuilder } from "./types.js";
 
 /**
- * Figma squircle — cubic shoulder + central arc + cubic shoulder.
+ * Figma squircle — cubic shoulder + central arc + cubic shoulder. G1
+ * with the adjacent edges (curvature steps at the cubic↔arc seams).
  *
- * G1 with the adjacent edges (curvature steps at the cubic↔arc seams).
- * This wraps the canonical four orientation-specific drawers
- * (`drawTopRightPath` / `drawBottomRightPath` / …) verbatim so the
- * squircle output is byte-identical to what Lisse has shipped since
- * 0.1.0.
- *
- * The per-orient drawers carry hand-placed literal `0` characters in
- * the template strings (e.g. `c ${a} 0 …`) — these are template text,
- * not interpolated values, so they print as `0` not `0.0000`.
- * Funneling the squircle through `transformXY` would round them, which
- * would diff in downstream snapshot tests even though the visual output
- * is identical. We keep the verbatim drawers for that reason.
+ * The four per-orient drawers are kept verbatim — byte-identical to
+ * what Lisse has shipped since 0.1.0. They contain hand-placed literal
+ * `0` characters in the template (e.g. `c ${a} 0 …`) that print as `0`,
+ * not `0.0000`. Routing through `transformXY` would round those literals
+ * and diff every downstream snapshot, despite identical visuals.
  */
 export const buildSquircle: CurveBuilder = ({
   cornerRadius,

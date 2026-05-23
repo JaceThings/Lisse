@@ -79,26 +79,24 @@ describe("curve types", () => {
     expect(a).toBe(b);
   });
 
-  it("renders an arc curve as a single 'a' command per corner", () => {
+  it("arc: one 'a' command per corner, no cubics", () => {
     const path = generatePath(200, 200, { radius: 40, curve: "arc" });
     expect(path).toContain("a 40.0000 40.0000 0 0 1");
-    expect(path).not.toContain(" c "); // no cubic Béziers
+    expect(path).not.toContain(" c ");
   });
 
-  it("renders a superellipse curve as three cubics per corner", () => {
+  it("superellipse: three cubics per corner (12 total)", () => {
     const path = generatePath(200, 200, { radius: 40, curve: "superellipse" });
     expect(path).toMatch(/^M /);
     expect(path).toMatch(/Z$/);
-    // 4 corners * 3 cubics each = 12 'c ' commands.
     expect((path.match(/ c /g) || []).length).toBe(12);
     expect(path).not.toContain("NaN");
   });
 
-  it("renders a clothoid curve with cubic-arc-cubic per corner at default smoothing", () => {
+  it("clothoid: cubic-arc-cubic per corner (8 cubics, 4 arcs)", () => {
     const path = generatePath(200, 200, { radius: 40, curve: "clothoid", smoothing: 0.6 });
     expect(path).toMatch(/^M /);
     expect(path).toMatch(/Z$/);
-    // 4 corners * 2 cubics each = 8 'c ' commands, plus 4 'a ' commands.
     expect((path.match(/ c /g) || []).length).toBe(8);
     expect((path.match(/ a /g) || []).length).toBe(4);
   });
@@ -116,10 +114,9 @@ describe("curve types", () => {
     expect(path).not.toContain("Infinity");
   });
 
-  it("respects exponent on superellipse", () => {
+  it("superellipse exponent changes the path", () => {
     const n2 = generatePath(200, 200, { radius: 40, curve: "superellipse", exponent: 2 });
     const n8 = generatePath(200, 200, { radius: 40, curve: "superellipse", exponent: 8 });
-    // Different exponents produce different paths.
     expect(n2).not.toBe(n8);
   });
 });

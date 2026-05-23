@@ -2,11 +2,11 @@ import { SmoothCorners, type CurveType } from "@lisse/react";
 import type { BorderConfig, ShadowConfig } from "@lisse/core";
 
 // Dev-only visual verification harness for the four curve types.
-// Mounted at /curves-test. Renders each curve at the same radius
-// against a matrix of effects (drop shadow, inner shadow, inner border,
-// outer border, all stacked) so a reviewer can eyeball whether the
-// shadow silhouette tracks the requested curve and the border doesn't
-// facet on the superellipse approximation.
+// Mounted at /curves-test. Each curve renders at the same radius across
+// a matrix of effects (drop shadow, inner shadow, inner border, outer
+// border, all stacked) so a reviewer can eyeball whether the shadow
+// silhouette tracks the requested curve and the border doesn't facet
+// on the superellipse approximation.
 
 const CURVES: CurveType[] = ["arc", "squircle", "superellipse", "clothoid"];
 const SIZE = 140;

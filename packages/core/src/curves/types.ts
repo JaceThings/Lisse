@@ -3,18 +3,16 @@ import type { CurveType } from "../types.js";
 export type { CurveType };
 
 /**
- * One of four corner orientations as the path traverses the rectangle
- * clockwise. Each builder's path segment is parameterised by the
- * orientation so the same canonical (entry → exit) curve can be drawn
- * at any corner without re-deriving the math.
+ * Corner orientation in clockwise traversal. Each builder writes a
+ * canonical (entry → exit) curve and is rotated to a corner via `orient`,
+ * so the math is derived once.
  */
 export type Orient = "TR" | "BR" | "BL" | "TL";
 
 /**
- * Input to a curve builder. `cornerRadius` is the post-distribute radius
- * (already clamped to the rectangle). `roundingAndSmoothingBudget` is the
- * post-distribute side budget — how much of the adjacent edge this corner
- * is allowed to consume.
+ * `cornerRadius` and `roundingAndSmoothingBudget` are both post-distribute:
+ * the radius is already clamped to the rectangle, and the budget is how
+ * much of the adjacent edge this corner may consume.
  */
 export interface CurveBuilderInput {
   cornerRadius: number;
@@ -25,15 +23,11 @@ export interface CurveBuilderInput {
 }
 
 /**
- * Output of a curve builder. `p` is the tangency distance from the sharp
- * corner vertex — i.e. how far back along each adjacent edge the curve
- * starts. The straight-edge stitcher uses `p` to know where one curve
- * ends and the next straight `L` begins.
- *
- * `pathSegment(orient)` returns the SVG path commands for the curve in
- * relative form (lowercase `c`, `a`, `l`), starting at the entry tangency
- * point (the caller's current pen position) and ending at the exit
- * tangency point.
+ * `p` is the tangency distance from the sharp vertex — where the curve
+ * starts along each adjacent edge. The stitcher uses it to place the
+ * straight `L` between corners. `pathSegment(orient)` returns SVG
+ * commands in relative form, entering at the current pen position and
+ * exiting at the opposite tangency point.
  */
 export interface CurveBuilderOutput {
   p: number;

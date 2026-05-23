@@ -4,15 +4,15 @@ export type CurveType = "arc" | "squircle" | "superellipse" | "clothoid";
 /** Configuration for a single corner. */
 export interface CornerConfig {
   radius: number;
-  /** Corner construction. Default: 'squircle'. */
+  /** Curve family. Default: `'squircle'`. */
   curve?: CurveType;
-  /** Smoothing amount from 0 (sharp) to 1 (maximum). Used by 'squircle'
-   *  and 'clothoid'; ignored by 'arc' and 'superellipse'. Default: 0.6 */
+  /** 0 (sharp) to 1 (max). Used by `'squircle'` and `'clothoid'`;
+   *  ignored by `'arc'` and `'superellipse'`. Default: `0.6`. */
   smoothing?: number;
-  /** Superellipse exponent. Used only when `curve === 'superellipse'`.
-   *  Default: 4 (the CSS `corner-shape: squircle` value). */
+  /** Superellipse exponent, only when `curve === 'superellipse'`.
+   *  Default: `4` (matches CSS `corner-shape: squircle`). */
   exponent?: number;
-  /** When true, preserves smoothing even when space is limited. Default: true */
+  /** Preserve smoothing when space is limited. Default: `true`. */
   preserveSmoothing?: boolean;
 }
 
@@ -25,8 +25,7 @@ export interface PerCornerConfig {
 }
 
 /** Uniform corner options — all corners share the same values.
- *  Structurally identical to {@link CornerConfig}; kept as a distinct
- *  exported name so `SmoothCornerOptions` reads as
+ *  Alias for {@link CornerConfig} so {@link SmoothCornerOptions} reads as
  *  `uniform | per-corner` at the call site. */
 export type UniformCornerOptions = CornerConfig;
 

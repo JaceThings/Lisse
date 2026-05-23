@@ -1,7 +1,6 @@
-// Phase 5 of the curve-type rollout — budget edge cases per curve.
-// Verifies that each new curve type survives the same clamping regimes
-// the squircle has always handled (oversized radius, half-side radius,
-// zero-radius corner) without NaN/Infinity.
+// Budget and clamping edge cases per curve. Squircle has always survived
+// these — these tests lock the same guarantees for arc, superellipse, and
+// clothoid (no NaN, no Infinity, well-formed M…Z path).
 import { describe, it, expect } from "vitest";
 import { generatePath } from "../src/generate-path.js";
 import type { CurveType } from "../src/types.js";
@@ -18,11 +17,11 @@ function expectSafe(path: string): void {
 
 describe("budget — radius clamped to half-side", () => {
   for (const curve of CURVES) {
-    it(`R = 200 on 100×100 box with ${curve} (R > half-side, clamp by distribute)`, () => {
+    it(`${curve}: R = 200 on 100×100 (R > half-side)`, () => {
       const path = generatePath(100, 100, { radius: 200, curve });
       expectSafe(path);
     });
-    it(`R = 50 on 100×100 box with ${curve} (half-side pill)`, () => {
+    it(`${curve}: R = 50 on 100×100 (half-side pill)`, () => {
       const path = generatePath(100, 100, { radius: 50, curve });
       expectSafe(path);
     });
@@ -31,7 +30,7 @@ describe("budget — radius clamped to half-side", () => {
 
 describe("budget — mixed-radius corners", () => {
   for (const curve of CURVES) {
-    it(`zero-radius topLeft alongside non-zero corners with ${curve}`, () => {
+    it(`${curve}: zero-radius topLeft alongside non-zero corners`, () => {
       const path = generatePath(200, 200, {
         topLeft: { radius: 0, curve },
         topRight: { radius: 30, curve },
@@ -41,7 +40,7 @@ describe("budget — mixed-radius corners", () => {
       expectSafe(path);
     });
 
-    it(`asymmetric radii with ${curve}`, () => {
+    it(`${curve}: asymmetric radii`, () => {
       const path = generatePath(300, 150, {
         topLeft: { radius: 10, curve },
         topRight: { radius: 50, curve },
@@ -55,11 +54,11 @@ describe("budget — mixed-radius corners", () => {
 
 describe("smoothing edges", () => {
   for (const curve of ["squircle", "clothoid"] as const) {
-    it(`smoothing = 0 with ${curve}`, () => {
+    it(`${curve}: smoothing = 0`, () => {
       const path = generatePath(200, 200, { radius: 40, curve, smoothing: 0 });
       expectSafe(path);
     });
-    it(`smoothing = 1 with ${curve}`, () => {
+    it(`${curve}: smoothing = 1`, () => {
       const path = generatePath(200, 200, { radius: 40, curve, smoothing: 1 });
       expectSafe(path);
     });
@@ -68,7 +67,7 @@ describe("smoothing edges", () => {
 
 describe("superellipse exponent edges", () => {
   for (const exponent of [2, 2.5, 3, 4, 6, 8]) {
-    it(`n = ${exponent} on 200×200`, () => {
+    it(`n = ${exponent}`, () => {
       const path = generatePath(200, 200, {
         radius: 40,
         curve: "superellipse",
@@ -80,7 +79,7 @@ describe("superellipse exponent edges", () => {
 });
 
 describe("per-corner curve mixing", () => {
-  it("clothoid + arc + superellipse + squircle on one rectangle", () => {
+  it("all four curve types on one rectangle", () => {
     const path = generatePath(300, 300, {
       topLeft: { radius: 40, curve: "clothoid", smoothing: 0.8 },
       topRight: { radius: 40, curve: "arc" },
@@ -90,7 +89,7 @@ describe("per-corner curve mixing", () => {
     expectSafe(path);
   });
 
-  it("different smoothing per corner does not contaminate adjacent corners", () => {
+  it("per-corner smoothing does not contaminate adjacent corners", () => {
     const path = generatePath(300, 300, {
       topLeft: { radius: 40, curve: "clothoid", smoothing: 0 },
       topRight: { radius: 40, curve: "clothoid", smoothing: 1 },

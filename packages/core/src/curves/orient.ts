@@ -1,16 +1,13 @@
 import type { Orient } from "./types.js";
 
 /**
- * Transform a canonical (X, Y) delta into a display (dx, dy) delta for
- * the given corner orientation.
+ * Rotate a canonical (X = entry direction, Y = exit direction) delta into
+ * the display (dx, dy) for `orient`. Clockwise traversal:
  *
- * Canonical frame: X = distance along entry direction, Y = distance
- * along exit direction. The path traverses the rectangle clockwise, so:
- *
- *   TR — enter going right (+x), exit going down (+y)
- *   BR — enter going down (+y), exit going left (−x)
- *   BL — enter going left (−x), exit going up (−y)
- *   TL — enter going up (−y), exit going right (+x)
+ *   TR — enter +x, exit +y
+ *   BR — enter +y, exit −x
+ *   BL — enter −x, exit −y
+ *   TL — enter −y, exit +x
  */
 export function transformXY(X: number, Y: number, orient: Orient): [number, number] {
   switch (orient) {

@@ -43,14 +43,7 @@ function resolveOptions(options: SmoothCornerOptions): ResolvedCorners {
   };
 }
 
-/**
- * Generate an SVG path `d` string for a smooth-cornered rectangle.
- *
- * @param width - Rectangle width in pixels
- * @param height - Rectangle height in pixels
- * @param options - Corner configuration (uniform or per-corner)
- * @returns SVG path `d` attribute string
- */
+/** SVG path `d` string for a smooth-cornered rectangle. */
 export function generatePath(
   width: number,
   height: number,
@@ -98,11 +91,9 @@ export function generatePath(
   const br = builderOutFor("bottomRight");
   const bl = builderOutFor("bottomLeft");
 
-  // The "next corner's p" pattern in the redundant L commands matches
-  // the original draw.ts byte-for-byte. Each pair of L commands ends at
-  // the next corner's entry tangency; the first L is geometrically a
-  // no-op when adjacent radii match, and a harmless back-and-forth
-  // otherwise — same shape, identical string in the snapshot tests.
+  // Each side ends with a paired L to the next corner's `p` — geometrically
+  // a no-op when adjacent radii match, harmless otherwise. Preserved for
+  // byte-for-byte parity with draw.ts under snapshot tests.
   return `
     M ${tl.p} 0
     L ${width - tr.p} 0
@@ -122,14 +113,7 @@ export function generatePath(
     .trim();
 }
 
-/**
- * Generate a CSS `clip-path: path(...)` value for a smooth-cornered rectangle.
- *
- * @param width - Rectangle width in pixels
- * @param height - Rectangle height in pixels
- * @param options - Corner configuration (uniform or per-corner)
- * @returns CSS clip-path string, e.g. `path("M 32 0 L 168 0 ...")`
- */
+/** CSS `clip-path: path(...)` value for a smooth-cornered rectangle. */
 export function generateClipPath(
   width: number,
   height: number,

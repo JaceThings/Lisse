@@ -1,15 +1,10 @@
 /**
  * Simpson's-rule integration of the clothoid position integrals
  *     X(L) = ∫₀ᴸ cos θ(s) ds,   Y(L) = ∫₀ᴸ sin θ(s) ds
- * where θ(s) = θ₀ + κ₀·s + (A/2)·s².
+ * where θ(s) = θ₀ + κ₀·s + (A/2)·s². Returns endpoint (x, y) and θ(L).
  *
- * Returns the endpoint offset (x, y) and the tangent angle at the
- * endpoint. The clothoid builder uses the endpoint to position the
- * central arc; the tangent angle falls out as θ(L) directly.
- *
- * N = 32 is sufficient for sub-pixel accuracy at all Lisse-realistic
- * radii (R ≤ 500). The Simpson error is O((L/N)⁴ · max|d⁴θ/ds⁴|·L);
- * at our parameter range the absolute position error is < 1e-4.
+ * N = 32 keeps the absolute position error below 1e-4 across all
+ * Lisse-realistic radii (R ≤ 500). Simpson error is O((L/N)⁴·L).
  */
 export function integrateClothoid(
   theta0: number,

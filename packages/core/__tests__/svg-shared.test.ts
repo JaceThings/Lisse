@@ -151,12 +151,10 @@ describe("angleToCoords", () => {
   });
 });
 
-// Risk #1 from the curve-type blueprint: `adjustOptions` rebuilds each
-// per-corner object via a `{...v, radius}` spread. If a future refactor
-// dropped to picking known keys, the `curve` and `exponent` fields would
-// silently disappear — the main path would render the requested curve
-// while the shadow rendered a squircle. Lock the spread behavior with
-// explicit tests so a future change can't regress this quietly.
+// Risk #1: `adjustOptions` rebuilds each per-corner object via a
+// `{...v, radius}` spread. A refactor that switched to picking known
+// keys would silently drop `curve` and `exponent`, leaving the main
+// path on the requested curve while the shadow fell back to squircle.
 describe("adjustOptions — curve-type preservation", () => {
   it("preserves curve and exponent on a uniform CornerConfig", () => {
     const result = adjustOptions(
@@ -189,7 +187,7 @@ describe("adjustOptions — curve-type preservation", () => {
     });
   });
 
-  it("clamps radius to zero rather than going negative on tight cutouts", () => {
+  it("clamps radius to 0 rather than going negative on tight cutouts", () => {
     const result = adjustOptions(
       { topLeft: { radius: 10, curve: "clothoid" } as CornerConfig },
       -100,
@@ -200,12 +198,11 @@ describe("adjustOptions — curve-type preservation", () => {
   });
 });
 
-// Risk #4 from the curve-type blueprint: the per-dispatch path cache
-// keys on `JSON.stringify(options)`. Since `curve` lives inside the
-// options object it should be included in the key automatically — lock
-// that with an explicit test.
+// Risk #4: the path cache keys on `JSON.stringify(options)`. `curve`
+// lives inside that object so it should bust the key automatically —
+// lock that behaviour explicitly.
 describe("createPathCache — curve invalidation", () => {
-  it("returns different paths for different curve types at the same dimensions", () => {
+  it("returns different paths for different curves at the same dimensions", () => {
     const baseSquircle = { radius: 40, curve: "squircle" as const };
     const baseClothoid = { radius: 40, curve: "clothoid" as const };
     const getSq = createPathCache(baseSquircle);

@@ -7,13 +7,10 @@ import { buildClothoid } from "./clothoid.js";
 export type { CurveType, CurveBuilder, CurveBuilderInput, CurveBuilderOutput, Orient } from "./types.js";
 export { buildArc, buildSquircle, buildSuperellipse, buildClothoid };
 
-/**
- * Default exponent for the superellipse curve. Matches the value that
- * CSS `corner-shape: squircle` resolves to (a Lamé curve with n = 4).
- */
+/** Default superellipse exponent. Matches CSS `corner-shape: squircle` (Lamé n = 4). */
 export const DEFAULT_EXPONENT = 4;
 
-/** Dispatch table — single source of truth for which builder runs for each curve. */
+/** Single source of truth for which builder runs per curve type. */
 export function getCurveBuilder(type: CurveType): CurveBuilder {
   switch (type) {
     case "arc":
