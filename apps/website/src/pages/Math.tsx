@@ -49,13 +49,14 @@ const RADIUS_MIN = 30;
 const RADIUS_MAX = 200;
 const RADIUS_DEFAULT = 160;
 const SMOOTHING_DEFAULT = 0.6;
-// Superellipse exponent. n = 2 is an ellipse (curvature blows up at the
-// seam — G0 only with a straight edge). n > 2 gives κ = 0 at the
+// Superellipse exponent. n = 2 is an ellipse (curvature blows up at
+// the seam — G0 only with a straight edge). n > 2 gives κ = 0 at the
 // crossings (G2). n = 4 is the CSS `corner-shape: squircle` default;
-// n ≈ 5 is the canonical "iOS-like" fit.
+// numerical fits to Figma 0.6 / iOS land near n ≈ 5 — picked as the
+// /math default for cross-curve visual parity with the Figma squircle.
 const EXPONENT_MIN = 2.5;
 const EXPONENT_MAX = 8;
-const EXPONENT_DEFAULT = 4;
+const EXPONENT_DEFAULT = 5;
 
 const COMB_DENSITY_MIN = 12;
 const COMB_DENSITY_MAX = 200;
@@ -125,11 +126,12 @@ function LabelledPoint({ point, label, offset, tone, opacity = 1 }: LabelledPt &
 }
 
 interface DiagramProps {
-  geometry: Geometry;
   /** Samples to render the main curve + comb from. During a curve-type
    *  morph this is the lerped result; otherwise equal to
    *  `geometry.curve.samples`. */
   displaySamples: CurveSamples;
+  /** Lerped comb scale across a curve-type morph — see useMorphedCurve. */
+  combScale: number;
   /** Pre-computed overlay (labels, polygons, spokes, etc.) with all
    *  positions lerped per-element. */
   overlay: MorphedOverlay;
@@ -139,13 +141,12 @@ interface DiagramProps {
 }
 
 function Diagram({
-  geometry,
   displaySamples,
+  combScale,
   overlay,
   combDensity,
   svgRef,
 }: DiagramProps) {
-  const { combScale } = geometry;
   const { whiskers, envelope } = useMemo(
     () => buildCombFromSamples(displaySamples, combScale, combDensity),
     [displaySamples, combScale, combDensity],
@@ -203,14 +204,14 @@ function Diagram({
         opacity={0.5}
       />
 
-      {overlay.referenceArcPath ? (
+      {overlay.referenceArc ? (
         <path
-          d={overlay.referenceArcPath.d}
+          d={`M ${overlay.referenceArc.start[0]} ${overlay.referenceArc.start[1]} A ${overlay.referenceArc.R} ${overlay.referenceArc.R} 0 0 1 ${overlay.referenceArc.end[0]} ${overlay.referenceArc.end[1]}`}
           fill="none"
           stroke={muted}
           strokeWidth={0.75}
           strokeDasharray="2 4"
-          opacity={overlay.referenceArcPath.opacity * 0.7}
+          opacity={overlay.referenceArc.opacity * 0.7}
         />
       ) : null}
 
@@ -413,13 +414,19 @@ export function MathPage() {
     [geometry],
   );
   const target = useMemo(
-    () => ({ samples: geometry.curve.samples, overlay: targetOverlay }),
-    [geometry.curve.samples, targetOverlay],
+    () => ({
+      samples: geometry.curve.samples,
+      overlay: targetOverlay,
+      combScale: geometry.combScale,
+    }),
+    [geometry.curve.samples, targetOverlay, geometry.combScale],
   );
-  const { displaySamples, displayOverlay: overlay, snapshotForMorph } = useMorphedCurve(
-    curveType,
-    target,
-  );
+  const {
+    displaySamples,
+    displayOverlay: overlay,
+    displayCombScale,
+    snapshotForMorph,
+  } = useMorphedCurve(curveType, target);
 
   const onCurveType = useCallback(
     (v: CurveType) => {
@@ -476,6 +483,32 @@ export function MathPage() {
 
   const showSmoothing = curveType === "squircle" || curveType === "clothoid";
   const showExponent = curveType === "superellipse";
+  // Unified "shape parameter" slider: one DOM-stable Slider for both
+  // smoothing and exponent, mapped through a normalised [0, 1] value so
+  // switching from squircle → superellipse glides the thumb from
+  // (smoothing 0.6 = 60% along) to (exponent 5 = 45% along) rather than
+  // mounting / unmounting two separate sliders.
+  const shapeValue = showExponent
+    ? (exponent - EXPONENT_MIN) / (EXPONENT_MAX - EXPONENT_MIN)
+    : smoothing;
+  const shapeLabel = showExponent ? "Exponent (n)" : "Smoothing";
+  const shapeFormat = useCallback(
+    (t: number) =>
+      showExponent
+        ? formatExponent(EXPONENT_MIN + t * (EXPONENT_MAX - EXPONENT_MIN))
+        : formatSmoothing(t),
+    [showExponent],
+  );
+  const onShapeChange = useCallback(
+    (next: number, drag = false) => {
+      if (showExponent) {
+        onExponent(EXPONENT_MIN + next * (EXPONENT_MAX - EXPONENT_MIN), drag);
+      } else {
+        onSmoothing(next, drag);
+      }
+    },
+    [showExponent, onExponent, onSmoothing],
+  );
 
   return (
     <PlaygroundTuningProvider value={DEFAULT_TUNING}>
@@ -507,8 +540,8 @@ export function MathPage() {
           >
             <div className="relative w-full overflow-hidden rounded-lg bg-[rgba(126,117,108,0.04)] p-3">
               <Diagram
-                geometry={geometry}
                 displaySamples={displaySamples}
+                combScale={displayCombScale}
                 overlay={overlay}
                 combDensity={combDensity}
                 svgRef={svgRef}
@@ -550,26 +583,15 @@ export function MathPage() {
 
         <Stagger index={9}>
           <div className="flex w-full flex-col gap-5 px-1">
-            {showSmoothing ? (
+            {showSmoothing || showExponent ? (
               <Slider
-                label="Smoothing"
-                value={smoothing}
+                label={shapeLabel}
+                value={shapeValue}
                 min={0}
                 max={1}
                 step={0.01}
-                onChange={onSmoothing}
-                format={formatSmoothing}
-              />
-            ) : null}
-            {showExponent ? (
-              <Slider
-                label="Exponent (n)"
-                value={exponent}
-                min={EXPONENT_MIN}
-                max={EXPONENT_MAX}
-                step={0.05}
-                onChange={onExponent}
-                format={formatExponent}
+                onChange={onShapeChange}
+                format={shapeFormat}
               />
             ) : null}
             <Slider

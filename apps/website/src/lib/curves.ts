@@ -86,8 +86,10 @@ export interface Curve {
   /** Off-curve control polygons drawn dashed (Bézier handles). Each
    *  inner array is one polyline. */
   controlPolygons?: Pt[][];
-  /** Optional reference quarter-circle path drawn dashed for comparison. */
-  referenceArcPath?: string;
+  /** Optional reference quarter-circle drawn dashed for comparison.
+   *  Structured (start, end, R) rather than a baked path string so the
+   *  overlay can lerp the numbers when morphing between curve types. */
+  referenceArc?: { start: Pt; end: Pt; R: number };
   /** Spokes drawn from the arc centre to the arc tangency points. Each
    *  inner array is [from, to]. */
   arcSpokes?: Pt[][];
@@ -488,7 +490,6 @@ function buildSquircle(R: number, smoothing: number, cornerX: number, cornerY: n
     cubic(P4, P5, P6, P7),
   ];
   const samples = resampleByArcLength(segments);
-  const referenceArcPath = `M ${cornerX - rR} ${cornerY} A ${rR} ${rR} 0 0 1 ${cornerX} ${cornerY + rR}`;
   return {
     segments,
     path: pathFromSamples(samples),
@@ -512,7 +513,7 @@ function buildSquircle(R: number, smoothing: number, cornerX: number, cornerY: n
       [P0, P1, P2, P3],
       [P4, P5, P6, P7],
     ],
-    referenceArcPath,
+    referenceArc: { start: [cornerX - rR, cornerY], end: [cornerX, cornerY + rR], R: rR },
     displayP: p,
     g2: false,
     info: [
@@ -539,7 +540,6 @@ function buildSuperellipse(R: number, exponent: number, cornerX: number, cornerY
   const samples = resampleByArcLength([seg]);
   // Peak curvature is at the 45° apex.
   const peakK = Math.abs(seg.curvature(0.5));
-  const referenceArcPath = `M ${cornerX - R} ${cornerY} A ${R} ${R} 0 0 1 ${cornerX} ${cornerY + R}`;
   return {
     segments: [seg],
     path: pathFromSamples(samples),
@@ -549,7 +549,7 @@ function buildSuperellipse(R: number, exponent: number, cornerX: number, cornerY
       makePoint(apex, "apex", [16, -8], "muted"),
       makePoint(P7, "P7", [14, 0]),
     ],
-    referenceArcPath,
+    referenceArc: { start: [cornerX - R, cornerY], end: [cornerX, cornerY + R], R },
     displayP: R,
     g2: exponent > 2,
     info: [
@@ -646,7 +646,6 @@ function buildClothoid(R: number, smoothing: number, cornerX: number, cornerY: n
 
   const samples = resampleByArcLength(segments);
   const path = pathFromSamples(samples);
-  const referenceArcPath = `M ${cornerX - p} ${cornerY} A ${p} ${p} 0 0 1 ${cornerX} ${cornerY + p}`;
 
   return {
     segments,
@@ -665,7 +664,7 @@ function buildClothoid(R: number, smoothing: number, cornerX: number, cornerY: n
           [arcCenter, arcEnd],
         ]
       : [],
-    referenceArcPath,
+    referenceArc: { start: [cornerX - p, cornerY], end: [cornerX, cornerY + p], R: p },
     displayP: p,
     g2: true,
     info: [

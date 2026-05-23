@@ -13,13 +13,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { animate } from "framer-motion";
 import { type CurveSamples, lerpSamples } from "../lib/curves.ts";
-import { lerpOverlay, type MorphedOverlay } from "../lib/overlay.ts";
+import { lerp, lerpOverlay, type MorphedOverlay } from "../lib/overlay.ts";
 
 const EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
 export interface MorphedCurve {
   displaySamples: CurveSamples;
   displayOverlay: MorphedOverlay;
+  /** Lerped comb scale. The comb whisker length is `κ · combScale`; if
+   *  the consumer used the *target* curve's combScale during the morph,
+   *  whiskers would jump instantly to the new scale while their κ
+   *  values were still tweening — visible as a comb snap. */
+  displayCombScale: number;
   /** Call from your click handler *before* updating the underlying
    *  state that drives `targetKey` — snapshots the visible-on-screen
    *  geometry so the next morph starts from there instead of jumping. */
@@ -33,17 +38,19 @@ export interface MorphedCurve {
  */
 export function useMorphedCurve(
   targetKey: unknown,
-  target: { samples: CurveSamples; overlay: MorphedOverlay },
+  target: { samples: CurveSamples; overlay: MorphedOverlay; combScale: number },
   durationMs = 450,
 ): MorphedCurve {
   const [snapshotSamples, setSnapshotSamples] = useState<CurveSamples>(() => target.samples);
   const [snapshotOverlay, setSnapshotOverlay] = useState<MorphedOverlay>(() => target.overlay);
+  const [snapshotCombScale, setSnapshotCombScale] = useState<number>(() => target.combScale);
   const [morph, setMorph] = useState(1);
 
   // Mirror the live computed values so `snapshotForMorph` can read
   // them without re-running the lerp from React state.
   const displaySamplesRef = useRef<CurveSamples>(target.samples);
   const displayOverlayRef = useRef<MorphedOverlay>(target.overlay);
+  const displayCombScaleRef = useRef<number>(target.combScale);
 
   // Avoid an animation on the first mount — the initial snapshot is
   // already equal to the target.
@@ -72,15 +79,21 @@ export function useMorphedCurve(
     return lerpOverlay(snapshotOverlay, target.overlay, morph);
   }, [snapshotOverlay, target.overlay, morph]);
 
+  const displayCombScale = morph >= 1
+    ? target.combScale
+    : lerp(snapshotCombScale, target.combScale, morph);
+
   displaySamplesRef.current = displaySamples;
   displayOverlayRef.current = displayOverlay;
+  displayCombScaleRef.current = displayCombScale;
 
   const snapshotForMorph = useCallback(() => {
     setSnapshotSamples(displaySamplesRef.current);
     setSnapshotOverlay(displayOverlayRef.current);
+    setSnapshotCombScale(displayCombScaleRef.current);
     setMorph(0);
   }, []);
 
-  return { displaySamples, displayOverlay, snapshotForMorph };
+  return { displaySamples, displayOverlay, displayCombScale, snapshotForMorph };
 }
 

@@ -37,7 +37,7 @@ export interface MorphedOverlay {
   arcSpokes: OverlaySpoke[];
   arcCenter?: { point: Pt; opacity: number };
   arcRadiusReadout?: { point: Pt; R: number; opacity: number };
-  referenceArcPath?: { d: string; opacity: number };
+  referenceArc?: { start: Pt; end: Pt; R: number; opacity: number };
   /** Lerped corner and curve endpoint positions for the straight edges
    *  and sharp-corner indicator. */
   cornerX: number;
@@ -63,7 +63,7 @@ export function buildOverlay(curve: Curve, cornerX: number, cornerY: number, R: 
     arcRadiusReadout: curve.arcCenter
       ? { point: [curve.arcCenter[0], curve.arcCenter[1] + 14], R, opacity: 1 }
       : undefined,
-    referenceArcPath: curve.referenceArcPath ? { d: curve.referenceArcPath, opacity: 1 } : undefined,
+    referenceArc: curve.referenceArc ? { ...curve.referenceArc, opacity: 1 } : undefined,
     cornerX,
     cornerY,
     P0: curve.points[0].point,
@@ -238,12 +238,20 @@ export function lerpOverlay(from: MorphedOverlay, to: MorphedOverlay, t: number)
     }
   }
 
-  // === Reference arc path — can't lerp path strings, just fade. ===
-  let referenceArcPath: MorphedOverlay["referenceArcPath"];
-  if (to.referenceArcPath) {
-    referenceArcPath = { d: to.referenceArcPath.d, opacity: t * to.referenceArcPath.opacity };
-  } else if (from.referenceArcPath) {
-    referenceArcPath = { d: from.referenceArcPath.d, opacity: from.referenceArcPath.opacity * (1 - t) };
+  // === Reference arc — lerp start/end/R per-number when both sides
+  // expose one; fade in/out otherwise. ===
+  let referenceArc: MorphedOverlay["referenceArc"];
+  if (from.referenceArc && to.referenceArc) {
+    referenceArc = {
+      start: lerpPt(from.referenceArc.start, to.referenceArc.start, t),
+      end: lerpPt(from.referenceArc.end, to.referenceArc.end, t),
+      R: lerp(from.referenceArc.R, to.referenceArc.R, t),
+      opacity: lerp(from.referenceArc.opacity, to.referenceArc.opacity, t),
+    };
+  } else if (to.referenceArc) {
+    referenceArc = { ...to.referenceArc, opacity: t * to.referenceArc.opacity };
+  } else if (from.referenceArc) {
+    referenceArc = { ...from.referenceArc, opacity: from.referenceArc.opacity * (1 - t) };
   }
 
   // === Corner XY + endpoints ===
@@ -258,7 +266,7 @@ export function lerpOverlay(from: MorphedOverlay, to: MorphedOverlay, t: number)
     arcSpokes,
     arcCenter,
     arcRadiusReadout,
-    referenceArcPath,
+    referenceArc,
     cornerX,
     cornerY,
     P0,
