@@ -583,28 +583,24 @@ export function MathPage() {
         </Stagger>
 
         <Stagger index={9}>
-          <div className="flex w-full flex-col px-1">
-            {/* Shape slider blurs in/out at the top when toggling
-                between arc and the other three curves. The AnimatePresence
-                + height-tweening motion.div handles its own slot;
-                flex column flow pushes the sliders below it down
-                naturally as the height tweens — no `layout` motion
-                needed (which would force per-frame measurement
-                during the 60fps morph animation and tank perf). */}
+          <div className="relative flex w-full flex-col px-1">
+            {/* Shape slider blurs in/out at the top when toggling between
+                arc (no shape param) and any other curve. The slider is
+                absolutely positioned so its height doesn't clip during
+                the transition — only opacity + filter animate. The
+                radius / comb column below has a marginTop that tweens
+                in lockstep, sliding the rest of the sliders down to
+                make room. SHAPE_SLOT_HEIGHT = slider's natural height
+                (33 px) + gap-5 (20 px) = 53 px. */}
             <AnimatePresence initial={false}>
               {showSmoothing || showExponent ? (
                 <motion.div
                   key="shape-slider"
-                  initial={{ opacity: 0, filter: "blur(4px)", height: 0 }}
-                  animate={{
-                    opacity: 1,
-                    filter: "blur(0px)",
-                    height: "auto",
-                    marginBottom: 20,
-                  }}
-                  exit={{ opacity: 0, filter: "blur(4px)", height: 0, marginBottom: 0 }}
+                  initial={{ opacity: 0, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
-                  style={{ overflow: "hidden" }}
+                  style={{ position: "absolute", top: 0, left: 4, right: 4 }}
                 >
                   <Slider
                     label={shapeLabel}
@@ -618,7 +614,12 @@ export function MathPage() {
                 </motion.div>
               ) : null}
             </AnimatePresence>
-            <div className="flex flex-col gap-5">
+            <motion.div
+              initial={false}
+              animate={{ marginTop: showSmoothing || showExponent ? 53 : 0 }}
+              transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
+              className="flex flex-col gap-5"
+            >
               <Slider
                 label="Corner radius"
                 value={radius}
@@ -637,7 +638,7 @@ export function MathPage() {
                 onChange={onCombDensity}
                 format={(v) => `${Math.round(v)} whiskers`}
               />
-            </div>
+            </motion.div>
           </div>
         </Stagger>
 
