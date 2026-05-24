@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
+import codspeedPlugin from "@codspeed/vitest-plugin";
 
 /**
  * Benchmark config for the React adapter.
@@ -9,6 +10,7 @@ import { fileURLToPath } from "node:url";
  *   same code paths as the tests (no need to rebuild dist/ first).
  */
 export default defineConfig({
+  plugins: [codspeedPlugin()],
   test: {
     environment: "happy-dom",
     include: ["**/*.bench.ts"],
