@@ -154,7 +154,7 @@ interface CaseSpec {
   effects: Effects;
 }
 
-const COUNTS = [1, 10, 50, 100, 500];
+const COUNTS = [1, 10, 50, 100];
 const AUTOS = [true, false];
 const EFFECTS: Effects[] = ["none", "innerBorder"];
 
