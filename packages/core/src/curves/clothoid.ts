@@ -1,6 +1,6 @@
 import { rounded } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
-import { transformXY } from "./orient.js";
+import { transformX, transformY } from "./orient.js";
 import { integrateClothoid } from "./integrate.js";
 
 const ANGLE_EPSILON = 1e-6;
@@ -111,9 +111,12 @@ export const buildClothoid: CurveBuilder = ({
         const B2dy = effY - h1 * Math.sin(dTheta);
         const B3dx = effX;
         const B3dy = effY;
-        const [a, b] = transformXY(B1dx, B1dy, orient);
-        const [c, d] = transformXY(B2dx, B2dy, orient);
-        const [e, f] = transformXY(B3dx, B3dy, orient);
+        const a = transformX(B1dx, B1dy, orient);
+        const b = transformY(B1dx, B1dy, orient);
+        const c = transformX(B2dx, B2dy, orient);
+        const d = transformY(B2dx, B2dy, orient);
+        const e = transformX(B3dx, B3dy, orient);
+        const f = transformY(B3dx, B3dy, orient);
         parts.push(rounded`c ${a} ${b} ${c} ${d} ${e} ${f}`);
       }
 
@@ -122,7 +125,8 @@ export const buildClothoid: CurveBuilder = ({
         // (p − effX − effY, p − effX − effY) on both axes by symmetry.
         const arcDx = p - effX - effY;
         const arcDy = p - effX - effY;
-        const [ax, ay] = transformXY(arcDx, arcDy, orient);
+        const ax = transformX(arcDx, arcDy, orient);
+        const ay = transformY(arcDx, arcDy, orient);
         parts.push(rounded`a ${effR} ${effR} 0 0 1 ${ax} ${ay}`);
       }
 
@@ -138,9 +142,12 @@ export const buildClothoid: CurveBuilder = ({
         const B2dy = effX - h0;
         const B3dx = effY;
         const B3dy = effX;
-        const [a, b] = transformXY(B1dx, B1dy, orient);
-        const [c, d] = transformXY(B2dx, B2dy, orient);
-        const [e, f] = transformXY(B3dx, B3dy, orient);
+        const a = transformX(B1dx, B1dy, orient);
+        const b = transformY(B1dx, B1dy, orient);
+        const c = transformX(B2dx, B2dy, orient);
+        const d = transformY(B2dx, B2dy, orient);
+        const e = transformX(B3dx, B3dy, orient);
+        const f = transformY(B3dx, B3dy, orient);
         parts.push(rounded`c ${a} ${b} ${c} ${d} ${e} ${f}`);
       }
 

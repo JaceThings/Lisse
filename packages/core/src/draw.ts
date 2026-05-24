@@ -25,9 +25,13 @@ export function getSVGPathFromPathParams({
   bottomLeftPathParams,
   bottomRightPathParams,
 }: SVGPathInput): string {
-  // Round every coordinate to 4 decimals (same precision as the inner
-  // `rounded`-tagged segments) so output is bit-stable across Node /
-  // browser engines.
+  // Legacy entry — the corner-segment helpers below emit multi-line
+  // `rounded` templates for source readability, and the outer
+  // whitespace regex collapses them. The modern hot path is
+  // `generatePath` in generate-path.ts (direct concat, no regex).
+  // `r()` rounds each outer coordinate to 4 decimals so output stays
+  // bit-stable across Node / browser engines (the inner segments are
+  // already at the same precision via `rounded`).
   const r = (n: number): string => n.toFixed(4);
   return `
     M ${r(topLeftPathParams.p)} 0

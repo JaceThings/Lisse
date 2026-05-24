@@ -1,6 +1,7 @@
 import type { SmoothCornerOptions, CornerConfig, CurveType } from "./types.js";
 import { distributeAndNormalize } from "./distribute.js";
 import { getCurveBuilder, DEFAULT_EXPONENT } from "./curves/index.js";
+import { getCachedBuilderOutput } from "./curves/cache.js";
 
 export const DEFAULT_SMOOTHING = 0.6;
 export const DEFAULT_PRESERVE_SMOOTHING = true;
@@ -77,7 +78,7 @@ export function generatePath(
   const builderOutFor = (name: keyof ResolvedCorners) => {
     const corner = corners[name];
     const builder = getCurveBuilder(corner.curve);
-    return builder({
+    return getCachedBuilderOutput(corner.curve, builder, {
       cornerRadius: normalized[name].radius,
       smoothing: corner.smoothing,
       exponent: corner.exponent,
@@ -92,28 +93,30 @@ export function generatePath(
   const bl = builderOutFor("bottomLeft");
 
   // Each side ends with a paired L to the next corner's `p` — geometrically
-  // a no-op when adjacent radii match, harmless otherwise. Round every
-  // coordinate to 4 decimals so output is bit-stable across Node /
-  // browser engines (Math.sin/cos can vary by 1 ULP between V8 builds,
-  // and the inner pathSegments are already rounded to the same precision).
+  // a no-op when adjacent radii match, harmless otherwise. Direct concat
+  // avoids a per-call template + whitespace regex pass; `r()` rounds each
+  // coordinate to 4 decimals so output is bit-stable across Node / browser
+  // engines (Math.sin/cos vary by 1 ULP between V8 builds, and the inner
+  // pathSegments are already rounded to the same precision). `seg()` skips
+  // the leading space for empty corner segments (radius=0) so we never
+  // emit double-spaces.
   const r = (n: number): string => n.toFixed(4);
-  return `
-    M ${r(tl.p)} 0
-    L ${r(width - tr.p)} 0
-    ${tr.pathSegment("TR")}
-    L ${r(width)} ${r(br.p)}
-    L ${r(width)} ${r(height - br.p)}
-    ${br.pathSegment("BR")}
-    L ${r(width - bl.p)} ${r(height)}
-    L ${r(bl.p)} ${r(height)}
-    ${bl.pathSegment("BL")}
-    L 0 ${r(height - tl.p)}
-    L 0 ${r(tl.p)}
-    ${tl.pathSegment("TL")}
-    Z
-  `
-    .replace(/[\t\s\n]+/g, " ")
-    .trim();
+  const seg = (s: string): string => (s.length > 0 ? " " + s : "");
+  return (
+    "M " + r(tl.p) + " 0" +
+    " L " + r(width - tr.p) + " 0" +
+    seg(tr.pathSegment("TR")) +
+    " L " + r(width) + " " + r(br.p) +
+    " L " + r(width) + " " + r(height - br.p) +
+    seg(br.pathSegment("BR")) +
+    " L " + r(width - bl.p) + " " + r(height) +
+    " L " + r(bl.p) + " " + r(height) +
+    seg(bl.pathSegment("BL")) +
+    " L 0 " + r(height - tl.p) +
+    " L 0 " + r(tl.p) +
+    seg(tl.pathSegment("TL")) +
+    " Z"
+  );
 }
 
 /** CSS `clip-path: path(...)` value for a smooth-cornered rectangle. */
