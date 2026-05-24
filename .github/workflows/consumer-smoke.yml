@@ -1,0 +1,26 @@
+name: Consumer smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  consumer-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `scripts/consumer-smoke.sh` builds packages, packs tarballs, runs
+      # publint + attw on each, installs the tarballs into a fresh fixture
+      # project, and exercises ESM/CJS/subpath/SSR imports. Catches
+      # packaging regressions that source-aliased unit tests cannot see.
+      - run: pnpm consumer-smoke

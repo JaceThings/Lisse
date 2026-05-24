@@ -13,6 +13,7 @@ Lisse *(rhymes with lease)* is Figma-quality squircle smoothing for the web. Gen
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/JaceThings/Lisse/ci.yml?branch=main&label=CI)](https://github.com/JaceThings/Lisse/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/JaceThings/Lisse?utm_source=badge)
 
 [![bundle: @lisse/core](https://deno.bundlejs.com/badge?q=%40lisse%2Fcore&label=%40lisse%2Fcore)](https://bundlejs.com/?q=%40lisse%2Fcore)
 [![bundle: @lisse/react](https://deno.bundlejs.com/badge?q=%40lisse%2Freact&label=%40lisse%2Freact)](https://bundlejs.com/?q=%40lisse%2Freact)
@@ -48,6 +49,34 @@ Lisse implements [Figma's corner smoothing algorithm](https://www.figma.com/blog
 - TypeScript-first with full type coverage
 - Auto-updates on element resize via shared `ResizeObserver`
 - Tree-shakeable ESM and CJS builds
+
+## Performance
+
+Lisse generates SVG path strings in JS — no WASM, no workers, no dependencies. An internal 64-entry LRU cache memoises the shape-only computation (everything that depends on `radius`, `smoothing`, `curve`, `exponent`, and the per-corner budget), so identical corner configs on different-sized elements skip the math entirely. Numbers below are measured via [`pnpm bench`](./benchmarks) on an M-series Mac with Node 22; instruction-count-based CodSpeed gates run on every PR.
+
+**Single corner — one `generatePath()` call** (200×100 box, radius 24, smoothing 0.6):
+
+| Curve | Per call |
+|---|---|
+| `arc` | ~1.3 µs |
+| `squircle` (default) | ~1.5 µs |
+| `superellipse` | ~1.4 µs |
+| `clothoid` | ~1.5 µs |
+
+**500 corners in a tight loop** — what a resize event on a busy page costs (varied widths/heights, shared corner config — the realistic SPA case):
+
+| Curve | 500 corners |
+|---|---|
+| `arc` | ~0.80 ms |
+| `squircle` | ~0.85 ms |
+| `superellipse` | ~0.81 ms |
+| `clothoid` | ~0.85 ms |
+
+**Effects setup** (`createSvgEffects` + first update with a border): ~130 µs per element, one-shot at mount.
+
+At 60 fps you have 16.7 ms per frame. A page with 500 smooth-cornered squircles re-computes all clip-paths in **under 1 ms per resize tick** — about 5% of a frame, leaving plenty of room for paint and everything else. On low-end mobile (3-5× slower JS), the same workload stays inside budget.
+
+The JS hot path doesn't include browser paint, layout, or compositor work, which dominates on complex pages. Lisse minimises layout cost by setting `clip-path` and reading layout once per `ResizeObserver` tick (shared singleton observer across all elements). The cache scales with config diversity, not element count — a page with 5,000 elements sharing one corner config performs identically to a page with 50.
 
 ## Which API Should I Use?
 
@@ -418,7 +447,7 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 - **Per-side borders** -- Only the top border is read during auto-extraction because `getComputedStyle` returns per-side values (`borderTopWidth`, `borderTopColor`, etc.) and the SVG overlay renders a single uniform border around the entire squircle. If you need different colors per side, use explicit effect props.
 - **`border-image`** -- Not detected because CSS `border-image` syntax is complex (angle units, color spaces, slice semantics). Reliably parsing all variants is not feasible. Use gradient borders via the explicit `BorderConfig.color` API instead.
 - **`outline`** -- Not extracted because CSS outlines don't follow `border-radius` in all browsers, and the squircle shape would make standard outlines look incorrect. The library does not attempt to replicate them.
-- **One-time extraction** -- CSS effects are read once on mount because continuously polling `getComputedStyle` would hurt performance. Changes to CSS borders or shadows after mount will not be reflected. Use explicit effect props for dynamic values.
+- **One-time extraction (mount-time snapshot)** -- CSS effects are read once on mount because continuously polling `getComputedStyle` would hurt performance, and a `MutationObserver` on the host element can't see ancestor class changes or CSS variable updates that affect computed style. **Re-mount the element to re-extract** after a theme switch or token change. An imperative `refresh()` API for in-place re-extraction is planned for v0.4. Until then, use explicit effect props for dynamic values.
 - **`!important` rules** -- Cannot be overridden because the library strips effects via inline styles, and `!important` stylesheet rules take precedence over inline styles. The CSS property stays visible alongside the SVG replacement. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
 - **CSS transitions** -- Stripped properties (`border`, `box-shadow`) will not animate because they are removed from the element and replaced with SVG. The SVG effects themselves are not animated. Use `autoEffects: false` and drive explicit effect props instead.
 - **`double` border minimum width** -- Requires `border-width >= 3px` because the double style needs space for two lines and a gap between them. Below 3px, the border falls back to solid.

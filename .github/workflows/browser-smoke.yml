@@ -1,0 +1,51 @@
+name: Browser smoke
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+# The job ran post-merge by design — it provides signal for the next PR
+# author, not a gate for this one. Per-PR browser-mode tests are the
+# wrong shape for a math-deterministic library; happy-dom unit tests
+# catch >95% of the regression class.
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium webkit firefox
+      - name: Run browser smoke
+        run: cd tests/browser-smoke && pnpm test
+        # Failure surfaces as a comment on the offending commit + a
+        # GitHub Issue (optional next step). The main branch is not
+        # blocked because the work has already merged.
+        continue-on-error: false
+      # Argos: read-only review surface for visual diffs. Vitest
+      # browser mode's `toMatchScreenshot` matcher writes baselines to
+      # `__screenshots__/` next to each test; Argos diffs every PNG it
+      # finds under the given root. Set up the project on argos-ci.com
+      # and store ARGOS_TOKEN in repo secrets before this fires.
+      - name: Upload screenshots to Argos
+        if: always()
+        run: |
+          if find tests/browser-smoke -name "*.png" -print -quit | grep -q .; then
+            pnpm dlx '@argos-ci/cli@^2' upload tests/browser-smoke/ || echo "Argos upload skipped (token missing or project not initialised)"
+          else
+            echo "No screenshots produced; skipping Argos upload."
+          fi
+        env:
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
+        continue-on-error: true

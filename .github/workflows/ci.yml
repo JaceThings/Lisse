@@ -23,4 +23,47 @@ jobs:
       # typechecks) can resolve the library `dist/` exports.
       - run: pnpm build
       - run: pnpm typecheck
-      - run: pnpm test
+      - name: Run tests with coverage
+        run: pnpm coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          # Token is optional for public repos; setting it improves
+          # rate-limit headroom when present.
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+
+  size-limit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # andresz1/size-limit-action shells out via `npx size-limit` which
+      # doesn't see the workspace-installed @size-limit/preset-small-lib,
+      # so we run size-limit directly. Hard-fails when any per-package
+      # budget is exceeded; the PR-comment surface is a follow-up
+      # (track at https://github.com/andresz1/size-limit-action/issues).
+      - run: pnpm size
+
+  knip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm knip

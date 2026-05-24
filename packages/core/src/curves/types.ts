@@ -35,3 +35,14 @@ export interface CurveBuilderOutput {
 }
 
 export type CurveBuilder = (input: CurveBuilderInput) => CurveBuilderOutput;
+
+/**
+ * Shared zero-radius output. Every builder short-circuits to this when
+ * the (post-budget-clamp) corner footprint is non-positive, so a single
+ * constant is reused across the four builders. The closure is allocation-
+ * free at call time — `pathSegment` is a static function reference.
+ */
+export const EMPTY_BUILDER_OUTPUT: CurveBuilderOutput = {
+  p: 0,
+  pathSegment: () => "",
+};

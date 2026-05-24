@@ -2,3 +2,8 @@ packages:
   - "packages/*"
   - "apps/*"
   - "benchmarks"
+  - "tests/browser-smoke"
+# tests/consumer-smoke is NOT a workspace — it consumes published
+# tarballs at runtime via the consumer-smoke script. Including it
+# here would make pnpm try to link @lisse/* as workspace deps,
+# defeating the test's purpose.

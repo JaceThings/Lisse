@@ -1,6 +1,7 @@
 import { rounded } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
-import { transformXY } from "./orient.js";
+import { EMPTY_BUILDER_OUTPUT } from "./types.js";
+import { transformX, transformY } from "./orient.js";
 
 /**
  * Plain quarter-circle corner via native SVG `a`. G1 with the adjacent
@@ -15,13 +16,12 @@ export const buildArc: CurveBuilder = ({
   roundingAndSmoothingBudget,
 }) => {
   const p = Math.min(cornerRadius, roundingAndSmoothingBudget);
-  if (p <= 0) {
-    return { p: 0, pathSegment: () => "" };
-  }
+  if (p <= 0) return EMPTY_BUILDER_OUTPUT;
   return {
     p,
     pathSegment: (orient) => {
-      const [dx, dy] = transformXY(p, p, orient);
+      const dx = transformX(p, p, orient);
+      const dy = transformY(p, p, orient);
       return rounded`a ${p} ${p} 0 0 1 ${dx} ${dy}`;
     },
   };

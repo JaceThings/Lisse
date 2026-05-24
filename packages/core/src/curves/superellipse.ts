@@ -1,6 +1,7 @@
 import { rounded } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
-import { transformXY } from "./orient.js";
+import { EMPTY_BUILDER_OUTPUT } from "./types.js";
+import { transformX, transformY } from "./orient.js";
 
 /**
  * Superellipse corner. `|X/p|^n + |Y'/p|^n = 1` reflected into the
@@ -17,8 +18,10 @@ import { transformXY } from "./orient.js";
  *
  * Three cubic Béziers per quadrant, sampled at θ ∈ {0, π/6, π/3, π/2}.
  * Each cubic uses the midpoint-match scheme: endpoint position + tangent
- * (4 constraints) plus the parameter midpoint (2). Hausdorff error well
- * sub-pixel for n ∈ [2, 8] at Lisse-realistic radii.
+ * (4 constraints) plus the parameter midpoint (2). Hausdorff error is
+ * well sub-pixel for n ∈ [2, 4] at Lisse-realistic radii; degrades to
+ * ~5% of corner footprint for n ∈ (4, 8] as the Lamé shape sharpens.
+ * Reference-shape tests pin the actual tolerances per exponent.
  */
 export const buildSuperellipse: CurveBuilder = ({
   cornerRadius,
@@ -26,14 +29,30 @@ export const buildSuperellipse: CurveBuilder = ({
   roundingAndSmoothingBudget,
 }) => {
   const p = Math.min(cornerRadius, roundingAndSmoothingBudget);
-  if (p <= 0) {
-    return { p: 0, pathSegment: () => "" };
-  }
+  if (p <= 0) return EMPTY_BUILDER_OUTPUT;
   // Clamp n to a safe range. n = 2 is a quarter-circle; n < 2 would
   // produce an inward-bulging concave corner; non-finite n produces
   // NaN through Math.pow downstream. Clamp before computing e = 2/n.
   const n = Number.isFinite(exponent) ? Math.max(2, exponent) : 4;
   const e = 2 / n;
+
+  // Specialise `pow(x, e)` for common integer reciprocals — `Math.pow`
+  // is a black-box C++ call (~30-50ns), `Math.sqrt` is a single
+  // hardware instruction (~3ns). Hot-path savings stack up across the
+  // 8-12 pow calls each builder makes. For uncommon `n` we fall back
+  // to plain Math.pow.
+  const powE: (x: number) => number =
+    n === 2 ? (x) => x
+    : n === 4 ? Math.sqrt
+    : n === 8 ? (x) => Math.sqrt(Math.sqrt(x))
+    : (x) => Math.pow(x, e);
+  // `pow(x, e - 1)` for the tangent derivative. n=2 ⇒ e-1=0 ⇒ 1; n=4 ⇒
+  // e-1=−0.5 ⇒ 1/sqrt(x); other n fall back to Math.pow.
+  const e1 = e - 1;
+  const powE1: (x: number) => number =
+    n === 2 ? () => 1
+    : n === 4 ? (x) => 1 / Math.sqrt(x)
+    : (x) => Math.pow(x, e1);
 
   const thetas = [0, Math.PI / 6, Math.PI / 3, Math.PI / 2];
   // Pin endpoints to (0, 0) and (p, p): Math.cos(π/2) returns 6.123e-17,
@@ -45,7 +64,7 @@ export const buildSuperellipse: CurveBuilder = ({
     if (i === thetas.length - 1) return [p, p];
     const sinTh = Math.sin(th);
     const cosTh = Math.cos(th);
-    return [p * Math.pow(sinTh, e), p * (1 - Math.pow(cosTh, e))];
+    return [p * powE(sinTh), p * (1 - powE(cosTh))];
   });
   // Endpoint tangents use the geometric limit (edge direction) — the
   // parametric form is numerically unstable at θ = 0 / π/2 for n > 2.
@@ -54,8 +73,8 @@ export const buildSuperellipse: CurveBuilder = ({
     if (i === thetas.length - 1) return [0, 1];
     const sinTh = Math.sin(th);
     const cosTh = Math.cos(th);
-    const dX = e * Math.pow(sinTh, e - 1) * cosTh * p;
-    const dY = e * Math.pow(cosTh, e - 1) * sinTh * p;
+    const dX = e * powE1(sinTh) * cosTh * p;
+    const dY = e * powE1(cosTh) * sinTh * p;
     const m = Math.hypot(dX, dY) || 1;
     return [dX / m, dY / m];
   });
@@ -74,8 +93,8 @@ export const buildSuperellipse: CurveBuilder = ({
         const thMid = (thetas[i] + thetas[i + 1]) / 2;
         const sinM = Math.sin(thMid);
         const cosM = Math.cos(thMid);
-        const Mx = p * Math.pow(sinM, e);
-        const My = p * (1 - Math.pow(cosM, e));
+        const Mx = p * powE(sinM);
+        const My = p * (1 - powE(cosM));
 
         // P(0.5) = ½(B0 + B3) + (3/8)(h0 T0 − h1 T1); solve for h0, h1.
         const RHSx = (8 / 3) * (Mx - (X0 + X1) / 2);
@@ -89,9 +108,18 @@ export const buildSuperellipse: CurveBuilder = ({
         const B2x = X1 - h1 * T1x;
         const B2y = Y1 - h1 * T1y;
 
-        const [dx1, dy1] = transformXY(B1x - X0, B1y - Y0, orient);
-        const [dx2, dy2] = transformXY(B2x - X0, B2y - Y0, orient);
-        const [dx3, dy3] = transformXY(X1 - X0, Y1 - Y0, orient);
+        const dB1x = B1x - X0;
+        const dB1y = B1y - Y0;
+        const dB2x = B2x - X0;
+        const dB2y = B2y - Y0;
+        const dB3x = X1 - X0;
+        const dB3y = Y1 - Y0;
+        const dx1 = transformX(dB1x, dB1y, orient);
+        const dy1 = transformY(dB1x, dB1y, orient);
+        const dx2 = transformX(dB2x, dB2y, orient);
+        const dy2 = transformY(dB2x, dB2y, orient);
+        const dx3 = transformX(dB3x, dB3y, orient);
+        const dy3 = transformY(dB3x, dB3y, orient);
         parts.push(rounded`c ${dx1} ${dy1} ${dx2} ${dy2} ${dx3} ${dy3}`);
       }
       return parts.join(" ");

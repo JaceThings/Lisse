@@ -1,14 +1,21 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
+import codspeedPlugin from "@codspeed/vitest-plugin";
 
 /**
- * Benchmark config for the React adapter.
+ * Benchmark config. Two surfaces:
  *
- * - `happy-dom` provides a JSDOM-compatible environment without paint.
- * - Aliases resolve the workspace sources directly so benches exercise the
- *   same code paths as the tests (no need to rebuild dist/ first).
+ *   - `core.bench.ts` — JS hot paths in @lisse/core (generatePath,
+ *     createSvgEffects). Instruction-count signal for CodSpeed.
+ *   - `use-smooth-corners.bench.ts` — adapter-level wall-clock benches
+ *     for local exploration. Also instruction-counted by CodSpeed.
+ *
+ * `@codspeed/vitest-plugin` is a no-op when not running under
+ * `codspeed-vitest` so `pnpm bench` still works locally with raw
+ * tinybench timing.
  */
 export default defineConfig({
+  plugins: [codspeedPlugin()],
   test: {
     environment: "happy-dom",
     include: ["**/*.bench.ts"],

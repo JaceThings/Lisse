@@ -2,6 +2,7 @@ import { rounded } from "../utils.js";
 import { getPathParamsForCorner } from "../corner-params.js";
 import type { CornerPathParams } from "../types.js";
 import type { CurveBuilder } from "./types.js";
+import { EMPTY_BUILDER_OUTPUT } from "./types.js";
 
 /**
  * Figma squircle — cubic shoulder + central arc + cubic shoulder. G1
@@ -25,9 +26,7 @@ export const buildSquircle: CurveBuilder = ({
     preserveSmoothing,
     roundingAndSmoothingBudget,
   });
-  if (params.cornerRadius <= 0) {
-    return { p: 0, pathSegment: () => "" };
-  }
+  if (params.cornerRadius <= 0) return EMPTY_BUILDER_OUTPUT;
   return {
     p: params.p,
     pathSegment: (orient) => {

@@ -8,16 +8,32 @@ import type { Orient } from "./types.js";
  *   BR — enter +y, exit −x
  *   BL — enter −x, exit −y
  *   TL — enter −y, exit +x
+ *
+ * Returned as scalars (not a tuple) so V8 keeps the hot loops
+ * allocation-free.
  */
-export function transformXY(X: number, Y: number, orient: Orient): [number, number] {
+export function transformX(X: number, Y: number, orient: Orient): number {
   switch (orient) {
     case "TR":
-      return [X, Y];
+      return X;
     case "BR":
-      return [-Y, X];
+      return -Y;
     case "BL":
-      return [-X, -Y];
+      return -X;
     case "TL":
-      return [Y, -X];
+      return Y;
+  }
+}
+
+export function transformY(X: number, Y: number, orient: Orient): number {
+  switch (orient) {
+    case "TR":
+      return Y;
+    case "BR":
+      return X;
+    case "BL":
+      return -Y;
+    case "TL":
+      return -X;
   }
 }

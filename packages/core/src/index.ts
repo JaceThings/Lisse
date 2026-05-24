@@ -9,6 +9,7 @@ export { observeResize } from "./observe-resize.js";
 export { getLayoutSize } from "./layout-size.js";
 export { DEFAULT_SMOOTHING, DEFAULT_PRESERVE_SMOOTHING, DEFAULT_CURVE } from "./generate-path.js";
 export { DEFAULT_EXPONENT, CURVE_TYPES, getCurveBuilder, buildArc, buildSquircle, buildSuperellipse, buildClothoid } from "./curves/index.js";
+export { clearCurveCache } from "./curves/cache.js";
 export { DEFAULT_SHADOW } from "./svg-shared.js";
 export {
   extractAndStripEffects,

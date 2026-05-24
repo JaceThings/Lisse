@@ -12,10 +12,16 @@ export interface SVGPathInput {
 
 /**
  * Build an SVG path string for a smooth-cornered rectangle from the four
- * per-corner parameter sets produced by `generatePathParamsForCorner`.
+ * per-corner parameter sets produced by `getPathParamsForCorner`.
  * The path starts at the top-left corner and traverses clockwise,
  * inserting a piecewise Bézier + arc segment at each corner and straight
  * lines along the sides.
+ *
+ * @deprecated Prefer {@link generatePath} from `./generate-path.js`.
+ * `generatePath` accepts the full `SmoothCornerOptions` (including
+ * curve type, exponent, per-corner config) and supports all four
+ * curves, whereas this function hard-codes the legacy squircle
+ * topology. Scheduled for removal at the next major (v1.0).
  */
 export function getSVGPathFromPathParams({
   width,
@@ -25,9 +31,13 @@ export function getSVGPathFromPathParams({
   bottomLeftPathParams,
   bottomRightPathParams,
 }: SVGPathInput): string {
-  // Round every coordinate to 4 decimals (same precision as the inner
-  // `rounded`-tagged segments) so output is bit-stable across Node /
-  // browser engines.
+  // Legacy entry — the corner-segment helpers below emit multi-line
+  // `rounded` templates for source readability, and the outer
+  // whitespace regex collapses them. The modern hot path is
+  // `generatePath` in generate-path.ts (direct concat, no regex).
+  // `r()` rounds each outer coordinate to 4 decimals so output stays
+  // bit-stable across Node / browser engines (the inner segments are
+  // already at the same precision via `rounded`).
   const r = (n: number): string => n.toFixed(4);
   return `
     M ${r(topLeftPathParams.p)} 0
