@@ -5,9 +5,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # workflow_dispatch lets CodSpeed kick off backtest runs from its UI
+  # to generate baseline data on a fresh install.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
-  benchmarks:
+  codspeed:
+    name: Run benchmarks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,12 +27,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      # CodSpeed action wraps the bench command, instruments via
-      # Valgrind, and posts a per-PR comment with instruction-count
-      # deltas. Soft-launch: PR comment only, no hard fail, for the
-      # first 8 weeks while thresholds calibrate.
-      - uses: CodSpeedHQ/action@v3
+      # CodSpeed instruments bench()s via Valgrind ("simulation" mode)
+      # for deterministic instruction-count results across runners. OIDC
+      # auth (id-token: write above) means no token secret needs storing.
+      # Soft-launch posture: comment-only on PRs, no hard fail, while
+      # per-bench thresholds calibrate.
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v4
         with:
+          mode: simulation
           run: pnpm bench
-          token: ${{ secrets.CODSPEED_TOKEN }}
