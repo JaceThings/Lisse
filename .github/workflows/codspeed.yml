@@ -30,10 +30,16 @@ jobs:
       # CodSpeed instruments bench()s via Valgrind ("simulation" mode)
       # for deterministic instruction-count results across runners. OIDC
       # auth (id-token: write above) means no token secret needs storing.
+      #
+      # `pnpm bench:ci` runs only `core.bench.ts` (9 benches, ~10s under
+      # Valgrind). The local `pnpm bench` also runs `use-smooth-corners
+      # .bench.ts` (~96 cases) for adapter-level wall-clock exploration —
+      # too heavy for Valgrind sim (>30min, vitest RPC times out).
+      #
       # Soft-launch posture: comment-only on PRs, no hard fail, while
       # per-bench thresholds calibrate.
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v4
         with:
           mode: simulation
-          run: pnpm bench
+          run: pnpm bench:ci
