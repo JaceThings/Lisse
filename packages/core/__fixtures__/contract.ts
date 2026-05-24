@@ -36,13 +36,7 @@ export interface EffectsContractCase extends ContractCase {
 const RADII = [10, 40, 100] as const;
 const CURVES: CurveType[] = ["arc", "squircle", "superellipse", "clothoid"];
 
-/**
- * 20 entries covering the cross-product of curve type × radius ×
- * smoothing, plus a handful of layout-shape cases (non-square boxes,
- * asymmetric per-corner radii, oversized radius that triggers budget
- * clamping). Hand-picked to maximise contract coverage while staying
- * reviewable in a PR diff.
- */
+/** Curve × radius cross-product + layout-shape edge cases. */
 export const PROP_MATRIX: ContractCase[] = (() => {
   const cases: ContractCase[] = [];
 
@@ -111,10 +105,7 @@ export const PROP_MATRIX: ContractCase[] = (() => {
   return cases;
 })();
 
-/**
- * 6 entries covering border-only, shadow-only, and combined effect
- * configs across two curves.
- */
+/** Border-only, shadow-only, and combined effects across two curves. */
 export const EFFECTS_MATRIX: EffectsContractCase[] = [
   {
     name: "squircle_innerBorder",

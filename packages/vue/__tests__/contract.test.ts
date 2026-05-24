@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
-// Adapter contract: the Vue wrapper feeds the same props, defaults,
-// dimensions, and effects into core as the other adapters.
+// Contract: the Vue wrapper feeds the same inputs into core as the
+// other adapters. Drift here (and not in react/svelte) is a wrapper bug.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createApp, h, type App } from "vue";
 import { generatePath } from "@lisse/core";

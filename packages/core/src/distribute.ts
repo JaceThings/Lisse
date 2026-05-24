@@ -5,11 +5,7 @@ import type {
   Adjacent,
 } from "./types.js";
 
-/**
- * Adjacency map used when distributing per-corner radii under space
- * constraints: each corner's two adjacent corners (share an edge) and
- * the side they share. Only used by this module.
- */
+/** Each corner's two edge-sharing neighbours, with the shared side. */
 const adjacentsByCorner: Record<Corner, Array<Adjacent>> = {
   topLeft: [
     { corner: "topRight", side: "top" },

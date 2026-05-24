@@ -25,15 +25,6 @@ export interface SmoothCornersConfig {
  * </script>
  * <div use:smoothCorners={{ corners: { radius: 20, smoothing: 0.6 } }}>Content</div>
  * ```
- *
- * @example With effects (parent must have position:relative)
- * ```svelte
- * <div style="position:relative">
- *   <div use:smoothCorners={{ corners: { radius: 20 }, effects: { innerBorder: { width: 2, color: '#fff', opacity: 0.5 } } }}>
- *     Content
- *   </div>
- * </div>
- * ```
  */
 export function smoothCorners(
   node: HTMLElement,
@@ -62,7 +53,6 @@ export function smoothCorners(
     }
   }
 
-  // Auto-extract CSS effects on init
   setAutoExtraction(currentAutoEffects);
 
   function getMergedEffects(): EffectsConfig {
@@ -85,8 +75,8 @@ export function smoothCorners(
     if (!effectsHandle) {
       effectsHandle = createSvgEffects(attachedAnchor);
     }
-    // Skip drop-shadow DOM nodes and the isolation:isolate mutation when
-    // only border effects are in play.
+    // Border-only configs skip the drop-shadow handle (avoids the
+    // isolation:isolate mutation).
     if (!shadowHandle && merged.shadow) {
       shadowHandle = createDropShadow(attachedAnchor);
     }
@@ -131,7 +121,6 @@ export function smoothCorners(
         setAutoExtraction(currentAutoEffects);
       }
 
-      // Create handles if they didn't exist but now effects are provided
       attachEffects();
 
       apply();

@@ -1,9 +1,7 @@
 // @vitest-environment happy-dom
 //
-// Adapter contract: the React wrapper feeds the same props, defaults,
-// dimensions, and effects into core as the other adapters. Drift in
-// this file (and not in vue / svelte) means the React wrapper is doing
-// something different — that's a contract bug to investigate.
+// Contract: the React wrapper feeds the same inputs into core as the
+// other adapters. Drift here (and not in vue/svelte) is a wrapper bug.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

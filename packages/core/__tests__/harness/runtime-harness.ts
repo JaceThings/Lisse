@@ -1,20 +1,10 @@
 // Deterministic ResizeObserver + requestAnimationFrame test harness.
 //
 // observe-resize.ts batches callbacks via rAF and dedupes per element.
-// The default test environment (happy-dom) runs rAF asynchronously,
-// which leaks timing into otherwise-unrelated assertions and makes
-// "did exactly one update fire" hard to express.
-//
-// This harness installs:
-//   - A stub ResizeObserver that records observed targets and exposes a
-//     deliverResize() method so the test can synchronously simulate the
-//     browser delivering entries to the observer callback.
-//   - A controllable rAF queue: rAF callbacks are deferred until the
-//     test explicitly calls flushRaf().
-//
-// Tests must call installHarness() before any code that touches
-// observeResize() runs (typically in beforeEach), and uninstallHarness()
-// after (typically in afterEach) to restore the previous globals.
+// happy-dom runs rAF asynchronously, so "did exactly one update fire"
+// is hard to express without controlling both surfaces. This harness
+// stubs ResizeObserver and the rAF queue so tests can deliver resize
+// entries synchronously and flush rAF on demand.
 
 interface RafTask {
   id: number;

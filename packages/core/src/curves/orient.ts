@@ -12,7 +12,6 @@ import type { Orient } from "./types.js";
  * Returned as scalars (not a tuple) so V8 keeps the hot loops
  * allocation-free.
  */
-/** dx component of the canonical → display rotation. */
 export function transformX(X: number, Y: number, orient: Orient): number {
   switch (orient) {
     case "TR":
@@ -26,7 +25,6 @@ export function transformX(X: number, Y: number, orient: Orient): number {
   }
 }
 
-/** dy component of the canonical → display rotation. */
 export function transformY(X: number, Y: number, orient: Orient): number {
   switch (orient) {
     case "TR":

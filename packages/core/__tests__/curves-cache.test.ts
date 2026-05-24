@@ -1,15 +1,6 @@
-// Direct tests for the curve-builder LRU cache.
-//
-// The cache is otherwise exercised implicitly by every generatePath
-// call in the suite — these tests pin its specific behaviour:
-//
-//   - cached output equals fresh output (no drift)
-//   - LRU eviction respects insertion + touch order
-//   - non-finite inputs bypass the cache (no permanent garbage slots)
-//   - clearCurveCache() actually clears
-//
-// Without these the cache could silently regress and the only failure
-// surface would be a perf bench drift, which is much later signal.
+// Direct tests for the curve-builder LRU cache. Without these the
+// cache could silently regress and the only failure surface would be
+// a perf bench drift — much later signal.
 import { describe, it, expect, beforeEach } from "vitest";
 import { buildSquircle, buildClothoid } from "../src/curves/index.js";
 import {

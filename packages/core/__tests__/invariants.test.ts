@@ -1,19 +1,6 @@
-// Property-based geometric invariants.
-//
-// fast-check generates random (curveType, radius, smoothing, exponent)
-// tuples and asserts the six invariants the blueprint enumerates:
-//
-//   1. Monotonic x/y progress along the TR quadrant
-//   2. No self-crossing (no non-adjacent sample-pair coincidence)
-//   3. Symmetry across orient (TR mirrored = BL, TR mirrored = TL)
-//   4. Scale invariance (scaling inputs by k scales output by k)
-//   5. Tangent direction at endpoints — (1, 0) at start, (0, 1) at end
-//   6. Budget clamping — p = budget when natural p > budget; p = natural
-//      otherwise
-//
-// Each property runs 500 random cases. Seed is logged on failure so any
-// reproducer is one re-run away. Total: 6 × 500 = 3,000 random
-// assertions per run, wall time under 5 seconds.
+// Property-based geometric invariants. fast-check generates random
+// inputs; the seed is logged on failure so any reproducer is one
+// re-run away.
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 import { svgPathProperties } from "svg-path-properties";
@@ -70,7 +57,7 @@ function samplePath(d: string, n: number): Pt[] {
   return out;
 }
 
-describe("R5 invariant 1 — monotonic x/y progress along TR", () => {
+describe("Invariant 1 — monotonic x/y progress along TR", () => {
   it("x is non-decreasing and y is non-decreasing across the curve", () => {
     fc.assert(
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
@@ -90,7 +77,7 @@ describe("R5 invariant 1 — monotonic x/y progress along TR", () => {
   });
 });
 
-describe("R5 invariant 2 — no self-crossing", () => {
+describe("Invariant 2 — no self-crossing", () => {
   it("no two non-adjacent sample points coincide within ε", () => {
     fc.assert(
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
@@ -114,10 +101,10 @@ describe("R5 invariant 2 — no self-crossing", () => {
   });
 });
 
-describe("R5 invariant 3 — symmetry", () => {
+describe("Invariant 3 — symmetry", () => {
   // The intrinsic invariant: the TR curve is symmetric across the
   // anti-diagonal x + y = p in its own frame. That property holds
-  // regardless of how `transformXY` rotates the curve into each
+  // regardless of how the orient transform rotates the curve into each
   // orient — it tests the math, not the orient plumbing.
   it("TR curve is symmetric across the anti-diagonal x + y = p", () => {
     fc.assert(
@@ -143,7 +130,7 @@ describe("R5 invariant 3 — symmetry", () => {
 
   // The orient sign-flip property: BL is rotated 180° from TR, so its
   // relative samples in local frame coincide with -TR. Independent
-  // test surface — pinpoints `transformXY` plumbing bugs.
+  // test surface — pinpoints orient-transform plumbing bugs.
   it("TR mirror across X+Y=p coincides with BL", () => {
     fc.assert(
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
@@ -171,7 +158,7 @@ describe("R5 invariant 3 — symmetry", () => {
   });
 });
 
-describe("R5 invariant 4 — scale invariance", () => {
+describe("Invariant 4 — scale invariance", () => {
   it("doubling radius doubles p and scales every sampled point by 2×", () => {
     fc.assert(
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
@@ -200,7 +187,7 @@ describe("R5 invariant 4 — scale invariance", () => {
   });
 });
 
-describe("R5 invariant 5 — endpoint tangent direction", () => {
+describe("Invariant 5 — endpoint tangent direction", () => {
   it("first segment exits along +X, last segment arrives along +Y", () => {
     fc.assert(
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
@@ -228,7 +215,7 @@ describe("R5 invariant 5 — endpoint tangent direction", () => {
   });
 });
 
-describe("R5 invariant 6 — budget clamping", () => {
+describe("Invariant 6 — budget clamping", () => {
   it("p = budget when natural p > budget", () => {
     fc.assert(
       fc.property(curveArb, smoothingArb, exponentArb, (curve, s, e) => {

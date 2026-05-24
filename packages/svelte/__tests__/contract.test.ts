@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
-// Adapter contract: the Svelte action feeds the same props, defaults,
-// dimensions, and effects into core as the other adapters.
+// Contract: the Svelte action feeds the same inputs into core as the
+// other adapters. Drift here (and not in react/vue) is a wrapper bug.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { generatePath } from "@lisse/core";
 import {

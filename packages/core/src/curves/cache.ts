@@ -1,40 +1,25 @@
 import type { CurveBuilder, CurveBuilderInput, CurveBuilderOutput, CurveType, Orient } from "./types.js";
 
 /**
- * LRU cache for curve-builder output keyed on the shape-determining
- * inputs.
+ * LRU cache for curve-builder output. The corner shape depends only on
+ * `(curve, radius, smoothing, exponent, preserveSmoothing, budget)` —
+ * width/height affect where the corner sits in the outer skeleton, not
+ * its shape. Without memoisation, pages with many elements sharing one
+ * corner config re-run the full math (including 32-point Simpson
+ * integration for clothoid) per element.
  *
- * The corner shape (`{ p, pathSegment(orient) }`) depends only on
- * `(curve, radius, smoothing, exponent, preserveSmoothing, budget)`.
- * Element width and height affect *where* the corner is placed in the
- * outer skeleton, not what the corner *looks like*. Real-world pages
- * have many elements sharing the same corner config but different
- * dimensions — without memoisation we re-do the full builder math
- * (including 32-point Simpson integration for clothoid) once per
- * element. The cache collapses that to one build per unique config.
- *
- * Capacity: 64. Real apps converge on a handful of corner configs
- * (default squircle, one or two custom radii); 64 is several multiples
- * of any realistic working set. Insertion-order Map gives O(1)
- * LRU-by-insertion semantics — on hit we delete + re-insert so the
- * most-recent entry is always at the end.
- *
- * Test escape valve: call `clearCurveCache()`. Tests that pin a
- * specific builder branch can call this to defeat warm-cache
- * artifacts.
+ * Map insertion order = LRU order: touch by delete+set, evict the
+ * first key. Capacity 64 is several multiples of any realistic
+ * working set.
  */
 const CAPACITY = 64;
 const cache = new Map<string, CurveBuilderOutput>();
 
 function key(curve: CurveType, input: CurveBuilderInput): string {
-  // Exact-number key. We deliberately do not round here: rounding
-  // would let two inputs that differ by less than the tolerance share
-  // a cache entry while the underlying builder math (and the public
-  // `p`/path-string output) still differs — that's a correctness leak
-  // where the cache returns output that doesn't match `builder(input)`
-  // for that exact input. Identical inputs always hit; different
-  // inputs always miss. Worst case is mild cache fragmentation for
-  // near-identical floats, which the 64-entry LRU absorbs fine.
+  // Exact-number key — rounding would let two inputs that differ by
+  // less than the tolerance share an entry while `builder(input)`
+  // would still produce different bytes for each. Mild fragmentation
+  // for near-identical floats is fine; correctness drift is not.
   return (
     curve +
     "|" +
@@ -51,11 +36,9 @@ function key(curve: CurveType, input: CurveBuilderInput): string {
 }
 
 /**
- * `true` if any cache-key field is non-finite. We refuse to cache
- * those inputs — they'd otherwise occupy a permanent slot under the
- * `"NaN"` / `"Infinity"` string key and never evict via LRU. The
- * builder still runs (callers get whatever output the builder would
- * have produced uncached); we just don't memoise.
+ * Non-finite inputs (NaN, Infinity) bypass the cache — they'd
+ * otherwise occupy a permanent `"NaN"`-keyed slot that never evicts.
+ * Builder still runs; output just isn't memoised.
  */
 function hasNonFiniteKeyField(input: CurveBuilderInput): boolean {
   return (
@@ -67,15 +50,11 @@ function hasNonFiniteKeyField(input: CurveBuilderInput): boolean {
 }
 
 /**
- * Wrap a builder output with lazy per-orient string memoisation. The
- * builder itself produces `pathSegment(orient)` that recomputes the
- * cubic-arc-cubic blend, `transformX/Y` calls, and `rounded.toFixed`
- * formatting on every call. Real workloads call each orient once per
- * `generatePath` so the second-and-onward calls for the same cached
- * shape can return the pre-rendered string directly.
- *
- * Cached strings: 4 orients × up to ~150 chars × 64 cache entries ≈
- * 40 KB worst case. Negligible.
+ * Lazy per-orient string memoisation. The builder's `pathSegment` re-
+ * runs the cubic-arc-cubic blend, `transformX/Y`, and toFixed work on
+ * every call. Real workloads call each orient once per `generatePath`
+ * so subsequent calls for the same cached shape return the pre-built
+ * string directly.
  */
 function wrapWithOrientCache(fresh: CurveBuilderOutput): CurveBuilderOutput {
   const orients: Partial<Record<Orient, string>> = {};
@@ -100,14 +79,12 @@ export function getCachedBuilderOutput(
   const k = key(curve, input);
   const cached = cache.get(k);
   if (cached) {
-    // LRU touch: re-insert so this entry moves to the end.
     cache.delete(k);
     cache.set(k, cached);
     return cached;
   }
   const fresh = wrapWithOrientCache(builder(input));
   if (cache.size >= CAPACITY) {
-    // Evict the least-recently-inserted entry — the first Map key.
     const firstKey = cache.keys().next().value;
     if (firstKey !== undefined) cache.delete(firstKey);
   }
@@ -115,15 +92,13 @@ export function getCachedBuilderOutput(
   return fresh;
 }
 
-/** Capacity exposed for tests. */
 export const CURVE_CACHE_CAPACITY = CAPACITY;
 
-/** Internal: current size, for tests. */
 export function _curveCacheSize(): number {
   return cache.size;
 }
 
-/** Test/debug escape hatch — clears the entire cache. */
+/** Clears the entire cache. */
 export function clearCurveCache(): void {
   cache.clear();
 }
