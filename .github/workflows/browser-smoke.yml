@@ -33,11 +33,12 @@ jobs:
         # GitHub Issue (optional next step). The main branch is not
         # blocked because the work has already merged.
         continue-on-error: false
-      # Argos: read-only review surface for visual diffs. Vitest
-      # browser mode's `toMatchScreenshot` matcher writes baselines to
-      # `__screenshots__/` next to each test; Argos diffs every PNG it
-      # finds under the given root. Set up the project on argos-ci.com
-      # and store ARGOS_TOKEN in repo secrets before this fires.
+      # Argos: read-only review surface for visual diffs. The tests
+      # call `page.screenshot({ path: 'screenshots/...' })`, writing
+      # PNGs into `tests/browser-smoke/screenshots/`. Argos diffs every
+      # PNG it finds under the given root. Set up the project on
+      # argos-ci.com and store ARGOS_TOKEN in repo secrets before this
+      # fires.
       - name: Upload screenshots to Argos
         if: always()
         run: |

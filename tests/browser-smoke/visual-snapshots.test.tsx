@@ -51,12 +51,10 @@ describe("Browser smoke — visual snapshots per curve type", () => {
       // Wait for first paint + observer flush.
       await new Promise((r) => setTimeout(r, 100));
 
-      // Capture full-page screenshot to disk. Vitest browser-mode v3.x
-      // doesn't ship a `toMatchScreenshot` matcher; visual diffing
-      // happens in Argos which the browser-smoke workflow uploads to
-      // post-test. Asserts capture succeeded (non-empty path returned).
+      // Scope the screenshot to `container` so Argos diffs the corner,
+      // not the whole viewport (page chrome, scrollbars, layout drift).
       const filepath = `screenshots/${curve}-${server.browser}.png`;
-      const result = await page.screenshot({ path: filepath });
+      const result = await page.screenshot({ path: filepath, element: container });
       if (!result) throw new Error(`screenshot returned empty for ${filepath}`);
     }, 30_000);
   }

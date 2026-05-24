@@ -64,10 +64,12 @@ describe("Browser smoke — focus ring through clip-path", () => {
     button!.focus();
     expect(document.activeElement).toBe(button);
 
-    // Visual proof: screenshot the container and let Argos diff it
-    // against the baseline. Vitest browser-mode v3.x doesn't ship a
-    // local pixel-diff matcher; the review surface lives in Argos.
-    const result = await page.screenshot({ path: "screenshots/focus-ring.png" });
+    // Screenshot just the container so Argos diffs the button + its
+    // outline, not the whole viewport.
+    const result = await page.screenshot({
+      path: "screenshots/focus-ring.png",
+      element: container,
+    });
     if (!result) throw new Error("focus-ring screenshot returned empty");
   }, 30_000);
 });
