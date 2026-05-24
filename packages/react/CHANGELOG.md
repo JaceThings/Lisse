@@ -1,5 +1,12 @@
 # @lisse/react
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [671a3f3]
+  - @lisse/core@0.4.0
+
 ## 0.3.2
 
 ### Patch Changes
