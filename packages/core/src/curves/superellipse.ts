@@ -1,5 +1,6 @@
 import { rounded } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
+import { EMPTY_BUILDER_OUTPUT } from "./types.js";
 import { transformX, transformY } from "./orient.js";
 
 /**
@@ -28,9 +29,7 @@ export const buildSuperellipse: CurveBuilder = ({
   roundingAndSmoothingBudget,
 }) => {
   const p = Math.min(cornerRadius, roundingAndSmoothingBudget);
-  if (p <= 0) {
-    return { p: 0, pathSegment: () => "" };
-  }
+  if (p <= 0) return EMPTY_BUILDER_OUTPUT;
   // Clamp n to a safe range. n = 2 is a quarter-circle; n < 2 would
   // produce an inward-bulging concave corner; non-finite n produces
   // NaN through Math.pow downstream. Clamp before computing e = 2/n.

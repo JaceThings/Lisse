@@ -1,6 +1,7 @@
 import { rounded } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
 import { transformX, transformY } from "./orient.js";
+import { EMPTY_BUILDER_OUTPUT } from "./types.js";
 import { integrateClothoid } from "./integrate.js";
 
 const ANGLE_EPSILON = 1e-6;
@@ -24,9 +25,7 @@ export const buildClothoid: CurveBuilder = ({
   smoothing,
   roundingAndSmoothingBudget,
 }) => {
-  if (cornerRadius <= 0) {
-    return { p: 0, pathSegment: () => "" };
-  }
+  if (cornerRadius <= 0) return EMPTY_BUILDER_OUTPUT;
   const s = Math.max(0, Math.min(1, smoothing));
   const R = cornerRadius;
   const dTheta = (Math.PI / 4) * s;
@@ -69,7 +68,7 @@ export const buildClothoid: CurveBuilder = ({
     effMy = yMid * scale;
   }
   if (p <= 0) {
-    return { p: 0, pathSegment: () => "" };
+    return EMPTY_BUILDER_OUTPUT;
   }
 
   // Midpoint-match cubic for the half-fillet. Endpoint position +

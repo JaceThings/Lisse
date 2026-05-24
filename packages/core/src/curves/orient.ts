@@ -9,24 +9,10 @@ import type { Orient } from "./types.js";
  *   BL — enter −x, exit −y
  *   TL — enter −y, exit +x
  *
- * Returns a fresh tuple. Allocates per call — for hot paths, use the
- * `transformX` / `transformY` pair which return scalars and let V8
- * keep the loop allocation-free.
+ * Returned as scalars (not a tuple) so V8 keeps the hot loops
+ * allocation-free.
  */
-export function transformXY(X: number, Y: number, orient: Orient): [number, number] {
-  switch (orient) {
-    case "TR":
-      return [X, Y];
-    case "BR":
-      return [-Y, X];
-    case "BL":
-      return [-X, -Y];
-    case "TL":
-      return [Y, -X];
-  }
-}
-
-/** dx component of `transformXY(X, Y, orient)`. Inline-friendly. */
+/** dx component of the canonical → display rotation. */
 export function transformX(X: number, Y: number, orient: Orient): number {
   switch (orient) {
     case "TR":
@@ -40,7 +26,7 @@ export function transformX(X: number, Y: number, orient: Orient): number {
   }
 }
 
-/** dy component of `transformXY(X, Y, orient)`. Inline-friendly. */
+/** dy component of the canonical → display rotation. */
 export function transformY(X: number, Y: number, orient: Orient): number {
   switch (orient) {
     case "TR":

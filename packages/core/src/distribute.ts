@@ -2,8 +2,32 @@ import type {
   RoundedRectangle,
   NormalizedCorners,
   Corner,
+  Adjacent,
 } from "./types.js";
-import { adjacentsByCorner } from "./utils.js";
+
+/**
+ * Adjacency map used when distributing per-corner radii under space
+ * constraints: each corner's two adjacent corners (share an edge) and
+ * the side they share. Only used by this module.
+ */
+const adjacentsByCorner: Record<Corner, Array<Adjacent>> = {
+  topLeft: [
+    { corner: "topRight", side: "top" },
+    { corner: "bottomLeft", side: "left" },
+  ],
+  topRight: [
+    { corner: "topLeft", side: "top" },
+    { corner: "bottomRight", side: "right" },
+  ],
+  bottomLeft: [
+    { corner: "bottomRight", side: "bottom" },
+    { corner: "topLeft", side: "left" },
+  ],
+  bottomRight: [
+    { corner: "bottomLeft", side: "bottom" },
+    { corner: "topRight", side: "right" },
+  ],
+};
 
 /**
  * Distribute available space among corners, normalizing radii so they

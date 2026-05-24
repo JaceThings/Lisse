@@ -16,6 +16,12 @@ export interface SVGPathInput {
  * The path starts at the top-left corner and traverses clockwise,
  * inserting a piecewise Bézier + arc segment at each corner and straight
  * lines along the sides.
+ *
+ * @deprecated Prefer {@link generatePath} from `./generate-path.js`.
+ * `generatePath` accepts the full `SmoothCornerOptions` (including
+ * curve type, exponent, per-corner config) and supports all four
+ * curves, whereas this function hard-codes the legacy squircle
+ * topology. Scheduled for removal at the next major (v1.0).
  */
 export function getSVGPathFromPathParams({
   width,
