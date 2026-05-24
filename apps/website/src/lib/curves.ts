@@ -403,9 +403,11 @@ function resampleByArcLength(segments: Segment[], N: number = SAMPLE_COUNT): Cur
   return { xs, ys, ks };
 }
 
-/** Linear interpolation between two CurveSamples of the same length. */
+/** Linear interpolation between two CurveSamples of the same length.
+ *  Guards on min length so a degenerate side (empty samples from a
+ *  near-zero-curvature path) doesn't index out of bounds. */
 export function lerpSamples(a: CurveSamples, b: CurveSamples, t: number): CurveSamples {
-  const N = a.xs.length;
+  const N = Math.min(a.xs.length, b.xs.length);
   const xs = new Array<number>(N);
   const ys = new Array<number>(N);
   const ks = new Array<number>(N);

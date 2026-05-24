@@ -154,22 +154,6 @@ describe("buildClothoid", () => {
 // silently drifts from the true clothoid shape — visible as the corner
 // not closing cleanly.
 describe("buildClothoid — cubic endpoint property", () => {
-  const sumEndpointDeltas = (seg: string): { x: number; y: number } => {
-    const tokens = seg.split(/\s+/);
-    let x = 0;
-    let y = 0;
-    for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i] === "c") {
-        x += parseFloat(tokens[i + 5]);
-        y += parseFloat(tokens[i + 6]);
-      } else if (tokens[i] === "a") {
-        x += parseFloat(tokens[i + 6]);
-        y += parseFloat(tokens[i + 7]);
-      }
-    }
-    return { x, y };
-  };
-
   for (const cornerRadius of [10, 40, 100, 200]) {
     for (const smoothing of [0.2, 0.4, 0.6, 0.8, 1.0]) {
       it(`R=${cornerRadius} s=${smoothing}: endpoint lands at (p, p) within 1e-3`, () => {
