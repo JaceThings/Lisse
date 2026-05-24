@@ -1,0 +1,30 @@
+name: CodSpeed
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # CodSpeed action wraps the bench command, instruments via
+      # Valgrind, and posts a per-PR comment with instruction-count
+      # deltas. Soft-launch: PR comment only, no hard fail, for the
+      # first 8 weeks while thresholds calibrate.
+      - uses: CodSpeedHQ/action@v3
+        with:
+          run: pnpm bench
+          token: ${{ secrets.CODSPEED_TOKEN }}

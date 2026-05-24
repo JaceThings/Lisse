@@ -1,0 +1,62 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/*.{ts,sh}",
+        "vitest.config.ts",
+        "vitest.setup.ts",
+        "benchmarks/**/*.{ts,js}",
+        "tests/consumer-smoke/*.{mjs,cjs,js}"
+      ],
+      "project": ["scripts/**/*.ts"],
+      "ignoreDependencies": [
+        "@argos-ci/playwright",
+        "@codspeed/vitest-plugin",
+        "size-limit",
+        "@size-limit/preset-small-lib",
+        "knip",
+        "publint",
+        "@arethetypeswrong/cli",
+        "@vitest/coverage-v8",
+        "fast-check",
+        "svg-path-properties",
+        "svgpath"
+      ]
+    },
+    "packages/core": {
+      "entry": ["src/index.ts", "src/path.ts", "__tests__/**/*.test.ts", "__tests__/harness/*.ts", "__fixtures__/*.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/react": {
+      "entry": ["src/index.ts", "__tests__/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/vue": {
+      "entry": ["src/index.ts", "__tests__/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx,vue}"]
+    },
+    "packages/svelte": {
+      "entry": ["src/index.ts", "__tests__/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,svelte}"]
+    },
+    "apps/website": {
+      "entry": [],
+      "project": []
+    },
+    "benchmarks": {
+      "entry": [],
+      "project": []
+    },
+    "tests/browser-smoke": {
+      "entry": ["vitest.config.ts", "*.test.{ts,tsx}"],
+      "project": ["**/*.{ts,tsx}"]
+    }
+  },
+  "ignoreWorkspaces": ["apps/website", "benchmarks", "tests/consumer-smoke"],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "exports": "off",
+    "types": "off"
+  }
+}

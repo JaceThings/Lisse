@@ -1,0 +1,14 @@
+{
+  "name": "lisse-consumer-smoke",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Installs Lisse tarballs and runs ESM/CJS/SSR import smokes. @lisse/* deps are added at install time by scripts/consumer-smoke.sh against the just-packed tarballs — do not pin them here, version drift will break the script.",
+  "type": "module",
+  "scripts": {
+    "smoke": "node esm-smoke.mjs && node cjs-smoke.cjs && node subpath-smoke.mjs && node ssr-smoke.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

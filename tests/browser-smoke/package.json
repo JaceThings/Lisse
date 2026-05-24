@@ -1,0 +1,20 @@
+{
+  "name": "lisse-browser-smoke",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Real-browser smoke runs via @vitest/browser + Playwright. Runs on push-to-main and tagged releases only; the deps below are declared so the fixture installs cleanly when CI cds into this directory.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/browser": "^3.2.4",
+    "@lisse/core": "workspace:*",
+    "@lisse/react": "workspace:*",
+    "playwright": "^1.60.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "vitest": "^3.2.4"
+  }
+}

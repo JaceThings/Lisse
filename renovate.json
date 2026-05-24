@@ -1,0 +1,44 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitTypeAll(chore)",
+    ":automergeDigest",
+    ":dependencyDashboard"
+  ],
+  "schedule": ["before 6am on monday"],
+  "timezone": "UTC",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group dev-only dependency bumps into a single weekly PR — easier to review and rebase than per-dep PRs.",
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "devDependencies",
+      "schedule": ["before 6am on monday"]
+    },
+    {
+      "description": "Group framework peer-deps (react/vue/svelte) separately so a wider review can happen if any of them ships a breaking change.",
+      "matchPackageNames": ["react", "react-dom", "vue", "svelte"],
+      "groupName": "framework peers"
+    },
+    {
+      "description": "Lockfile-only maintenance once a month so transitive bumps come through even when direct deps haven't changed.",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "schedule": ["before 6am on the first day of the month"]
+    },
+    {
+      "description": "Auto-merge patch updates for devDependencies once the suite is stable. Keep blocked for now (false) — flip to true after 4-6 weeks of clean signal.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "schedule": ["at any time"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "ignorePaths": ["**/tests/consumer-smoke/**"]
+}

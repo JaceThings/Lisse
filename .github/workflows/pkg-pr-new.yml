@@ -1,0 +1,28 @@
+name: pkg.pr.new
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # Publishes a continuous preview release for each PR/commit. The
+      # action posts a comment on the PR with `npm install` URLs so
+      # contributors can install and test the branch end-to-end before
+      # merge. Pairs with the consumer-smoke job — that proves the build
+      # is consumable; this lets a human kick the tires.
+      - run: pnpm dlx pkg-pr-new publish './packages/core' './packages/react' './packages/vue' './packages/svelte'
