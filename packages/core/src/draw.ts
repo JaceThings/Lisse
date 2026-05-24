@@ -25,18 +25,22 @@ export function getSVGPathFromPathParams({
   bottomLeftPathParams,
   bottomRightPathParams,
 }: SVGPathInput): string {
+  // Round every coordinate to 4 decimals (same precision as the inner
+  // `rounded`-tagged segments) so output is bit-stable across Node /
+  // browser engines.
+  const r = (n: number): string => n.toFixed(4);
   return `
-    M ${topLeftPathParams.p} 0
-    L ${width - topRightPathParams.p} 0
+    M ${r(topLeftPathParams.p)} 0
+    L ${r(width - topRightPathParams.p)} 0
     ${drawTopRightPath(topRightPathParams)}
-    L ${width} ${bottomRightPathParams.p}
-    L ${width} ${height - bottomRightPathParams.p}
+    L ${r(width)} ${r(bottomRightPathParams.p)}
+    L ${r(width)} ${r(height - bottomRightPathParams.p)}
     ${drawBottomRightPath(bottomRightPathParams)}
-    L ${width - bottomLeftPathParams.p} ${height}
-    L ${bottomLeftPathParams.p} ${height}
+    L ${r(width - bottomLeftPathParams.p)} ${r(height)}
+    L ${r(bottomLeftPathParams.p)} ${r(height)}
     ${drawBottomLeftPath(bottomLeftPathParams)}
-    L 0 ${height - topLeftPathParams.p}
-    L 0 ${topLeftPathParams.p}
+    L 0 ${r(height - topLeftPathParams.p)}
+    L 0 ${r(topLeftPathParams.p)}
     ${drawTopLeftPath(topLeftPathParams)}
     Z
   `

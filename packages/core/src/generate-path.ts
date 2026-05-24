@@ -92,20 +92,23 @@ export function generatePath(
   const bl = builderOutFor("bottomLeft");
 
   // Each side ends with a paired L to the next corner's `p` — geometrically
-  // a no-op when adjacent radii match, harmless otherwise. Preserved for
-  // byte-for-byte parity with draw.ts under snapshot tests.
+  // a no-op when adjacent radii match, harmless otherwise. Round every
+  // coordinate to 4 decimals so output is bit-stable across Node /
+  // browser engines (Math.sin/cos can vary by 1 ULP between V8 builds,
+  // and the inner pathSegments are already rounded to the same precision).
+  const r = (n: number): string => n.toFixed(4);
   return `
-    M ${tl.p} 0
-    L ${width - tr.p} 0
+    M ${r(tl.p)} 0
+    L ${r(width - tr.p)} 0
     ${tr.pathSegment("TR")}
-    L ${width} ${br.p}
-    L ${width} ${height - br.p}
+    L ${r(width)} ${r(br.p)}
+    L ${r(width)} ${r(height - br.p)}
     ${br.pathSegment("BR")}
-    L ${width - bl.p} ${height}
-    L ${bl.p} ${height}
+    L ${r(width - bl.p)} ${r(height)}
+    L ${r(bl.p)} ${r(height)}
     ${bl.pathSegment("BL")}
-    L 0 ${height - tl.p}
-    L 0 ${tl.p}
+    L 0 ${r(height - tl.p)}
+    L 0 ${r(tl.p)}
     ${tl.pathSegment("TL")}
     Z
   `
