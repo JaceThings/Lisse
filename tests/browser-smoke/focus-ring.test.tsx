@@ -64,11 +64,12 @@ describe("Browser smoke — focus ring through clip-path", () => {
     button!.focus();
     expect(document.activeElement).toBe(button);
 
-    // Visual proof: screenshot the container and let the pixel diff
-    // catch any regression where the outline gets clipped. Argos
-    // surfaces visual diffs as a review comment in addition.
-    await expect(page.locator(container)).toMatchScreenshot("focus-ring.png", {
-      maxDiffPixelRatio: 0.02,
+    // Screenshot just the container so Argos diffs the button + its
+    // outline, not the whole viewport.
+    const result = await page.screenshot({
+      path: "screenshots/focus-ring.png",
+      element: container,
     });
+    if (!result) throw new Error("focus-ring screenshot returned empty");
   }, 30_000);
 });
