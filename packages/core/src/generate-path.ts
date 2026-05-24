@@ -1,10 +1,10 @@
-import type { SmoothCornerOptions, CornerConfig } from "./types.js";
+import type { SmoothCornerOptions, CornerConfig, CurveType } from "./types.js";
 import { distributeAndNormalize } from "./distribute.js";
-import { getPathParamsForCorner } from "./corner-params.js";
-import { getSVGPathFromPathParams } from "./draw.js";
+import { getCurveBuilder, DEFAULT_EXPONENT } from "./curves/index.js";
 
 export const DEFAULT_SMOOTHING = 0.6;
 export const DEFAULT_PRESERVE_SMOOTHING = true;
+export const DEFAULT_CURVE: CurveType = "squircle";
 
 type Resolved = Required<CornerConfig>;
 
@@ -18,7 +18,9 @@ interface ResolvedCorners {
 function withDefaults(c: CornerConfig): Resolved {
   return {
     radius: c.radius,
+    curve: c.curve ?? DEFAULT_CURVE,
     smoothing: c.smoothing ?? DEFAULT_SMOOTHING,
+    exponent: c.exponent ?? DEFAULT_EXPONENT,
     preserveSmoothing: c.preserveSmoothing ?? DEFAULT_PRESERVE_SMOOTHING,
   };
 }
@@ -41,14 +43,7 @@ function resolveOptions(options: SmoothCornerOptions): ResolvedCorners {
   };
 }
 
-/**
- * Generate an SVG path `d` string for a smooth-cornered rectangle.
- *
- * @param width - Rectangle width in pixels
- * @param height - Rectangle height in pixels
- * @param options - Corner configuration (uniform or per-corner)
- * @returns SVG path `d` attribute string
- */
+/** SVG path `d` string for a smooth-cornered rectangle. */
 export function generatePath(
   width: number,
   height: number,
@@ -79,32 +74,49 @@ export function generatePath(
     height,
   });
 
-  const paramsFor = (name: keyof ResolvedCorners) =>
-    getPathParamsForCorner({
+  const builderOutFor = (name: keyof ResolvedCorners) => {
+    const corner = corners[name];
+    const builder = getCurveBuilder(corner.curve);
+    return builder({
       cornerRadius: normalized[name].radius,
-      cornerSmoothing: corners[name].smoothing,
-      preserveSmoothing: corners[name].preserveSmoothing,
+      smoothing: corner.smoothing,
+      exponent: corner.exponent,
+      preserveSmoothing: corner.preserveSmoothing,
       roundingAndSmoothingBudget: normalized[name].roundingAndSmoothingBudget,
     });
+  };
 
-  return getSVGPathFromPathParams({
-    width,
-    height,
-    topLeftPathParams: paramsFor("topLeft"),
-    topRightPathParams: paramsFor("topRight"),
-    bottomRightPathParams: paramsFor("bottomRight"),
-    bottomLeftPathParams: paramsFor("bottomLeft"),
-  });
+  const tl = builderOutFor("topLeft");
+  const tr = builderOutFor("topRight");
+  const br = builderOutFor("bottomRight");
+  const bl = builderOutFor("bottomLeft");
+
+  // Each side ends with a paired L to the next corner's `p` — geometrically
+  // a no-op when adjacent radii match, harmless otherwise. Round every
+  // coordinate to 4 decimals so output is bit-stable across Node /
+  // browser engines (Math.sin/cos can vary by 1 ULP between V8 builds,
+  // and the inner pathSegments are already rounded to the same precision).
+  const r = (n: number): string => n.toFixed(4);
+  return `
+    M ${r(tl.p)} 0
+    L ${r(width - tr.p)} 0
+    ${tr.pathSegment("TR")}
+    L ${r(width)} ${r(br.p)}
+    L ${r(width)} ${r(height - br.p)}
+    ${br.pathSegment("BR")}
+    L ${r(width - bl.p)} ${r(height)}
+    L ${r(bl.p)} ${r(height)}
+    ${bl.pathSegment("BL")}
+    L 0 ${r(height - tl.p)}
+    L 0 ${r(tl.p)}
+    ${tl.pathSegment("TL")}
+    Z
+  `
+    .replace(/[\t\s\n]+/g, " ")
+    .trim();
 }
 
-/**
- * Generate a CSS `clip-path: path(...)` value for a smooth-cornered rectangle.
- *
- * @param width - Rectangle width in pixels
- * @param height - Rectangle height in pixels
- * @param options - Corner configuration (uniform or per-corner)
- * @returns CSS clip-path string, e.g. `path("M 32 0 L 168 0 ...")`
- */
+/** CSS `clip-path: path(...)` value for a smooth-cornered rectangle. */
 export function generateClipPath(
   width: number,
   height: number,

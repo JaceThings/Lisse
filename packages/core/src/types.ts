@@ -1,9 +1,18 @@
+/** Corner curve family. Default: `'squircle'` (the Figma curve). */
+export type CurveType = "arc" | "squircle" | "superellipse" | "clothoid";
+
 /** Configuration for a single corner. */
 export interface CornerConfig {
   radius: number;
-  /** Smoothing amount from 0 (sharp) to 1 (maximum). Default: 0.6 */
+  /** Curve family. Default: `'squircle'`. */
+  curve?: CurveType;
+  /** 0 (sharp) to 1 (max). Used by `'squircle'` and `'clothoid'`;
+   *  ignored by `'arc'` and `'superellipse'`. Default: `0.6`. */
   smoothing?: number;
-  /** When true, preserves smoothing even when space is limited. Default: true */
+  /** Superellipse exponent, only when `curve === 'superellipse'`.
+   *  Default: `4` (matches CSS `corner-shape: squircle`). */
+  exponent?: number;
+  /** Preserve smoothing when space is limited. Default: `true`. */
   preserveSmoothing?: boolean;
 }
 
@@ -15,21 +24,21 @@ export interface PerCornerConfig {
   bottomLeft?: CornerConfig | number;
 }
 
-/** Uniform corner options — all corners share the same values. */
-export interface UniformCornerOptions {
-  radius: number;
-  /** Smoothing amount from 0 (sharp) to 1 (maximum). Default: 0.6 */
-  smoothing?: number;
-  /** When true, preserves smoothing even when space is limited. Default: true */
-  preserveSmoothing?: boolean;
-}
+/** Uniform corner options — all corners share the same values.
+ *  Alias for {@link CornerConfig} so {@link SmoothCornerOptions} reads as
+ *  `uniform | per-corner` at the call site. */
+export type UniformCornerOptions = CornerConfig;
 
 /** Options for generating a smooth-cornered path. */
 export type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
 
 // --- Internal types ---
 
-/** Resolved arc parameters for drawing a single corner of the smooth path. */
+/** Squircle-only resolved parameters (`a, b, c, d, p, arcSectionLength`).
+ *  Implementation detail of the Figma squircle curve — not meaningful
+ *  for arc / superellipse / clothoid. New code should treat this as
+ *  the return shape of `getPathParamsForCorner` rather than
+ *  constructing it directly. */
 export interface CornerPathParams {
   a: number;
   b: number;

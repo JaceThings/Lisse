@@ -72,6 +72,55 @@ describe("generateClipPath", () => {
   });
 });
 
+describe("curve types", () => {
+  it("defaults to squircle when curve is omitted", () => {
+    const a = generatePath(200, 200, { radius: 40, smoothing: 0.6 });
+    const b = generatePath(200, 200, { radius: 40, smoothing: 0.6, curve: "squircle" });
+    expect(a).toBe(b);
+  });
+
+  it("arc: one 'a' command per corner, no cubics", () => {
+    const path = generatePath(200, 200, { radius: 40, curve: "arc" });
+    expect(path).toContain("a 40.0000 40.0000 0 0 1");
+    expect(path).not.toContain(" c ");
+  });
+
+  it("superellipse: three cubics per corner (12 total)", () => {
+    const path = generatePath(200, 200, { radius: 40, curve: "superellipse" });
+    expect(path).toMatch(/^M /);
+    expect(path).toMatch(/Z$/);
+    expect((path.match(/ c /g) || []).length).toBe(12);
+    expect(path).not.toContain("NaN");
+  });
+
+  it("clothoid: cubic-arc-cubic per corner (8 cubics, 4 arcs)", () => {
+    const path = generatePath(200, 200, { radius: 40, curve: "clothoid", smoothing: 0.6 });
+    expect(path).toMatch(/^M /);
+    expect(path).toMatch(/Z$/);
+    expect((path.match(/ c /g) || []).length).toBe(8);
+    expect((path.match(/ a /g) || []).length).toBe(4);
+  });
+
+  it("mixes curve types per corner", () => {
+    const path = generatePath(200, 200, {
+      topLeft: { radius: 30, curve: "clothoid" },
+      topRight: { radius: 30, curve: "arc" },
+      bottomRight: { radius: 30, curve: "superellipse" },
+      bottomLeft: { radius: 30, curve: "squircle" },
+    });
+    expect(path).toMatch(/^M /);
+    expect(path).toMatch(/Z$/);
+    expect(path).not.toContain("NaN");
+    expect(path).not.toContain("Infinity");
+  });
+
+  it("superellipse exponent changes the path", () => {
+    const n2 = generatePath(200, 200, { radius: 40, curve: "superellipse", exponent: 2 });
+    const n8 = generatePath(200, 200, { radius: 40, curve: "superellipse", exponent: 8 });
+    expect(n2).not.toBe(n8);
+  });
+});
+
 describe("snapshot tests", () => {
   it("matches snapshot for 200x200 r=40 s=0.6", () => {
     const path = generatePath(200, 200, { radius: 40, smoothing: 0.6 });

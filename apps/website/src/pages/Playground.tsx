@@ -5,6 +5,7 @@ import {
 } from "../components/playground/PlaygroundTuning.tsx";
 import { BorderSection } from "../components/playground/sections/BorderSection.tsx";
 import { CornerShapeSection } from "../components/playground/sections/CornerShapeSection.tsx";
+import { CurveTypeSection } from "../components/playground/sections/CurveTypeSection.tsx";
 import { PerCornerSection } from "../components/playground/sections/PerCornerSection.tsx";
 import { RadiusSection } from "../components/playground/sections/RadiusSection.tsx";
 import { ShadowSection } from "../components/playground/sections/ShadowSection.tsx";
@@ -49,6 +50,9 @@ export function Playground() {
         </Stagger>
         <Stagger index={13}>
           <BorderSection title="Center Border" description={BORDER_DESC} position="middle" />
+        </Stagger>
+        <Stagger index={14}>
+          <CurveTypeSection />
         </Stagger>
       </div>
     </PlaygroundTuningProvider>
