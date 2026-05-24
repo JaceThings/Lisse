@@ -25,4 +25,9 @@ jobs:
       # contributors can install and test the branch end-to-end before
       # merge. Pairs with the consumer-smoke job — that proves the build
       # is consumable; this lets a human kick the tires.
+      #
+      # Requires the pkg.pr.new GitHub App to be installed on the repo:
+      # https://github.com/apps/pkg-pr-new — until installed, the step is
+      # marked continue-on-error so it doesn't block PR merges.
       - run: pnpm dlx pkg-pr-new publish './packages/core' './packages/react' './packages/vue' './packages/svelte'
+        continue-on-error: true

@@ -47,13 +47,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      # andresz1/size-limit-action posts a per-target byte-delta comment
-      # on PRs and hard-fails when any limit is exceeded.
-      - uses: andresz1/size-limit-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          skip_step: install
-          script: pnpm size
+      # andresz1/size-limit-action shells out via `npx size-limit` which
+      # doesn't see the workspace-installed @size-limit/preset-small-lib,
+      # so we run size-limit directly. Hard-fails when any per-package
+      # budget is exceeded; the PR-comment surface is a follow-up
+      # (track at https://github.com/andresz1/size-limit-action/issues).
+      - run: pnpm size
 
   knip:
     runs-on: ubuntu-latest
