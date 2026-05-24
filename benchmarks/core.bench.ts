@@ -27,10 +27,15 @@ for (const curve of CURVES) {
   });
 }
 
+// Batch size capped at 100 because CodSpeed's Valgrind simulation hits
+// VG_N_SEGMENTS (max mmap regions) when string allocations balloon past
+// ~500 path generations per iteration. 100 still captures the scaling
+// story (linear in count); the local `pnpm bench` wall-clock numbers
+// for n=500 in the README are extrapolated.
 for (const curve of CURVES) {
-  describe(`generatePath 500-batch — ${curve}`, () => {
-    bench(`500x generatePath ${curve}`, () => {
-      for (let i = 0; i < 500; i++) {
+  describe(`generatePath 100-batch — ${curve}`, () => {
+    bench(`100x generatePath ${curve}`, () => {
+      for (let i = 0; i < 100; i++) {
         generatePath(200 + (i % 50), 100 + (i % 20), { radius: 24, smoothing: 0.6, curve });
       }
     });
