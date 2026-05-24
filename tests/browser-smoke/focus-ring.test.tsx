@@ -64,11 +64,10 @@ describe("Browser smoke — focus ring through clip-path", () => {
     button!.focus();
     expect(document.activeElement).toBe(button);
 
-    // Visual proof: screenshot the container and let the pixel diff
-    // catch any regression where the outline gets clipped. Argos
-    // surfaces visual diffs as a review comment in addition.
-    await expect(page.locator(container)).toMatchScreenshot("focus-ring.png", {
-      maxDiffPixelRatio: 0.02,
-    });
+    // Visual proof: screenshot the container and let Argos diff it
+    // against the baseline. Vitest browser-mode v3.x doesn't ship a
+    // local pixel-diff matcher; the review surface lives in Argos.
+    const result = await page.screenshot({ path: "screenshots/focus-ring.png" });
+    if (!result) throw new Error("focus-ring screenshot returned empty");
   }, 30_000);
 });

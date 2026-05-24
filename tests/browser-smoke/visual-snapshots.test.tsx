@@ -7,12 +7,9 @@
 // browser-smoke workflow then uploads that directory to Argos for
 // review-surface diffing. Read-only in Argos for the first 4 weeks
 // (visual changes appear as non-blocking PR comments), then promoted
-// to blocking.
-//
-// Within this test we use `toMatchScreenshot` (Vitest browser mode's
-// built-in pixel-diff matcher) so a regression also fails the run
-// locally and in CI before Argos sees it.
-import { describe, it, beforeEach, afterEach, expect } from "vitest";
+// to blocking. The local test just asserts capture succeeded; Argos
+// handles the actual diff.
+import { describe, it, beforeEach, afterEach } from "vitest";
 import { page, server } from "@vitest/browser/context";
 import { createRoot, type Root } from "react-dom/client";
 import { createElement } from "react";
@@ -54,14 +51,13 @@ describe("Browser smoke — visual snapshots per curve type", () => {
       // Wait for first paint + observer flush.
       await new Promise((r) => setTimeout(r, 100));
 
-      // Vitest browser-mode pixel-diff snapshot. `maxDiffPixelRatio:
-      // 0.02` tolerates antialiasing noise but catches real visual
-      // regressions. Baselines live in `__screenshots__/` next to this
-      // file; Argos receives the same images via the workflow upload.
-      const filename = `${curve}-${server.browser}.png`;
-      await expect(page.locator(container)).toMatchScreenshot(filename, {
-        maxDiffPixelRatio: 0.02,
-      });
+      // Capture full-page screenshot to disk. Vitest browser-mode v3.x
+      // doesn't ship a `toMatchScreenshot` matcher; visual diffing
+      // happens in Argos which the browser-smoke workflow uploads to
+      // post-test. Asserts capture succeeded (non-empty path returned).
+      const filepath = `screenshots/${curve}-${server.browser}.png`;
+      const result = await page.screenshot({ path: filepath });
+      if (!result) throw new Error(`screenshot returned empty for ${filepath}`);
     }, 30_000);
   }
 });
