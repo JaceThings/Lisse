@@ -1,13 +1,9 @@
-// Post-build prerender. Reads the Vite-built `dist/index.html` template,
+// Post-build prerender for canonical routes. Reads dist/index.html,
 // rewrites the per-route meta tags (title, description, OG, Twitter,
-// canonical) for each canonical route, and writes the variant to
-// `dist/<route>.html`. nginx's `try_files $uri $uri.html ...` then serves
-// the right file when the URL is hit directly — so social unfurls and
-// non-JS crawlers see route-specific cards instead of the home card on
-// every page.
-//
-// The runtime SPA still updates the same tags via RouteHeadUpdater after
-// hydration, which keeps client-side route transitions correct.
+// canonical), and writes each variant as dist/<route>.html. nginx's
+// `try_files $uri $uri.html` serves them on direct hits so social
+// unfurls see route-specific cards. RouteHeadUpdater (App.tsx) handles
+// the same job for client-side SPA navigations.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -16,6 +12,7 @@ import {
   CANONICAL_PATHS,
   ROUTE_META,
   SITE_ORIGIN,
+  type CanonicalPath,
   type RouteMeta,
 } from "../src/lib/route-meta.ts";
 
@@ -50,9 +47,8 @@ const rewrite = (html: string, path: string, meta: RouteMeta): string => {
     /<title>[^<]*<\/title>/,
     `<title>${escapeHtml(meta.title)}</title>`,
   );
-  // Some meta tags in index.html span multiple lines, so the matcher
-  // accepts any non-`>` chars (including newlines) around the
-  // identifying attribute.
+  // Meta tags in index.html can span lines, so matchers allow newlines
+  // around the identifying attribute.
   out = setAttr(out, /<meta[^>]*name="description"[^>]*>/, "content", meta.description);
   out = setAttr(out, /<meta[^>]*property="og:title"[^>]*>/, "content", meta.title);
   out = setAttr(out, /<meta[^>]*property="og:description"[^>]*>/, "content", meta.description);
@@ -64,19 +60,15 @@ const rewrite = (html: string, path: string, meta: RouteMeta): string => {
   return out;
 };
 
-async function main() {
-  const indexPath = join(DIST, "index.html");
-  const template = await readFile(indexPath, "utf8");
+const indexPath = join(DIST, "index.html");
+const template = await readFile(indexPath, "utf8");
 
-  for (const path of CANONICAL_PATHS) {
-    const meta = ROUTE_META[path as keyof typeof ROUTE_META];
-    const out = rewrite(template, path, meta);
-    // "/" stays as dist/index.html; non-root canonical routes are written
-    // as flat .html files matched by nginx's `try_files $uri.html`.
-    const file = path === "/" ? indexPath : join(DIST, `${path.slice(1)}.html`);
-    await writeFile(file, out, "utf8");
-    console.log(`prerendered ${path} -> ${file.replace(DIST, "dist")}`);
-  }
+for (const path of CANONICAL_PATHS) {
+  const meta = ROUTE_META[path as CanonicalPath];
+  const out = rewrite(template, path, meta);
+  // "/" stays as dist/index.html; other canonical routes write to flat
+  // .html files matched by nginx's `try_files $uri.html`.
+  const file = path === "/" ? indexPath : join(DIST, `${path.slice(1)}.html`);
+  await writeFile(file, out, "utf8");
+  console.log(`prerendered ${path} -> ${file.replace(DIST, "dist")}`);
 }
-
-await main();
