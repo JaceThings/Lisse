@@ -126,8 +126,15 @@ export function CurveTypeSection() {
   // becomes "arc").
   const showShape = curve !== "arc";
   const shapeCurveRef = useRef<CurveType>(curve);
-  if (showShape) shapeCurveRef.current = curve;
   const shapeCurve = showShape ? curve : shapeCurveRef.current;
+  // Sync post-commit so StrictMode/concurrent renders that get discarded
+  // don't leave the ref ahead of the committed tree. `shapeCurve` reads
+  // the ref only on the `!showShape` path, so the post-commit timing
+  // doesn't change any visible output — the last `showShape === true`
+  // commit's effect has always already run by the time we read it.
+  useEffect(() => {
+    if (showShape) shapeCurveRef.current = curve;
+  }, [showShape, curve]);
 
   // Bump on entry from hidden so the Slider remounts — preserves the
   // squircle ↔ superellipse morph (both non-arc, key stable) but stops
