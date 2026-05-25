@@ -97,6 +97,8 @@ Issues and PRs welcome. Contributor docs (release process, testing strategy, ben
 
 <div align="center">
 
-Built by [Jace](https://ja.mt) · [X](https://ja.mt/x) · [Bluesky](https://ja.mt/bsky) · [Instagram](https://ja.mt/ig) · [Threads](https://ja.mt/threads)
+Built by [Jace](https://ja.mt)
+
+[X](https://ja.mt/x) | [Bluesky](https://ja.mt/bsky) | [Instagram](https://ja.mt/ig) | [Threads](https://ja.mt/threads)
 
 </div>
