@@ -5,13 +5,14 @@ import {
   MotionConfig,
   motion,
 } from "framer-motion";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { FocusRingOverlay } from "./components/FocusRingOverlay.tsx";
 import { Header } from "./components/Header.tsx";
 import { Layout } from "./components/Layout.tsx";
 import { SelectionHighlight } from "./components/SelectionHighlight.tsx";
 import { Stagger } from "./components/Stagger.tsx";
 import { Footer } from "./components/playground/Footer.tsx";
+import { CANONICAL_PATHS, ROUTE_META, SITE_ORIGIN } from "./lib/route-meta.ts";
 import { CurvesTest } from "./pages/CurvesTest.tsx";
 import { Home } from "./pages/Home.tsx";
 import { MathPage } from "./pages/Math.tsx";
@@ -41,23 +42,31 @@ const FADE_MS = 250;
 const FOOTER_SLIDE_MS = 350;
 const EASE = [0.4, 0, 0.2, 1] as const;
 
-// The static <link rel="canonical"> in index.html applies to every SPA
-// route. Update it per route so Googlebot consolidates each path
-// against itself, matching what sitemap.xml lists as distinct URLs.
-// Unknown paths fall back to "/" to match the catch-all route, which
-// renders <Home /> — otherwise crawlers could index /typo as a
-// duplicate-content URL.
-// `/math` is intentionally omitted — the page is unlisted (still
-// reachable by direct URL for internal use, but not a canonical /
-// indexable surface).
-const CANONICAL_PATHS = new Set(["/", "/what", "/playground"]);
-function CanonicalUpdater() {
+// Per-route SEO metadata lives in src/lib/route-meta.ts so the post-build
+// prerender script can read the same source. `/math` is intentionally
+// omitted from CANONICAL_PATHS — the page is unlisted.
+function setMeta(selector: string, attr: string, value: string) {
+  const el = document.querySelector(selector);
+  if (el) el.setAttribute(attr, value);
+}
+
+function RouteHeadUpdater() {
   const location = useLocation();
   useEffect(() => {
-    const link = document.querySelector('link[rel="canonical"]');
-    if (!link) return;
-    const path = CANONICAL_PATHS.has(location.pathname) ? location.pathname : "/";
-    link.setAttribute("href", `https://corne.rs${path}`);
+    const path = (
+      CANONICAL_PATHS.has(location.pathname) ? location.pathname : "/"
+    ) as keyof typeof ROUTE_META;
+    const meta = ROUTE_META[path];
+    const url = `${SITE_ORIGIN}${path}`;
+
+    document.title = meta.title;
+    setMeta('link[rel="canonical"]', "href", url);
+    setMeta('meta[name="description"]', "content", meta.description);
+    setMeta('meta[property="og:title"]', "content", meta.title);
+    setMeta('meta[property="og:description"]', "content", meta.description);
+    setMeta('meta[property="og:url"]', "content", url);
+    setMeta('meta[name="twitter:title"]', "content", meta.title);
+    setMeta('meta[name="twitter:description"]', "content", meta.description);
   }, [location.pathname]);
   return null;
 }
@@ -98,7 +107,7 @@ function AnimatedBody() {
           <Route path="/math" element={<MathPage />} />
           <Route path="/curves-test" element={<CurvesTest />} />
           <Route path="/what" element={<What />} />
-          <Route path="*" element={<Home />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -134,7 +143,7 @@ export function App() {
             <PersistentFooter />
           </Layout>
         </LayoutGroup>
-        <CanonicalUpdater />
+        <RouteHeadUpdater />
         <FocusRingOverlay />
         <SelectionHighlight />
         <DevAgentation />
