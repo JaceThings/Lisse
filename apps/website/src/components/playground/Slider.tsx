@@ -186,7 +186,7 @@ export function Slider({
           onDoubleClick={handleLabelDoubleClick}
           className="flex-1 min-w-0 select-none text-text-input"
         >
-          {label}
+          <NumericText value={label} transition={READOUT_TRANSITION} />
         </label>
         {editable.editing ? (
           <input

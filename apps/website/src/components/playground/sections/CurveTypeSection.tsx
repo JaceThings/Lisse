@@ -117,11 +117,29 @@ export function CurveTypeSection() {
 
   const d = useMemo(() => pathFromSamples(displaySamples), [displaySamples]);
 
-  // One DOM-stable Slider for the shape parameter — value, label, and
-  // format swap based on curve so the thumb glides between e.g.
-  // squircle smoothing 0.6 (60 %) and superellipse n = 5 (45 %).
+  // One DOM-stable Slider whose value, label, and format swap with
+  // curve so the thumb glides between squircle smoothing 0.6 (60 %)
+  // and superellipse n = 5 (45 %). Latch the rendered curve — when
+  // curve becomes "arc", Collapse keeps the slider's children alive
+  // during the exit; without the latch, "Exponent (n)" would flip to
+  // "Smoothing" mid-exit (showExponent goes false the instant curve
+  // becomes "arc").
   const showShape = curve !== "arc";
-  const showExponent = curve === "superellipse";
+  const shapeCurveRef = useRef<CurveType>(curve);
+  if (showShape) shapeCurveRef.current = curve;
+  const shapeCurve = showShape ? curve : shapeCurveRef.current;
+
+  // Bump on entry from hidden so the Slider remounts — preserves the
+  // squircle ↔ superellipse morph (both non-arc, key stable) but stops
+  // stale "Exponent (n)" from animating into a fresh "Smoothing" when
+  // the row reopens for a different curve.
+  const [entryKey, setEntryKey] = useState(0);
+  const wasShownRef = useRef(showShape);
+  useEffect(() => {
+    if (showShape && !wasShownRef.current) setEntryKey((k) => k + 1);
+    wasShownRef.current = showShape;
+  }, [showShape]);
+  const showExponent = shapeCurve === "superellipse";
   const shapeValue = showExponent
     ? (exponent - EXPONENT_MIN) / (EXPONENT_MAX - EXPONENT_MIN)
     : smoothing;
@@ -185,6 +203,7 @@ export function CurveTypeSection() {
         <Collapse show={showShape}>
           <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
             <Slider
+              key={entryKey}
               label={shapeLabel}
               value={shapeValue}
               min={0}
