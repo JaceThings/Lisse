@@ -12,7 +12,12 @@ import { Layout } from "./components/Layout.tsx";
 import { SelectionHighlight } from "./components/SelectionHighlight.tsx";
 import { Stagger } from "./components/Stagger.tsx";
 import { Footer } from "./components/playground/Footer.tsx";
-import { CANONICAL_PATHS, ROUTE_META, SITE_ORIGIN } from "./lib/route-meta.ts";
+import {
+  CANONICAL_PATHS,
+  ROUTE_META,
+  SITE_ORIGIN,
+  type CanonicalPath,
+} from "./lib/route-meta.ts";
 import { CurvesTest } from "./pages/CurvesTest.tsx";
 import { Home } from "./pages/Home.tsx";
 import { MathPage } from "./pages/Math.tsx";
@@ -42,20 +47,21 @@ const FADE_MS = 250;
 const FOOTER_SLIDE_MS = 350;
 const EASE = [0.4, 0, 0.2, 1] as const;
 
-// Per-route SEO metadata lives in src/lib/route-meta.ts so the post-build
-// prerender script can read the same source. `/math` is intentionally
-// omitted from CANONICAL_PATHS — the page is unlisted.
 function setMeta(selector: string, attr: string, value: string) {
   const el = document.querySelector(selector);
   if (el) el.setAttribute(attr, value);
 }
 
+// Mirror per-route metadata (route-meta.ts) into the document head on
+// SPA navigation — index.html's static tags only cover the landing
+// route. Unknown paths fall back to home meta before the router's
+// catch-all redirects them; `/math` is unlisted, so absent from the set.
 function RouteHeadUpdater() {
   const location = useLocation();
   useEffect(() => {
     const path = (
       CANONICAL_PATHS.has(location.pathname) ? location.pathname : "/"
-    ) as keyof typeof ROUTE_META;
+    ) as CanonicalPath;
     const meta = ROUTE_META[path];
     const url = `${SITE_ORIGIN}${path}`;
 
