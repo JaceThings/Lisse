@@ -47,7 +47,10 @@ const EASE = [0.4, 0, 0.2, 1] as const;
 // Unknown paths fall back to "/" to match the catch-all route, which
 // renders <Home /> — otherwise crawlers could index /typo as a
 // duplicate-content URL.
-const CANONICAL_PATHS = new Set(["/", "/what", "/playground", "/math"]);
+// `/math` is intentionally omitted — the page is unlisted (still
+// reachable by direct URL for internal use, but not a canonical /
+// indexable surface).
+const CANONICAL_PATHS = new Set(["/", "/what", "/playground"]);
 function CanonicalUpdater() {
   const location = useLocation();
   useEffect(() => {

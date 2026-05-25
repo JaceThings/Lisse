@@ -51,7 +51,7 @@ For Vue, Svelte, or framework-agnostic core, see the [packages](#packages) below
 | `superellipse` | `\|x/R\|^n + \|y/R\|^n = 1`. G2 with edges for `n > 2`. |
 | `clothoid` | Euler-spiral blend from straight edge to central arc. G2 everywhere. |
 
-Math reference: [`docs/curves.md`](docs/curves.md). Interactive demo: [corne.rs/math](https://corne.rs/math).
+Math reference: [`docs/curves.md`](docs/curves.md).
 
 ## Packages
 
@@ -97,8 +97,6 @@ Issues and PRs welcome. Contributor docs (release process, testing strategy, ben
 
 <div align="center">
 
-Built by [Jace](https://ja.mt)
-&nbsp;·&nbsp;
-[X](https://ja.mt/x) · [Bluesky](https://ja.mt/bsky) · [Instagram](https://ja.mt/ig) · [Threads](https://ja.mt/threads)
+Built by [Jace](https://ja.mt) · [X](https://ja.mt/x) · [Bluesky](https://ja.mt/bsky) · [Instagram](https://ja.mt/ig) · [Threads](https://ja.mt/threads)
 
 </div>
