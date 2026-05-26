@@ -19,10 +19,10 @@ pnpm install
 
 Run these from the repo root:
 
-- `pnpm typecheck` -- type-check every package with TypeScript
-- `pnpm test` -- run the Vitest suite
-- `pnpm build` -- build every package under `packages/*`
-- `pnpm bench` -- run performance benchmarks (not wired up yet; coming soon)
+- `pnpm test`: run the Vitest suite
+- `pnpm build`: build every package under `packages/*`
+- `pnpm typecheck`: type-check every package with TypeScript
+- `pnpm bench`: run performance benchmarks (not wired up yet; coming soon)
 
 Run a script in a single package with `pnpm --filter @lisse/core <script>`.
 
@@ -30,11 +30,11 @@ Run a script in a single package with `pnpm --filter @lisse/core <script>`.
 
 Use one of the following prefixes so the intent of a branch is clear at a glance:
 
-- `feat/` -- a new feature or capability
-- `fix/` -- a bug fix
-- `docs/` -- documentation-only changes
-- `chore/` -- tooling, config, or dependency work
-- `perf/` -- performance work that doesn't change behaviour
+- `fix/`: a bug fix
+- `docs/`: documentation-only changes
+- `feat/`: a new feature or capability
+- `chore/`: tooling, config, or dependency work
+- `perf/`: performance work that doesn't change behaviour
 
 Example: `feat/per-corner-shadow-blur`.
 
@@ -50,9 +50,9 @@ pnpm changeset
 
 Choose the bump type for each affected package:
 
-- **patch** -- bug fixes, internal refactors, docs inside a package
-- **minor** -- new features, new APIs, new exports (backwards compatible)
-- **major** -- breaking changes to a public API
+- **major**: breaking changes to a public API
+- **patch**: bug fixes, internal refactors, docs inside a package
+- **minor**: new features, new APIs, new exports (backwards compatible)
 
 ### Lockstep versioning
 
@@ -78,12 +78,11 @@ A maintainer will review, request changes if needed, and merge once CI is green.
 1. PRs are merged into `main`.
 2. The Changesets bot opens (or updates) a `chore: version packages` PR that consumes pending changesets, bumps versions, and updates changelogs.
 3. Merging that version-packages PR triggers the release workflow.
-4. Publishing to npm happens via OIDC trusted publishing -- no long-lived tokens involved.
+4. Publishing to npm happens via OIDC trusted publishing, so no long-lived tokens are involved.
 
 ## Style notes
 
 - British spellings in prose where it's natural (colour, behaviour, organisation).
-- Prefer `--` to em-dashes when writing plain text.
 - Keep docs plain and direct; skip marketing adjectives.
 
 Questions? Open a discussion or reach out at hi@ja.mt.

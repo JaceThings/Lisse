@@ -8,10 +8,10 @@ Results are consumed by the wiki's `Performance.md` page.
 
 Each bench case drives one of three hot paths:
 
-- **Mount**: render _N_ `<SmoothCorners />` instances from scratch and run
-  the first sync (clip-path apply + initial SVG overlay).
 - **Resize**: deliver a `ResizeObserver` callback to every mounted
   element and wait for every per-element sync to finish.
+- **Mount**: render _N_ `<SmoothCorners />` instances from scratch and run
+  the first sync (clip-path apply + initial SVG overlay).
 - **Update**: mutate the `corners.radius` prop on every instance and
   measure the re-sync cost (commit + second `useIsoLayoutEffect`).
 
@@ -60,13 +60,13 @@ pnpm --filter @lisse/benchmarks bench
 
 vitest-bench prints tinybench stats per case. The columns you want are:
 
-- **mean** — average time per op in ms. Primary signal.
-- **hz** — ops per second (inverse of mean).
-- **p99 / p999** — tail latency. Large gaps between `mean` and `p99`
+- **hz**: ops per second (inverse of mean).
+- **mean**: average time per op in ms. Primary signal.
+- **p99 / p999**: tail latency. Large gaps between `mean` and `p99`
   usually indicate GC pauses mid-sample.
-- **rme** — relative margin of error. Treat any result over ~5% as noisy
+- **rme**: relative margin of error. Treat any result over ~5% as noisy
   and re-run before drawing conclusions.
-- **samples** — how many iterations fed the stats. Low sample counts
+- **samples**: how many iterations fed the stats. Low sample counts
   (fewer than a few hundred) mean the individual op is expensive; the
   numbers are still valid but have wider error bars.
 
@@ -97,7 +97,7 @@ a modern laptop; no dimensions were reduced.
 See the wiki `Performance` page for narrative analysis and rules of
 thumb. The tables below are the raw per-case means in milliseconds.
 
-### Mount -- initial render + first sync
+### Mount: initial render + first sync
 
 | n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
 |---|---|---|---|---|
@@ -107,7 +107,7 @@ thumb. The tables below are the raw per-case means in milliseconds.
 | **100** | 15.0 ms | 85.6 ms | 4.89 ms | 56.2 ms |
 | **500** | 142 ms | 1601 ms | 25.1 ms | 898 ms |
 
-### Resize -- single ResizeObserver callback tick
+### Resize: single ResizeObserver callback tick
 
 | n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
 |---|---|---|---|---|
@@ -117,7 +117,7 @@ thumb. The tables below are the raw per-case means in milliseconds.
 | **100** | 1.64 ms | 4.82 ms | 1.03 ms | 4.02 ms |
 | **500** | 8.39 ms | 31.1 ms | 5.32 ms | 27.0 ms |
 
-### Update -- one `corners.radius` prop change
+### Update: one `corners.radius` prop change
 
 | n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
 |---|---|---|---|---|

@@ -1,12 +1,5 @@
 # @lisse/react
 
-## 0.4.0
-
-### Patch Changes
-
-- Updated dependencies [671a3f3]
-  - @lisse/core@0.4.0
-
 ## 0.3.2
 
 ### Patch Changes
@@ -18,10 +11,6 @@
   `autoEffects` works the same way under the new strategy: any CSS `box-shadow` Lisse extracts from the consumer element is routed into the sibling div instead of the SVG handle, so the shadow doesn't disappear when you flip the strategy. The explicit `shadow` prop takes precedence over the extracted chain.
 
   Trade-off: the `"box-shadow"` silhouette is a rounded rectangle, not a squircle, so corners with high smoothing will look slightly less continuous than the SVG path. The `ShadowStrategy` type is exported from `@lisse/react`.
-
-- Updated dependencies [fd05b4a]
-- Updated dependencies [5c137a4]
-  - @lisse/core@0.3.2
 
 ## 0.3.1
 
@@ -48,12 +37,6 @@
   - `@lisse/core` `createDropShadow` sets `color-interpolation-filters="sRGB"` on its filter element, matching `svg-effects.ts`. Removes a blur-tint inconsistency across user agents.
   - Drop-shadow handle is created lazily across the React, Vue, and Svelte adapters, and skipped entirely for consumers using only border effects. Saves two DOM nodes and one `isolation:isolate` mutation per instance.
 
-- Updated dependencies [d2d78ba]
-- Updated dependencies [069b036]
-- Updated dependencies [60745a2]
-- Updated dependencies [a37f53e]
-  - @lisse/core@0.3.1
-
 ## 0.3.0
 
 ### Minor Changes
@@ -70,9 +53,9 @@
   </Slot>;
   ```
 
-  The existing `SlotProps` type is unchanged, so non-parameterised usage continues to work. Runtime behaviour is unchanged -- every prop is forwarded to the cloned child regardless of type. The generic parameter is a type-level hint only.
+  The existing `SlotProps` type is unchanged, so non-parameterised usage continues to work. Runtime behaviour is unchanged: every prop is forwarded to the cloned child regardless of type. The generic parameter is a type-level hint only.
 
-- c94438f: `Slot` now respects `event.preventDefault()` when composing event handlers: the parent handler is skipped if the child handler called `preventDefault()` on the event. Matches Radix's Slot semantics and gives a child a way to opt out of the composed behaviour. Existing usages where the child does not call `preventDefault()` are unchanged -- both handlers still fire in order (child first, parent second).
+- c94438f: `Slot` now respects `event.preventDefault()` when composing event handlers: the parent handler is skipped if the child handler called `preventDefault()` on the event. Matches Radix's Slot semantics and gives a child a way to opt out of the composed behaviour. Existing usages where the child does not call `preventDefault()` are unchanged. Both handlers still fire in order (child first, parent second).
 
 ### Patch Changes
 
@@ -85,9 +68,6 @@
   - Fragment child: tells the user to unwrap the Fragment so Slot can merge props onto a real element.
 
   The previous single message (`"expects exactly one child"`) covered all four cases without distinguishing them. Behaviour is otherwise unchanged.
-
-- Updated dependencies [6d8cd18]
-  - @lisse/core@0.3.0
 
 ## 0.2.0
 

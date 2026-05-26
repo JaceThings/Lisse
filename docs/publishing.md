@@ -171,8 +171,8 @@ npm error - .../node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/rebu
 **Cause:** npm is upgrading itself — replacing its own files on disk while still running. The old npm's `@npmcli/arborist` module needs `promise-retry` to finish the post-install `reify-finish` step, but the dependency has already been evicted by the new npm's install layout. A self-modification race condition.
 
 **Attempted fixes that did NOT work:**
-- `npm install -g npm@latest --force` — still fails the same way. `--force` doesn't reach `reify-finish`.
-- `--ignore-scripts` — the failure is inside npm's own internal code path, not a user lifecycle script.
+- `--ignore-scripts`: the failure is inside npm's own internal code path, not a user lifecycle script.
+- `npm install -g npm@latest --force`: still fails the same way. `--force` doesn't reach `reify-finish`.
 
 **What did work:** Skip the upgrade entirely by using a Node version whose bundled npm is already ≥11.5.1. Node 24 does.
 

@@ -33,7 +33,7 @@ const d = generatePath(300, 200, { radius: 24, smoothing: 0.6 });
 | `height` | `number` | Rectangle height in pixels |
 | `options` | `SmoothCornerOptions` | Corner configuration (uniform or per-corner) |
 
-**Returns:** `string` -- an SVG path `d` attribute.
+**Returns:** `string`. The SVG path `d` attribute.
 
 ### `generateClipPath(width, height, options)`
 
@@ -46,7 +46,7 @@ const clipPath = generateClipPath(300, 200, { radius: 24 });
 element.style.clipPath = clipPath;
 ```
 
-**Returns:** `string` -- a CSS `clip-path` value like `path("M 24 0 L 276 0 ...")`.
+**Returns:** `string`. A CSS `clip-path` value like `path("M 24 0 L 276 0 ...")`.
 
 ### `getPathParamsForCorner(params)`
 
@@ -73,7 +73,7 @@ const params = getPathParamsForCorner({
 | `params.preserveSmoothing` | `boolean` | Whether to preserve smoothing at the cost of radius |
 | `params.roundingAndSmoothingBudget` | `number` | Available edge length for this corner |
 
-**Returns:** `CornerPathParams` -- `{ a, b, c, d, p, cornerRadius, arcSectionLength }`.
+**Returns:** `CornerPathParams` with the shape `{ a, b, c, d, p, cornerRadius, arcSectionLength }`.
 
 ### `distributeAndNormalize(rect)`
 
@@ -105,7 +105,7 @@ const corners = distributeAndNormalize({
 | `rect.width` | `number` | Rectangle width |
 | `rect.height` | `number` | Rectangle height |
 
-**Returns:** `NormalizedCorners` -- each corner has `{ radius, roundingAndSmoothingBudget }`.
+**Returns:** `NormalizedCorners`. Each corner has `{ radius, roundingAndSmoothingBudget }`.
 
 ### `getSVGPathFromPathParams(input)`
 
@@ -124,7 +124,7 @@ const path = getSVGPathFromPathParams({
 });
 ```
 
-**Returns:** `string` -- a complete SVG path `d` attribute.
+**Returns:** `string`. A complete SVG path `d` attribute.
 
 ### `toRadians(degrees)`
 
@@ -165,7 +165,7 @@ const unsubscribe = observeResize(element, () => {
 unsubscribe();
 ```
 
-**Returns:** `() => void` -- an unsubscribe function.
+**Returns:** `() => void`. An unsubscribe function.
 
 ### `createSvgEffects(anchor)`
 
@@ -197,7 +197,7 @@ effects.update(
 effects.destroy();
 ```
 
-**Returns:** `SvgEffectsHandle` -- `{ update(options, effects, width, height): void; destroy(): void }`.
+**Returns:** `SvgEffectsHandle` with the shape `{ update(options, effects, width, height): void; destroy(): void }`.
 
 ### `extractAndStripEffects(el)`
 
@@ -211,7 +211,7 @@ const { effects, savedStyles } = extractAndStripEffects(element);
 // CSS border and box-shadow are now stripped from the element
 ```
 
-**Returns:** `ExtractedEffects` -- `{ effects: EffectsConfig; savedStyles: { border: string; boxShadow: string } }`.
+**Returns:** `ExtractedEffects` with the shape `{ effects: EffectsConfig; savedStyles: { border: string; boxShadow: string } }`.
 
 ### `restoreStyles(el, saved)`
 
@@ -283,7 +283,7 @@ shadow.update(
 shadow.destroy();
 ```
 
-**Returns:** `DropShadowHandle` -- `{ update(options, shadow | shadows[], width, height): void; destroy(): void }`. Accepts a single `ShadowConfig` or an array.
+**Returns:** `DropShadowHandle` with the shape `{ update(options, shadow | shadows[], width, height): void; destroy(): void }`. Accepts a single `ShadowConfig` or an array.
 
 ### `nextUid()`
 
@@ -307,7 +307,7 @@ const rgb = hexToRgb("#ff6600"); // "255, 102, 0"
 
 ### `acquirePosition(anchor)`
 
-Ref-counted helper that sets `position: relative` on an anchor element if it currently has `position: static`. Returns `true` if the position was changed, `false` if it was already non-static. Multiple calls on the same element increment a counter -- the position is only restored when all callers release.
+Ref-counted helper that sets `position: relative` on an anchor element if it currently has `position: static`. Returns `true` if the position was changed, `false` if it was already non-static. Multiple calls on the same element increment a counter; the position is only restored when all callers release.
 
 ```ts
 import { acquirePosition, releasePosition } from "@lisse/core";
@@ -546,7 +546,7 @@ import { generatePath, generateClipPath } from "@lisse/core/path";
 
 ### Excluded
 
-`createSvgEffects`, `createDropShadow`, `observeResize`, `extractAndStripEffects`, `restoreStyles`, `parseBorder`, `parseBoxShadow`, `parseColor` -- these depend on the DOM and are only available from the main entry point.
+`createSvgEffects`, `createDropShadow`, `observeResize`, `extractAndStripEffects`, `restoreStyles`, `parseBorder`, `parseBoxShadow`, `parseColor`. These depend on the DOM and are only available from the main entry point.
 
 ### When to use it
 
@@ -601,22 +601,22 @@ restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
 
 | CSS feature | What happens | Why |
 |---|---|---|
-| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. | The SVG overlay renders a uniform border along a single squircle path; per-side variation is not possible. |
-| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. | -- |
-| `inset`, `outset` border styles | Not replicated. Rendered as solid. | -- |
+| Per-side borders | Only the top border is read. All four sides are stripped; differing sides are lost. | The SVG overlay renders a uniform border along a single squircle path; per-side variation is not possible. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |  |
+| `inset`, `outset` border styles | Not replicated. Rendered as solid. |  |
 | `border-image` | Not detected. Use the gradient border API (`GradientConfig`) instead. | `border-image` syntax is too complex to reliably parse from `getComputedStyle`. |
 | `outline` | Not read or stripped. | `outline` does not follow `border-radius` consistently across browsers, so extraction would be unreliable. |
 | Gradient borders | Not auto-extracted from CSS. Use the `GradientConfig` API on `BorderConfig.color` instead. | CSS gradient borders are set via `border-image`, which cannot be reliably parsed (see above). |
 
 **Behavioral notes:**
 
-- **One-time extraction** -- reads CSS once when called. Subsequent dynamic changes won't be reflected. Continuous `getComputedStyle` polling would be expensive, so use explicit `EffectsConfig` values for dynamic effects.
-- **`!important` rules** -- inline style stripping can't override `!important` stylesheet rules. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **CSS transitions** -- stripped properties (`border`, `box-shadow`) are replaced with SVG equivalents that are not animatable via CSS transitions. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
-- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double (needs space for two lines plus a gap). Thinner double borders fall back to solid.
-- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
-- **Content-box border compensation** -- when `extractAndStripEffects` removes a border from an element using `box-sizing: content-box`, the content area would expand by the border width (since content-box sizing excludes borders from the content dimensions). To prevent this layout shift, padding is automatically increased by the border width on each side. The original padding values are saved and restored when `restoreStyles` is called.
-- **Wrapper div** -- the SVG overlay is inserted into a wrapper element, which can affect `flex` and `grid` layouts. Account for the wrapper when styling parent containers.
+- **Wrapper div**: the SVG overlay is inserted into a wrapper element, which can affect `flex` and `grid` layouts. Account for the wrapper when styling parent containers.
+- **`double` minimum width**: `double` borders require at least 3px `border-width` to render as double (needs space for two lines plus a gap). Thinner double borders fall back to solid.
+- **One-time extraction**: reads CSS once when called. Subsequent dynamic changes won't be reflected. Continuous `getComputedStyle` polling would be expensive, so use explicit `EffectsConfig` values for dynamic effects.
+- **CSS transitions**: stripped properties (`border`, `box-shadow`) are replaced with SVG equivalents that are not animatable via CSS transitions. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`groove` / `ridge` approximation**: the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **`!important` rules**: inline style stripping can't override `!important` stylesheet rules. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **Content-box border compensation**: when `extractAndStripEffects` removes a border from an element using `box-sizing: content-box`, the content area would expand by the border width (since content-box sizing excludes borders from the content dimensions). To prevent this layout shift, padding is automatically increased by the border width on each side. The original padding values are saved and restored when `restoreStyles` is called.
 
 ## Examples
 

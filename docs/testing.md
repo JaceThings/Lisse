@@ -77,9 +77,9 @@ parity tests in the strict sense.
 
 The matrices live in `packages/core/__fixtures__/contract.ts`:
 
-- `PROP_MATRIX` — 20 cases spanning curve types × radii + layout
+- `EFFECTS_MATRIX`: 6 cases covering border / shadow / combined.
+- `PROP_MATRIX`: 20 cases spanning curve types × radii + layout
   variations (non-square, asymmetric per-corner, oversized, tiny).
-- `EFFECTS_MATRIX` — 6 cases covering border / shadow / combined.
 
 Each adapter's `contract.test.{ts,tsx}` iterates these, renders via
 the adapter, reads `el.style.clipPath`, unwraps the `path("...")`, and
@@ -202,8 +202,6 @@ BrowserStack Automate job that reproduces the bug, gated on tagged
 releases only. Until that day, the credentials sit unused.
 
 ## Test count snapshot
-
-After all blueprint requirements landed:
 
 - 411 unit tests (core / react / vue / svelte combined)
 - 9 CodSpeed benches

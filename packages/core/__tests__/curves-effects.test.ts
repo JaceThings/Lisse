@@ -2,8 +2,7 @@
 //
 // Effects-pipeline coverage per curve type. Curve geometry is unit-tested
 // in curves.test.ts; here we assert that drop shadows, inner shadows, and
-// borders all read the requested curve through to the rendered path
-// (risks #1 and #4 from the curve-type blueprint).
+// borders all read the requested curve through to the rendered path.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createDropShadow } from "../src/drop-shadow.js";
 import { createSvgEffects } from "../src/svg-effects.js";

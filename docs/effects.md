@@ -103,8 +103,8 @@ Gradient borders are **API-only** — they cannot be auto-extracted from CSS `bo
 
 Two gradient types are available:
 
-- **`LinearGradientConfig`** — `{ type: "linear", angle?: number, stops: GradientStop[] }`. The `angle` is in CSS degrees (default `0`, bottom-to-top; `90` is left-to-right).
-- **`RadialGradientConfig`** — `{ type: "radial", cx?: number, cy?: number, r?: number, stops: GradientStop[] }`. All values are relative (0 to 1), defaulting to `0.5`.
+- **`LinearGradientConfig`**: `{ type: "linear", angle?: number, stops: GradientStop[] }`. The `angle` is in CSS degrees (default `0`, bottom-to-top; `90` is left-to-right).
+- **`RadialGradientConfig`**: `{ type: "radial", cx?: number, cy?: number, r?: number, stops: GradientStop[] }`. All values are relative (0 to 1), defaulting to `0.5`.
 
 Each `GradientStop` is `{ offset: number, color: string, opacity?: number }` where `offset` ranges from 0 to 1.
 
@@ -214,13 +214,13 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 | `border-image` | Not detected. Use gradient borders via the API instead. |
 | `outline` | Not read or stripped. |
 
-- **Per-side borders** — Only the top border is read during auto-extraction because `getComputedStyle` returns per-side values (`borderTopWidth`, `borderTopColor`, etc.) and the SVG overlay renders a single uniform border around the entire squircle. If you need different colours per side, use explicit effect props.
-- **`border-image`** — Not detected because CSS `border-image` syntax is complex (angle units, colour spaces, slice semantics). Use gradient borders via the explicit `BorderConfig.color` API instead.
-- **`outline`** — Not extracted because CSS outlines don't follow `border-radius` in all browsers, and the squircle shape would make standard outlines look incorrect.
-- **One-time extraction (mount-time snapshot)** — CSS effects are read once on mount because continuously polling `getComputedStyle` would hurt performance, and a `MutationObserver` on the host element can't see ancestor class changes or CSS variable updates that affect computed style. **Re-mount the element to re-extract** after a theme switch or token change. An imperative `refresh()` API for in-place re-extraction is planned for v0.4. Until then, use explicit effect props for dynamic values.
-- **`!important` rules** — Cannot be overridden because the library strips effects via inline styles, and `!important` stylesheet rules take precedence over inline styles. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **CSS transitions** — Stripped properties (`border`, `box-shadow`) will not animate because they are removed from the element and replaced with SVG. Use `autoEffects: false` and drive explicit effect props instead.
-- **`double` border minimum width** — Requires `border-width >= 3px` because the double style needs space for two lines and a gap. Below 3px, the border falls back to solid.
-- **`groove` / `ridge` shading** — The dark shade is computed as `RGB * 2/3`, matching Firefox's algorithm.
-- **Wrapper div (React/Vue)** — The `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. Use the hook/composable/action approach for full layout control.
-- **Gradient border auto-extraction** — Gradient borders are API-only. CSS `border-image` is not detected or extracted.
+- **`groove` / `ridge` shading**: the dark shade is computed as `RGB * 2/3`, matching Firefox's algorithm.
+- **Gradient border auto-extraction**: gradient borders are API-only. CSS `border-image` is not detected or extracted.
+- **`double` border minimum width**: requires `border-width >= 3px` because the double style needs space for two lines and a gap. Below 3px, the border falls back to solid.
+- **`outline`**: not extracted because CSS outlines don't follow `border-radius` in all browsers, and the squircle shape would make standard outlines look incorrect.
+- **CSS transitions**: stripped properties (`border`, `box-shadow`) will not animate because they are removed from the element and replaced with SVG. Use `autoEffects: false` and drive explicit effect props instead.
+- **Wrapper div (React/Vue)**: the `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. Use the hook/composable/action approach for full layout control.
+- **`border-image`**: not detected because CSS `border-image` syntax is complex (angle units, colour spaces, slice semantics). Use gradient borders via the explicit `BorderConfig.color` API instead.
+- **`!important` rules**: cannot be overridden because the library strips effects via inline styles, and `!important` stylesheet rules take precedence over inline styles. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **Per-side borders**: only the top border is read during auto-extraction because `getComputedStyle` returns per-side values (`borderTopWidth`, `borderTopColor`, etc.) and the SVG overlay renders a single uniform border around the entire squircle. If you need different colours per side, use explicit effect props.
+- **One-time extraction (mount-time snapshot)**: CSS effects are read once on mount because continuously polling `getComputedStyle` would hurt performance, and a `MutationObserver` on the host element can't see ancestor class changes or CSS variable updates that affect computed style. **Re-mount the element to re-extract** after a theme switch or token change. An imperative `refresh()` API for in-place re-extraction is planned for v0.4. Until then, use explicit effect props for dynamic values.

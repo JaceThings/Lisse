@@ -148,11 +148,10 @@ describe("buildClothoid", () => {
   });
 });
 
-// Risk #5 from the curve-type blueprint: the clothoid cubic Bézier's
-// endpoint must match the Simpson-integrated clothoid endpoint within
-// tight tolerance across the R / smoothing range. Otherwise the cubic
-// silently drifts from the true clothoid shape — visible as the corner
-// not closing cleanly.
+// The clothoid cubic Bézier's endpoint must match the Simpson-integrated
+// clothoid endpoint within tight tolerance across the R / smoothing
+// range. Otherwise the cubic silently drifts from the true clothoid
+// shape — visible as the corner not closing cleanly.
 describe("buildClothoid — cubic endpoint property", () => {
   for (const cornerRadius of [10, 40, 100, 200]) {
     for (const smoothing of [0.2, 0.4, 0.6, 0.8, 1.0]) {

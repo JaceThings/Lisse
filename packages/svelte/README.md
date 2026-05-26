@@ -30,7 +30,7 @@ Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
 </div>
 ```
 
-> **Why an action instead of a component?** Svelte actions are the idiomatic way to attach behaviour to existing elements. Unlike React or Vue, there is no wrapper `<div>` -- the action attaches directly to your element and inserts the SVG overlay into its parent. This gives you full control over your DOM structure.
+> **Why an action instead of a component?** Svelte actions are the idiomatic way to attach behaviour to existing elements. Unlike React or Vue, there is no wrapper `<div>`. The action attaches directly to your element and inserts the SVG overlay into its parent, giving you full control over your DOM structure.
 
 ## `smoothCorners` Action
 
@@ -105,11 +105,11 @@ The action sets `data-slot="smooth-corners"` and `data-state="pending" | "ready"
 [data-slot="smooth-corners"][data-state="pending"] { opacity: 0; }
 ```
 
-The `preserveSmoothing` option controls how corners behave when adjacent corners compete for space. When `true` (default), the smoothing curve is preserved even when adjacent corners compete for space -- the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced.
+The `preserveSmoothing` option controls how corners behave when adjacent corners compete for space. When `true` (default), the smoothing curve is preserved and the radius shrinks instead. When `false`, the radius is preserved and smoothing is reduced.
 
 ## Auto Effects (enabled by default)
 
-Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect config -- extra work that's easy to forget.
+Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect config, which is extra work that's easy to forget.
 
 **Auto effects removes that step.** When the action initialises, the library automatically:
 
@@ -158,7 +158,7 @@ Set `autoEffects: false`:
 </div>
 ```
 
-When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behaviour. You will need to ensure the parent has `position: relative` yourself if using manual effects.
+When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs (the original pre-autoEffects behaviour). You will need to ensure the parent has `position: relative` yourself if using manual effects.
 
 ### How CSS properties are mapped
 
@@ -174,31 +174,31 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 
 | CSS feature | What happens | Why |
 |---|---|---|
-| Per-side borders | Only the top border is read. All four sides are stripped -- differing sides are lost. | SVG strokes follow a single path and cannot vary width/color per side. |
-| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. | -- |
+| Per-side borders | Only the top border is read. All four sides are stripped; differing sides are lost. | SVG strokes follow a single path and cannot vary width/color per side. |
+| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |  |
 | `inset`, `outset` border styles | Not replicated. Rendered as solid. | These styles rely on per-side light/dark shading that has no SVG equivalent on a continuous path. |
-| Multiple `box-shadow` layers | All shadow layers are extracted and rendered. | -- |
+| Multiple `box-shadow` layers | All shadow layers are extracted and rendered. |  |
 | `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. | `getComputedStyle` does not expose `border-image` in a way that can be reliably parsed into SVG. |
-| `outline` | Not read or stripped. | `outline` is not clipped by `clip-path`, so it continues to work -- but it renders as a rectangle, not a squircle. |
+| `outline` | Not read or stripped. | `outline` is not clipped by `clip-path`, so it continues to work, but it renders as a rectangle, not a squircle. |
 | Gradient borders from CSS | Not auto-extracted. CSS gradient borders must be set manually via the `GradientConfig` API. | CSS border colors are returned as flat `rgb()`/`rgba()` values by `getComputedStyle`, so gradient information is lost. |
 
 **Behavioral notes:**
 
-- **One-time extraction** -- CSS is read once on init (not re-evaluated on `update()`). This avoids repeated `getComputedStyle` calls on every resize. Use explicit effects in config mode for dynamic values.
-- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. This is a fundamental limitation of inline style specificity. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. The library removes these properties to prevent clipped artifacts. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
-- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid. This matches CSS behaviour where the three lines of a `double` border need minimum space to be visible.
-- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles) because SVG strokes follow a single continuous path without per-segment color control.
+- **One-time extraction**: CSS is read once on init (not re-evaluated on `update()`). This avoids repeated `getComputedStyle` calls on every resize. Use explicit effects in config mode for dynamic values.
+- **`double` minimum width**: `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid. This matches CSS behaviour where the three lines of a `double` border need minimum space to be visible.
+- **`groove` / `ridge` approximation**: the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles) because SVG strokes follow a single continuous path without per-segment color control.
+- **CSS transitions**: `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. The library removes these properties to prevent clipped artifacts. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`!important` rules**: inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. This is a fundamental limitation of inline style specificity. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
 
 ## CSS Borders and Shadows
 
-Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` effect config directly -- these render as SVG overlays that correctly follow the squircle path.
+Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` effect config directly. These render as SVG overlays that correctly follow the squircle path.
 
 ## Effects
 
 Effects are rendered as SVG overlays. When using effects, the parent element must have `position: relative` for correct overlay positioning.
 
-The SVG overlays are absolutely positioned inside the parent element. The library automatically sets `position: relative` on the parent if it currently has `position: static`. If you already set `position: relative` (or `absolute`/`fixed`) on the parent, the library leaves it unchanged. When the action is destroyed, the position is restored to its original value -- and if multiple Lisse instances share the same parent, the position is only restored when the last one unmounts.
+The SVG overlays are absolutely positioned inside the parent element. The library automatically sets `position: relative` on the parent if it currently has `position: static`. If you already set `position: relative` (or `absolute`/`fixed`) on the parent, the library leaves it unchanged. When the action is destroyed, the position is restored to its original value. If multiple Lisse instances share the same parent, the position is only restored when the last one unmounts.
 
 ```svelte
 <script>
@@ -284,7 +284,7 @@ Use a `GradientConfig` object for the border `color` property to render a gradie
 | Property | Type | Description |
 |----------|------|-------------|
 | `width` | `number` | Border width in pixels |
-| `color` | `string \| GradientConfig` | Border color -- hex string or a gradient configuration |
+| `color` | `string \| GradientConfig` | Border color: a hex string or a gradient configuration |
 | `opacity` | `number` | Border opacity (0-1) |
 | `style` | `BorderStyle` | Border style (default: `"solid"`). One of `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, `"ridge"`. |
 | `dash` | `number` | Custom dash length for dashed/dotted styles |
@@ -365,7 +365,7 @@ type GradientConfig = LinearGradientConfig | RadialGradientConfig;
 
 ## SSR / SvelteKit
 
-The `smoothCorners` action uses browser APIs (`ResizeObserver`, DOM manipulation) and only runs on the client. In SvelteKit, actions are automatically client-only -- they run after the element is mounted in the DOM, so no special handling is needed.
+The `smoothCorners` action uses browser APIs (`ResizeObserver`, DOM manipulation) and only runs on the client. In SvelteKit, actions are automatically client-only. They run after the element is mounted in the DOM, so no special handling is needed.
 
 For server-side path generation (e.g., generating SVG paths in a `+page.server.ts` load function), use the DOM-free subpath:
 

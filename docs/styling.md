@@ -2,8 +2,8 @@
 
 Every element managed by Lisse — whether via the React/Vue components, the React/Vue hooks/composables, or the Svelte action — gets two stable attributes:
 
-- `data-slot="smooth-corners"` — present for the lifetime of the binding.
-- `data-state="pending" | "ready"` — flips to `"ready"` after the first successful clip-path application.
+- `data-slot="smooth-corners"`: present for the lifetime of the binding.
+- `data-state="pending" | "ready"`: flips to `"ready"` after the first successful clip-path application.
 
 Use these to mask any first-frame flicker without sprinkling component-specific class names throughout your CSS:
 

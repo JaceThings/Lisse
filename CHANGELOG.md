@@ -6,41 +6,35 @@ Aggregate release notes across the `@lisse/*` packages. Per-package detail lives
 
 ## 0.4.0
 
-- [@lisse/react](./packages/react/CHANGELOG.md#040) -- Version bump only (lockstep).
-- [@lisse/vue](./packages/vue/CHANGELOG.md#040) -- Version bump only (lockstep).
-- [@lisse/svelte](./packages/svelte/CHANGELOG.md#040) -- Version bump only (lockstep).
-- [@lisse/core](./packages/core/CHANGELOG.md#040) -- Add a `curve` option to `CornerConfig`.
+- [@lisse/core](./packages/core/CHANGELOG.md#040): Add a `curve` option to `CornerConfig`.
 
 ## 0.3.2
 
-- [@lisse/react](./packages/react/CHANGELOG.md#032) -- Adds `shadowStrategy?: "svg" | "box-shadow"` to `<SmoothCorners>`.
-- [@lisse/vue](./packages/vue/CHANGELOG.md#032) -- Version bump only (lockstep).
-- [@lisse/svelte](./packages/svelte/CHANGELOG.md#032) -- Version bump only (lockstep).
-- [@lisse/core](./packages/core/CHANGELOG.md#032) -- Fix horizontal viewport overflow on narrow anchors.
+- [@lisse/react](./packages/react/CHANGELOG.md#032): Adds `shadowStrategy?: "svg" | "box-shadow"` to `<SmoothCorners>`.
+- [@lisse/core](./packages/core/CHANGELOG.md#032): Fix horizontal viewport overflow on narrow anchors.
 
 ## 0.3.1
 
-- [@lisse/react](./packages/react/CHANGELOG.md#031) -- Fixes surfaced by a multi-reviewer audit of the 0.3.0 codebase (all four reviewers agreed):.
-- [@lisse/vue](./packages/vue/CHANGELOG.md#031) -- Fixes surfaced by a multi-reviewer audit (three of four reviewers agreed):.
-- [@lisse/svelte](./packages/svelte/CHANGELOG.md#031) -- Four singleton findings from a multi-reviewer audit:.
-- [@lisse/core](./packages/core/CHANGELOG.md#031) -- Fixes surfaced by a multi-reviewer audit of the 0.3.0 codebase (all four reviewers agreed):.
+- [@lisse/react](./packages/react/CHANGELOG.md#031): Fixes surfaced by a multi-reviewer audit of the 0.3.0 codebase (all four reviewers agreed).
+- [@lisse/vue](./packages/vue/CHANGELOG.md#031): Fixes surfaced by a multi-reviewer audit (three of four reviewers agreed).
+- [@lisse/svelte](./packages/svelte/CHANGELOG.md#031): Four singleton findings from a multi-reviewer audit.
+- [@lisse/core](./packages/core/CHANGELOG.md#031): Fixes surfaced by a multi-reviewer audit of the 0.3.0 codebase (all four reviewers agreed).
 
 ## 0.3.0 (2026-04-24)
 
-- [@lisse/react](./packages/react/CHANGELOG.md#030) -- Add `SlotPropsFor<E>` and make `Slot` generic over the element type it will merge onto.
-- [@lisse/vue](./packages/vue/CHANGELOG.md#030) -- Vue `Slot` now respects `event.preventDefault()` when composing event handlers, matching the React `Slot`.
-- [@lisse/svelte](./packages/svelte/CHANGELOG.md#030) -- Version bump only (lockstep).
-- [@lisse/core](./packages/core/CHANGELOG.md#030) -- Fill in JSDoc on the public utility exports (`toRadians`, `rounded`, `adjacentsByCorner`, `acquirePosition`, `releasePosition`, `getSVGPathFromPathParams`).
+- [@lisse/react](./packages/react/CHANGELOG.md#030): Add `SlotPropsFor<E>` and make `Slot` generic over the element type it will merge onto.
+- [@lisse/vue](./packages/vue/CHANGELOG.md#030): Vue `Slot` now respects `event.preventDefault()` when composing event handlers, matching the React `Slot`.
+- [@lisse/core](./packages/core/CHANGELOG.md#030): Fill in JSDoc on the public utility exports (`toRadians`, `rounded`, `adjacentsByCorner`, `acquirePosition`, `releasePosition`, `getSVGPathFromPathParams`).
 
 ## 0.2.0 (2026-04-24)
 
-- [@lisse/react](./packages/react/CHANGELOG.md#020) -- Add `asChild` prop and a tiny internal `Slot` component.
-- [@lisse/vue](./packages/vue/CHANGELOG.md#020) -- Add `asChild` prop and a tiny internal `Slot` component.
-- [@lisse/svelte](./packages/svelte/CHANGELOG.md#020) -- **Breaking**: corner options are now passed via a single `corners` prop / config field instead of being spread on the component or action.
+- [@lisse/react](./packages/react/CHANGELOG.md#020): Add `asChild` prop and a tiny internal `Slot` component.
+- [@lisse/vue](./packages/vue/CHANGELOG.md#020): Add `asChild` prop and a tiny internal `Slot` component.
+- [@lisse/svelte](./packages/svelte/CHANGELOG.md#020): **Breaking**: corner options are now passed via a single `corners` prop / config field instead of being spread on the component or action.
 
 ## 0.1.0 (2026-04-23)
 
-- [@lisse/react](./packages/react/CHANGELOG.md#010) -- Initial public release of `@lisse/react`: a `<SmoothCorners>` component that renders squircle clip paths with optional inner and outer SVG effects, built on `@lisse/core`.
-- [@lisse/vue](./packages/vue/CHANGELOG.md#010) -- Initial public release of `@lisse/vue`: a `<SmoothCorners>` component and `useSmoothCorners` composable that render squircle clip paths with optional SVG effects, built on `@lisse/core`.
-- [@lisse/svelte](./packages/svelte/CHANGELOG.md#010) -- Initial public release of `@lisse/svelte`: a `<SmoothCorners>` component and `smoothCorners` action that render squircle clip paths with optional SVG effects, built on `@lisse/core`.
-- [@lisse/core](./packages/core/CHANGELOG.md#010) -- Initial public release of `@lisse/core`: framework-agnostic utilities for computing squircle clip paths and SVG effect overlays, shared by the React, Vue, and Svelte adapters.
+- [@lisse/react](./packages/react/CHANGELOG.md#010): Initial public release of `@lisse/react`: a `<SmoothCorners>` component that renders squircle clip paths with optional inner and outer SVG effects, built on `@lisse/core`.
+- [@lisse/vue](./packages/vue/CHANGELOG.md#010): Initial public release of `@lisse/vue`: a `<SmoothCorners>` component and `useSmoothCorners` composable that render squircle clip paths with optional SVG effects, built on `@lisse/core`.
+- [@lisse/svelte](./packages/svelte/CHANGELOG.md#010): Initial public release of `@lisse/svelte`: a `<SmoothCorners>` component and `smoothCorners` action that render squircle clip paths with optional SVG effects, built on `@lisse/core`.
+- [@lisse/core](./packages/core/CHANGELOG.md#010): Initial public release of `@lisse/core`: framework-agnostic utilities for computing squircle clip paths and SVG effect overlays, shared by the React, Vue, and Svelte adapters.
