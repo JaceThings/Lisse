@@ -655,16 +655,27 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
         }
       }
     }
+    // Capture the cursor's final position before clearing the trail —
+    // used below to decide whether the user released inside the
+    // magnetic zone (counts as a drop-in-place re-hang).
+    const lastCursor = trail[trail.length - 1];
     cursorTrailRef.current = [];
 
-    // Snap if the body is currently close to the original slot — but
-    // only after the minimum detach time, so the initial pop can't
+    // Snap if the body is currently close to the original slot OR the
+    // user released while the cursor was inside the magnetic zone.
+    // The magnetic check makes the drop zone match what the user feels
+    // — once the magnet has them, letting go re-hangs in place. Both
+    // gated on the minimum detach time so the initial pop can't
     // accidentally snap back before the word has had time to fall.
     const sinceDetach = performance.now() - detachedAtRef.current;
-    if (
-      sinceDetach >= MIN_DETACH_MS &&
-      Math.hypot(x.get(), y.get()) < SNAP_RADIUS_PX
-    ) {
+    const bodyClose = Math.hypot(x.get(), y.get()) < SNAP_RADIUS_PX;
+    const cursorInMagnet = lastCursor
+      ? Math.hypot(
+          origin.x + origin.w / 2 - lastCursor.x,
+          origin.y + origin.h / 2 - lastCursor.y,
+        ) < MAGNETIC_RADIUS_PX
+      : false;
+    if (sinceDetach >= MIN_DETACH_MS && (bodyClose || cursorInMagnet)) {
       triggerRehang();
     }
   };
