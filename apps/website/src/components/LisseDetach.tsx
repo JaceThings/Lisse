@@ -42,10 +42,17 @@ const WOBBLE_DURATION_S = 0.18;
 // fall to take ~0.6 s, not 1.3 s. Tuned by visual feel: any higher and
 // the word arrives before the bounce reads.
 const GRAVITY_SCALE = 3.6e-3;
-const RESTITUTION = 0.42;
+const RESTITUTION = 0.62;         // applied to our manual bounce override —
+                                  // matter's own restitution gets clobbered
+                                  // by its position-correction step
+const WALL_FRICTION_TANGENT = 0.8; // tangential damping on each bounce
 const BODY_FRICTION = 0.35;       // sliding friction at the floor
 const BODY_FRICTION_AIR = 0.018;  // linear+angular drag in flight
 const BODY_DENSITY = 0.0015;
+// matter.js's default sleepThreshold is 60 frames of low motion. Raise
+// it so a couple of small bounces play out before the body latches —
+// otherwise the first floor contact reads as a hard stop, not a bounce.
+const SLEEP_THRESHOLD_FRAMES = 100;
 
 // Walls are static rectangles 50 px thick, placed flush with the four
 // viewport edges. Thick enough that a high-velocity throw can't tunnel.
@@ -57,6 +64,13 @@ const DETACH_KICK_MIN = 0.7;
 
 const SNAP_RADIUS_PX = 32;        // centre-to-centre for the re-hang test
 const SNAP_SPRING = { type: "spring" as const, stiffness: 420, damping: 22, mass: 0.9 };
+
+// Minimum time the word must spend off the wall before the user can
+// re-hang it by drag. Without this, releasing near origin during the
+// initial pop fires snap-back instantly and the whole detach reads as
+// an accidental click. The user still gets Escape and the auto-rehang
+// timer, which are explicit, so this only gates the proximity snap.
+const MIN_DETACH_MS = 1400;
 
 const AUTO_REHANG_MS = 12_000;
 
@@ -237,6 +251,13 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   const pointerIdRef = useRef<number | null>(null);
   const draggingRef = useRef(false);
   const lastRestStartRef = useRef<number | null>(null);
+  const detachedAtRef = useRef(performance.now());
+  // Cursor history during drag, used to compute the throw velocity at
+  // release. The constraint's soft spring lags behind the cursor, so the
+  // body's intrinsic velocity on release is much smaller than what the
+  // user expects from a flick — we override it with the cursor's actual
+  // recent velocity.
+  const cursorTrailRef = useRef<{ x: number; y: number; t: number }[]>([]);
 
   // Snap-back animation refs (rehang spring on translation + rotation).
   const phaseRef = useRef<"sim" | "snapping">("sim");
@@ -264,10 +285,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
         friction: BODY_FRICTION,
         frictionAir: BODY_FRICTION_AIR,
         density: BODY_DENSITY,
-        // sleepThreshold drops to ~30 frames so the word latches into
-        // a clean rest after a couple of bounces — without this, the
-        // restitution alone leaves it micro-oscillating on the floor.
-        sleepThreshold: 30,
+        sleepThreshold: SLEEP_THRESHOLD_FRAMES,
       },
     );
     // Initial impulse: tiny upward kick + horizontal drift from click offset.
@@ -292,6 +310,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     };
     wallsRef.current = buildWalls();
     Matter.World.add(engine.world, [body, ...wallsRef.current]);
+
 
     const onResize = () => {
       Matter.World.remove(engine.world, wallsRef.current);
@@ -328,7 +347,50 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     if (phaseRef.current === "snapping") return;
 
     const dt = Math.min(deltaMs, MAX_DT_MS);
+    // Capture pre-step velocity so we can detect matter's bounce-eating
+    // and override with our own restitution on hard impacts.
+    const preVx = body.velocity.x;
+    const preVy = body.velocity.y;
     Matter.Engine.update(engine, dt);
+
+    // Manual bounce override. matter.js's solver absorbs most of the
+    // bounce on a hard impact (apparent restitution ~0.13 against the
+    // configured RESTITUTION) because position correction reshuffles
+    // velocity. Detect wall-direction impacts by checking the body's
+    // bounds AND that the pre-step velocity was going INTO that wall,
+    // then reflect with our own restitution.
+    if (!draggingRef.current) {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const b = body.bounds;
+      const postVx = body.velocity.x;
+      const postVy = body.velocity.y;
+      const IMPACT_THRESHOLD = 3; // px/step minimum to trigger a bounce
+      let bx = postVx;
+      let by = postVy;
+      let bounced = false;
+      if (b.max.y >= vh - 1 && preVy > IMPACT_THRESHOLD) {
+        by = -preVy * RESTITUTION;
+        bx = postVx * WALL_FRICTION_TANGENT;
+        bounced = true;
+      } else if (b.min.y <= 1 && preVy < -IMPACT_THRESHOLD) {
+        by = -preVy * RESTITUTION;
+        bx = postVx * WALL_FRICTION_TANGENT;
+        bounced = true;
+      }
+      if (b.min.x <= 1 && preVx < -IMPACT_THRESHOLD) {
+        bx = -preVx * RESTITUTION;
+        if (!bounced) by = postVy * WALL_FRICTION_TANGENT;
+        bounced = true;
+      } else if (b.max.x >= vw - 1 && preVx > IMPACT_THRESHOLD) {
+        bx = -preVx * RESTITUTION;
+        if (!bounced) by = postVy * WALL_FRICTION_TANGENT;
+        bounced = true;
+      }
+      if (bounced) {
+        Matter.Body.setVelocity(body, { x: bx, y: by });
+      }
+    }
 
     // Velocity caps — fixed in matter's per-step units, applied after
     // every integration step (not just before drag). Without this a
@@ -381,6 +443,16 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     snapAnimX.current?.stop();
     snapAnimY.current?.stop();
     snapAnimR.current?.stop();
+    // Wrap rotation to the shortest equivalent angle in (−180°, 180°]
+    // before springing to 0. Without this, a throw that spun the word
+    // 10× makes the snap-back animation unwind every one of those
+    // rotations visually — looks like a comedy fast-rewind.
+    const current = rotate.get();
+    let wrapped = current % 360;
+    if (wrapped > 180) wrapped -= 360;
+    else if (wrapped <= -180) wrapped += 360;
+    if (wrapped !== current) rotate.set(wrapped);
+
     snapAnimX.current = animate(x, 0, SNAP_SPRING);
     snapAnimY.current = animate(y, 0, {
       ...SNAP_SPRING,
@@ -420,6 +492,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     e.currentTarget.setPointerCapture(e.pointerId);
     pointerIdRef.current = e.pointerId;
     draggingRef.current = true;
+    cursorTrailRef.current = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
 
     // Wake the body so the engine integrates the drag impulses immediately.
     Matter.Sleeping.set(body, false);
@@ -457,6 +530,17 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     const constraint = dragConstraintRef.current;
     if (!constraint) return;
     constraint.pointA = { x: e.clientX, y: e.clientY };
+    const now = performance.now();
+    cursorTrailRef.current.push({ x: e.clientX, y: e.clientY, t: now });
+    // Keep ~120 ms of history so a fast flick has enough samples to
+    // average over, but old slow motion doesn't dilute the release.
+    const cutoff = now - 120;
+    while (
+      cursorTrailRef.current.length > 2 &&
+      cursorTrailRef.current[0].t < cutoff
+    ) {
+      cursorTrailRef.current.shift();
+    }
   };
 
   const endDrag = () => {
@@ -470,8 +554,41 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     }
     if (!body) return;
 
-    // Snap if the body is currently close to the original slot.
-    if (Math.hypot(x.get(), y.get()) < SNAP_RADIUS_PX) {
+    // Override the body's velocity with the cursor's release velocity
+    // so a flick translates 1:1 into a throw. matter stores velocity in
+    // px/step, so divide px/s by 60 fps. Capped to MAX_VEL_PER_STEP so
+    // a finger-spike doesn't tunnel through walls.
+    const trail = cursorTrailRef.current;
+    if (trail.length >= 2) {
+      const first = trail[0];
+      const last = trail[trail.length - 1];
+      const sdt = (last.t - first.t) / 1000;
+      if (sdt > 1e-3) {
+        const vxPerSec = (last.x - first.x) / sdt;
+        const vyPerSec = (last.y - first.y) / sdt;
+        const vxStep = vxPerSec / 60;
+        const vyStep = vyPerSec / 60;
+        const sp = Math.hypot(vxStep, vyStep);
+        if (sp > MAX_VEL_PER_STEP) {
+          Matter.Body.setVelocity(body, {
+            x: (vxStep * MAX_VEL_PER_STEP) / sp,
+            y: (vyStep * MAX_VEL_PER_STEP) / sp,
+          });
+        } else {
+          Matter.Body.setVelocity(body, { x: vxStep, y: vyStep });
+        }
+      }
+    }
+    cursorTrailRef.current = [];
+
+    // Snap if the body is currently close to the original slot — but
+    // only after the minimum detach time, so the initial pop can't
+    // accidentally snap back before the word has had time to fall.
+    const sinceDetach = performance.now() - detachedAtRef.current;
+    if (
+      sinceDetach >= MIN_DETACH_MS &&
+      Math.hypot(x.get(), y.get()) < SNAP_RADIUS_PX
+    ) {
       triggerRehang();
     }
   };
