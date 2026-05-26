@@ -65,6 +65,14 @@ const DETACH_KICK_MIN = 0.7;
 const SNAP_RADIUS_PX = 32;        // centre-to-centre for the re-hang test
 const SNAP_SPRING = { type: "spring" as const, stiffness: 420, damping: 22, mass: 0.9 };
 
+// Magnetic snap zone — when the cursor enters this radius around the
+// original slot, the drag-constraint's anchor is biased toward the
+// origin, so the word "itches" home and the user gets a wider, more
+// forgiving drop zone. sqrt (ease-out) falloff: barely felt at the
+// edge, decisively grabby once the user crosses ~halfway in.
+const MAGNETIC_RADIUS_PX = 110;
+const MAGNET_PULL_FACTOR = 0.65;
+
 // Minimum time the word must spend off the wall before the user can
 // re-hang it by drag. Without this, releasing near origin during the
 // initial pop fires snap-back instantly and the whole detach reads as
@@ -407,6 +415,35 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       }
     }
 
+    // Angular magnetism: while held in the magnetic zone, nudge the
+    // body's rotation toward the nearest upright orientation, with
+    // strength scaling like the positional pull. Feels like the slot
+    // wants its word back — the closer you get, the straighter it sits.
+    if (draggingRef.current) {
+      const cx = origin.x + origin.w / 2;
+      const cy = origin.y + origin.h / 2;
+      const dxOrigin = cx - body.position.x;
+      const dyOrigin = cy - body.position.y;
+      const distOrigin = Math.hypot(dxOrigin, dyOrigin);
+      if (distOrigin < MAGNETIC_RADIUS_PX) {
+        const t = 1 - distOrigin / MAGNETIC_RADIUS_PX;
+        const strength = Math.sqrt(t);
+        // Shortest signed delta from body.angle to nearest 2π multiple.
+        const twoPi = Math.PI * 2;
+        let delta = body.angle % twoPi;
+        if (delta > Math.PI) delta -= twoPi;
+        else if (delta < -Math.PI) delta += twoPi;
+        // Damped angular spring: ω' = −k·δ − c·ω, blended in by
+        // `strength` so it kicks in smoothly at the magnetic edge.
+        // Tuned by feel: at hold near origin the word reaches upright
+        // in roughly half a second without visible overshoot.
+        const k = 0.045;
+        const c = 0.32;
+        const angAcc = (-k * delta - c * body.angularVelocity) * strength;
+        Matter.Body.setAngularVelocity(body, body.angularVelocity + angAcc);
+      }
+    }
+
     // Velocity caps — fixed in matter's per-step units, applied after
     // every integration step (not just before drag). Without this a
     // fast cursor flick whips the body into hundreds of rotations/sec.
@@ -549,7 +586,26 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     if (pointerIdRef.current !== e.pointerId) return;
     const constraint = dragConstraintRef.current;
     if (!constraint) return;
-    constraint.pointA = { x: e.clientX, y: e.clientY };
+
+    // Magnetic bias for the constraint anchor when the cursor is near
+    // the original slot. The RAW cursor position still feeds the trail
+    // (so release velocity reflects what the user actually did) — only
+    // the constraint's pointA gets shifted home-ward.
+    const originCx = origin.x + origin.w / 2;
+    const originCy = origin.y + origin.h / 2;
+    const dx = originCx - e.clientX;
+    const dy = originCy - e.clientY;
+    const dist = Math.hypot(dx, dy);
+    let anchorX = e.clientX;
+    let anchorY = e.clientY;
+    if (dist < MAGNETIC_RADIUS_PX && dist > 0) {
+      const t = 1 - dist / MAGNETIC_RADIUS_PX;
+      const pull = MAGNET_PULL_FACTOR * Math.sqrt(t);
+      anchorX += dx * pull;
+      anchorY += dy * pull;
+    }
+    constraint.pointA = { x: anchorX, y: anchorY };
+
     const now = performance.now();
     cursorTrailRef.current.push({ x: e.clientX, y: e.clientY, t: now });
     // Keep ~120 ms of history so a fast flick has enough samples to
