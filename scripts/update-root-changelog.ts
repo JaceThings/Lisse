@@ -199,6 +199,10 @@ function render(entries: PackageVersionEntry[]): string {
   for (const version of versions) {
     const date = RELEASE_DATES[version];
     const header = date ? `## ${version} (${date})` : `## ${version}`;
+    // Capture position before the header so a lockstep-only version can be
+    // rolled back to exactly the pre-header state, regardless of how many
+    // lines the header preamble grows to.
+    const sectionStart = out.length;
     out.push(header);
     out.push("");
 
@@ -219,9 +223,8 @@ function render(entries: PackageVersionEntry[]): string {
       out.push(`- [${entry.packageName}](${link}): ${summary}`);
       wrote += 1;
     }
-    // Drop the whole version section if every package was lockstep-only.
     if (wrote === 0) {
-      out.splice(out.length - 2, 2);
+      out.length = sectionStart;
       continue;
     }
     out.push("");
