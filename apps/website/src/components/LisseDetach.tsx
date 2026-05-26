@@ -742,21 +742,18 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
 
 // ---------------------------------------------------------------------------
 
-/** Chalky outline of where "lisse" used to hang. Sits over the
- *  visibility:hidden original so the heading row reserves its width. */
+/** Faded "hole" left in the heading slot after the word has popped
+ *  off. Sits over the visibility:hidden original so the heading row
+ *  reserves its width. Colour + font live in global.css (.lisse-ghost)
+ *  so the display-p3 fallback chain can resolve through the cascade. */
 export function LisseGhost() {
   return (
     <span
       aria-hidden
+      className="lisse-ghost"
       style={{
         position: "absolute",
         inset: 0,
-        color: "transparent",
-        WebkitTextStroke: "0.5px rgba(0, 0, 0, 0.18)",
-        textShadow:
-          "0 1px 0 rgba(255, 255, 255, 0.6), 0 0 2px rgba(0, 0, 0, 0.06)",
-        mixBlendMode: "multiply",
-        filter: "blur(0.15px)",
         pointerEvents: "none",
       }}
     >
