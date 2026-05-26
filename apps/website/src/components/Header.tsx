@@ -1,5 +1,6 @@
 import { Divider } from "./Divider.tsx";
 import { Stagger } from "./Stagger.tsx";
+import { playLissePronunciation } from "../lib/sounds.ts";
 
 // Definitions stay as <p> not <dl>: the visible "1, 2, b, 3" numbering is
 // part of the prose, so <dt>/<dd> would announce the leading digit twice.
@@ -23,6 +24,7 @@ export function Header({ staggerFrom }: HeaderProps) {
             <h1
               id="lisse-heading"
               className="text-[16px] leading-none font-[550] tracking-[-0.25px]"
+              onClick={playLissePronunciation}
             >
               lisse
             </h1>
