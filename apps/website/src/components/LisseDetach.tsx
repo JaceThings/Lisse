@@ -173,6 +173,31 @@ export function useLisseDetach() {
     };
   };
 
+  const fireDetach = useCallback(
+    (clientX: number) => {
+      // Snap rotation to zero before measuring so a residual wobble
+      // doesn't bake a tilt into the floating clone's start frame.
+      wobble.stop();
+      wobble.set({ rotate: 0, x: 0 });
+      const el = headingRef.current;
+      if (!el) return;
+      const origin = measure(el);
+      const offsetX =
+        clamp((clientX - (origin.x + origin.w / 2)) / (origin.w / 2), -1, 1);
+      // Direction follows offset; magnitude scales but stays above
+      // DETACH_KICK_MIN so a perfectly-centred click still drifts.
+      const kickMag = lerp(DETACH_KICK_MIN, DETACH_KICK_MAX, Math.abs(offsetX));
+      const kickSign = offsetX === 0 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(offsetX);
+      setDetach({
+        origin,
+        initialVel: { x: kickMag * kickSign, y: DETACH_INITIAL_VY },
+      });
+      cancelTimers();
+      countRef.current = 0;
+    },
+    [wobble],
+  );
+
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLHeadingElement>) => {
       // While detached the heading is an empty hole — clicks there must
@@ -181,30 +206,20 @@ export function useLisseDetach() {
       playLissePronunciation();
       if (reduced) return;
 
+      // Cmd/Ctrl + click bypasses the 22-click threshold and detaches
+      // immediately — a debug-and-delight shortcut for people who
+      // already know about the easter egg.
+      if (e.metaKey || e.ctrlKey) {
+        fireDetach(e.clientX);
+        return;
+      }
+
       const next = countRef.current + 1;
       countRef.current = next;
       scheduleDecay();
 
       if (next >= THRESHOLD) {
-        // Snap rotation to zero before measuring so a residual wobble
-        // doesn't bake a tilt into the floating clone's start frame.
-        wobble.stop();
-        wobble.set({ rotate: 0, x: 0 });
-        const el = headingRef.current;
-        if (!el) return;
-        const origin = measure(el);
-        const offsetX =
-          clamp((e.clientX - (origin.x + origin.w / 2)) / (origin.w / 2), -1, 1);
-        // Direction follows offset; magnitude scales but stays above
-        // DETACH_KICK_MIN so a perfectly-centred click still drifts.
-        const kickMag = lerp(DETACH_KICK_MIN, DETACH_KICK_MAX, Math.abs(offsetX));
-        const kickSign = offsetX === 0 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(offsetX);
-        setDetach({
-          origin,
-          initialVel: { x: kickMag * kickSign, y: DETACH_INITIAL_VY },
-        });
-        cancelTimers();
-        countRef.current = 0;
+        fireDetach(e.clientX);
         return;
       }
 
@@ -219,7 +234,7 @@ export function useLisseDetach() {
         });
       }
     },
-    [reduced, detach, scheduleDecay, wobble],
+    [reduced, detach, scheduleDecay, wobble, fireDetach],
   );
 
   const onRehang = useCallback(() => setDetach(null), []);
