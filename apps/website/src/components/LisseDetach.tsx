@@ -461,19 +461,24 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     // Wrap rotation to the shortest equivalent angle in (−180°, 180°]
     // before springing to 0. Without this, a throw that spun the word
     // 10× makes the snap-back animation unwind every one of those
-    // rotations visually — looks like a comedy fast-rewind.
+    // rotations visually. AND pass velocity: 0 to the rotation spring:
+    // framer-motion infers initial spring velocity from the motion
+    // value's recent change rate. If the body was spinning fast at
+    // rehang time, that inferred velocity launches the spring in the
+    // wrong direction at thousands of deg/s before it can recover.
     const current = rotate.get();
     let wrapped = current % 360;
     if (wrapped > 180) wrapped -= 360;
     else if (wrapped <= -180) wrapped += 360;
     if (wrapped !== current) rotate.set(wrapped);
 
-    snapAnimX.current = animate(x, 0, SNAP_SPRING);
+    snapAnimX.current = animate(x, 0, { ...SNAP_SPRING, velocity: 0 });
     snapAnimY.current = animate(y, 0, {
       ...SNAP_SPRING,
+      velocity: 0,
       onComplete: () => onRehang(),
     });
-    snapAnimR.current = animate(rotate, 0, SNAP_SPRING);
+    snapAnimR.current = animate(rotate, 0, { ...SNAP_SPRING, velocity: 0 });
   }, [x, y, rotate, onRehang]);
 
   // Auto-rehang after AUTO_REHANG_MS of continuous sleep.
