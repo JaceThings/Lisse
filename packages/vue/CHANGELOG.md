@@ -1,20 +1,5 @@
 # @lisse/vue
 
-## 0.4.0
-
-### Patch Changes
-
-- Updated dependencies [671a3f3]
-  - @lisse/core@0.4.0
-
-## 0.3.2
-
-### Patch Changes
-
-- Updated dependencies [fd05b4a]
-- Updated dependencies [5c137a4]
-  - @lisse/core@0.3.2
-
 ## 0.3.1
 
 ### Patch Changes
@@ -32,22 +17,11 @@
   - `@lisse/core` `createDropShadow` sets `color-interpolation-filters="sRGB"` on its filter element, matching `svg-effects.ts`. Removes a blur-tint inconsistency across user agents.
   - Drop-shadow handle is created lazily across the React, Vue, and Svelte adapters, and skipped entirely for consumers using only border effects. Saves two DOM nodes and one `isolation:isolate` mutation per instance.
 
-- Updated dependencies [d2d78ba]
-- Updated dependencies [069b036]
-- Updated dependencies [60745a2]
-- Updated dependencies [a37f53e]
-  - @lisse/core@0.3.1
-
 ## 0.3.0
 
 ### Minor Changes
 
 - 6d8cd18: Vue `Slot` now respects `event.preventDefault()` when composing event handlers, matching the React `Slot`. The parent handler is skipped if the child handler called `preventDefault()`. Previously Vue's `cloneVNode(vnode, attrs)` concatenated listeners into an array that always ran both; there was no way for the child to opt out of the parent handler. Error messages are also now per-case (zero children / multiple / text-only / comment-only) instead of a single generic `"exactly one element child"`.
-
-### Patch Changes
-
-- Updated dependencies [6d8cd18]
-  - @lisse/core@0.3.0
 
 ## 0.2.0
 

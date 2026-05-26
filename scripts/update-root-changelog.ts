@@ -81,14 +81,11 @@ function parseChangelog(markdown: string): Array<{ version: string; body: string
 
 /**
  * Produce a concise one-line summary from a per-package changelog body for one
- * version. Strategy:
- *
- * - If the body contains only `Updated dependencies` patch notes, return
- *   "Version bump only (lockstep).".
- * - Otherwise take the first bullet that is not an `Updated dependencies`
- *   entry, drop its changeset-hash prefix, and return its first sentence.
+ * version, or `null` for a lockstep-only entry (no published-facing changes
+ * beyond a transitive `@lisse/core` bump). The caller drops `null` rows from
+ * the aggregate view.
  */
-function summariseBody(body: string): string {
+function summariseBody(body: string): string | null {
   // Collect top-level bullets (lines beginning with "- " at column 0).
   const lines = body.split("\n");
   const bullets: string[] = [];
@@ -106,9 +103,7 @@ function summariseBody(body: string): string {
 
   const meaningful = bullets.filter((b) => !/^-\s+Updated dependencies/i.test(b));
 
-  if (meaningful.length === 0) {
-    return "Version bump only (lockstep).";
-  }
+  if (meaningful.length === 0) return null;
 
   const first = meaningful[0];
   // Strip leading "- ", optional `<hash>:` prefix, trim.
@@ -126,7 +121,9 @@ function summariseBody(body: string): string {
   const sentenceMatch = flat.match(/^(.+?[.!?])(?:\s+[A-Z`]|\s*$)/);
   let summary = sentenceMatch ? sentenceMatch[1] : flat;
 
-  // Guarantee terminal punctuation.
+  // Trailing colon means the bullet introduced a sublist — replace with a
+  // period so the aggregate reads as a sentence rather than a dangling lede.
+  summary = summary.replace(/:$/, ".");
   if (!/[.!?]$/.test(summary)) summary += ".";
   return summary;
 }
@@ -209,15 +206,23 @@ function render(entries: PackageVersionEntry[]): string {
       .slice()
       .sort((a, b) => comparePackages(a.packageName, b.packageName));
 
+    let wrote = 0;
     for (const entry of packages) {
+      const summary = summariseBody(entry.body);
+      if (summary === null) continue;
       const rel = entry.packageDir
         .replace(repoRoot, "")
         .replace(/^\/+/, "")
         .split(/[/\\]/)
         .join("/");
       const link = `./${rel}/CHANGELOG.md#${versionAnchor(entry.version)}`;
-      const summary = summariseBody(entry.body);
-      out.push(`- [${entry.packageName}](${link}) -- ${summary}`);
+      out.push(`- [${entry.packageName}](${link}): ${summary}`);
+      wrote += 1;
+    }
+    // Drop the whole version section if every package was lockstep-only.
+    if (wrote === 0) {
+      out.splice(out.length - 2, 2);
+      continue;
     }
     out.push("");
   }

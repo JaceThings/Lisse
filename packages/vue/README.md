@@ -17,8 +17,8 @@ npm install @lisse/vue
 
 ## Which API Should I Use?
 
-- **`SmoothCorners` component** -- Renders its own element with smooth corners applied. Handles effects and wrapper creation automatically. Use this when building new UI or when you want a drop-in replacement for a `<div>`.
-- **`useSmoothCorners` composable** -- Applies smooth corners to an existing element via a template ref. Use this when you already have an element and don't want to change your DOM structure.
+- **`useSmoothCorners` composable**: applies smooth corners to an existing element via a template ref. Use this when you already have an element and don't want to change your DOM structure.
+- **`SmoothCorners` component**: renders its own element with smooth corners applied. Handles effects and wrapper creation automatically. Use this when building new UI or when you want a drop-in replacement for a `<div>`.
 
 ## Quick Start
 
@@ -162,12 +162,12 @@ A ready-to-use component that handles clip-path, resize observation, and effects
 |------|------|---------|-------------|
 | `as` | `keyof HTMLElementTagNameMap \| keyof SVGElementTagNameMap` | `"div"` | The HTML element tag to render |
 | `asChild` | `boolean` | `false` | If `true`, clone the single default-slot child and apply SmoothCorners to it instead of rendering its own element. |
-| `corners` | `SmoothCornerOptions` | -- | Corner configuration: `{ radius, smoothing?, preserveSmoothing? }` or `{ topLeft, topRight, bottomRight, bottomLeft }`. |
-| `innerBorder` | `BorderConfig` | -- | Inner border effect |
-| `outerBorder` | `BorderConfig` | -- | Outer border effect |
-| `middleBorder` | `BorderConfig` | -- | Middle border effect (centred on shape edge) |
-| `innerShadow` | `ShadowConfig \| ShadowConfig[]` | -- | Inner shadow effect (single or array) |
-| `shadow` | `ShadowConfig \| ShadowConfig[]` | -- | Drop shadow effect (single or array) |
+| `corners` | `SmoothCornerOptions` |  | Corner configuration: `{ radius, smoothing?, preserveSmoothing? }` or `{ topLeft, topRight, bottomRight, bottomLeft }`. |
+| `innerBorder` | `BorderConfig` |  | Inner border effect |
+| `outerBorder` | `BorderConfig` |  | Outer border effect |
+| `middleBorder` | `BorderConfig` |  | Middle border effect (centred on shape edge) |
+| `innerShadow` | `ShadowConfig \| ShadowConfig[]` |  | Inner shadow effect (single or array) |
+| `shadow` | `ShadowConfig \| ShadowConfig[]` |  | Drop shadow effect (single or array) |
 | `autoEffects` | `boolean` | `true` | Automatically extract CSS border and box-shadow as SVG effects |
 
 All other attributes and event listeners are forwarded to the rendered element.
@@ -349,7 +349,7 @@ Pass a `GradientConfig` object as the border `color` to render a gradient border
 
 ## Auto Effects (enabled by default)
 
-Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect props -- extra work that's easy to forget.
+Lisse clips your element with `clip-path`, which slices through CSS `border` and `box-shadow`. Normally that means you have to remove your CSS styles and rewrite them as SVG-based effect props, which is extra work that's easy to forget.
 
 **Auto effects removes that step.** On mount, the library automatically:
 
@@ -358,7 +358,7 @@ Lisse clips your element with `clip-path`, which slices through CSS `border` and
 3. Strips the CSS properties so they don't get clipped
 4. Restores the original CSS on unmount (cleanup)
 
-This is enabled by default -- existing CSS borders and shadows just work.
+This is enabled by default, so existing CSS borders and shadows just work.
 
 ```vue
 <!-- The CSS border is automatically converted to an SVG inner border -->
@@ -404,7 +404,7 @@ With the composable:
 useSmoothCorners(el, { radius: 24 }, { autoEffects: false });
 ```
 
-When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs -- the original pre-autoEffects behaviour.
+When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs (the original pre-autoEffects behaviour).
 
 ### How CSS properties are mapped
 
@@ -422,7 +422,7 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 |---|---|
 | Per-side borders | Only the top border is read. `getComputedStyle` returns per-side values but a squircle path has no distinct sides, so all four sides are stripped and only the top edge values are used. |
 | `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
-| `inset`, `outset` border styles | Not replicated -- rendered as solid. These styles rely on rectangular per-side shading that has no meaningful squircle equivalent. |
+| `inset`, `outset` border styles | Not replicated; rendered as solid. These styles rely on rectangular per-side shading that has no meaningful squircle equivalent. |
 | Multiple `box-shadow` layers | All shadow layers are extracted and rendered. Each outer shadow becomes a `shadow` entry and each inset shadow becomes an `innerShadow` entry. |
 | `border-image` | Not detected. `getComputedStyle` does not expose `border-image` in a way that can be reliably parsed, so it may be misread as a solid border and stripped incorrectly. |
 | Gradient borders (CSS) | CSS gradient borders (`border-image`) cannot be auto-extracted. Use the `innerBorder` or `outerBorder` prop with a `GradientConfig` color instead. |
@@ -430,16 +430,16 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 
 **Behavioral notes:**
 
-- **One-time extraction** -- CSS is read once on mount. Use explicit effect props for dynamic values.
-- **`!important` rules** -- inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **CSS transitions** -- `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
-- **`double` minimum width** -- `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
-- **`groove` / `ridge` approximation** -- the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
-- **Wrapper div** -- The `SmoothCorners` component renders a wrapper `<div>` with `position: relative` when effects are active (either via explicit props or `autoEffects`). When no effects are needed, the wrapper is omitted. This can affect flex/grid layouts and CSS child selectors. Use the `useSmoothCorners` composable to avoid the wrapper.
+- **One-time extraction**: CSS is read once on mount. Use explicit effect props for dynamic values.
+- **`double` minimum width**: `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
+- **CSS transitions**: `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
+- **`!important` rules**: inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
+- **`groove` / `ridge` approximation**: the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
+- **Wrapper div**: the `SmoothCorners` component renders a wrapper `<div>` with `position: relative` when effects are active (either via explicit props or `autoEffects`). When no effects are needed, the wrapper is omitted. This can affect flex/grid layouts and CSS child selectors. Use the `useSmoothCorners` composable to avoid the wrapper.
 
 ## CSS Borders and Shadows
 
-Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` props directly -- these render as SVG overlays that correctly follow the squircle path.
+Lisse works by applying a CSS `clip-path` to the element. This means CSS `border`, `box-shadow`, and `outline` get clipped and will look broken at the corners. With `autoEffects` enabled (the default), CSS borders and box-shadows are automatically converted to SVG equivalents. You can also use the library's `innerBorder`, `outerBorder`, `innerShadow`, and `shadow` props directly. These render as SVG overlays that correctly follow the squircle path.
 
 ## Effects Configuration
 
@@ -448,7 +448,7 @@ Lisse works by applying a CSS `clip-path` to the element. This means CSS `border
 | Property | Type | Description |
 |----------|------|-------------|
 | `width` | `number` | Border width in pixels |
-| `color` | `string \| GradientConfig` | Border color -- a hex string or a gradient configuration |
+| `color` | `string \| GradientConfig` | Border color: a hex string or a gradient configuration |
 | `opacity` | `number` | Border opacity (0-1) |
 | `style` | `BorderStyle` | Border style: `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, or `"ridge"`. Default: `"solid"` |
 | `dash` | `number` | Custom dash length for dashed/dotted styles |
@@ -478,7 +478,7 @@ Lisse works by applying a CSS `clip-path` to the element. This means CSS `border
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `type` | `"linear"` | Discriminator -- must be `"linear"` |
+| `type` | `"linear"` | Discriminator. Must be `"linear"` |
 | `angle` | `number` | Angle in degrees (CSS convention). Default: `0` (bottom to top) |
 | `stops` | `GradientStop[]` | Array of color stops |
 
@@ -486,7 +486,7 @@ Lisse works by applying a CSS `clip-path` to the element. This means CSS `border
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `type` | `"radial"` | Discriminator -- must be `"radial"` |
+| `type` | `"radial"` | Discriminator. Must be `"radial"` |
 | `cx` | `number` | Horizontal center (0-1 relative). Default: `0.5` |
 | `cy` | `number` | Vertical center (0-1 relative). Default: `0.5` |
 | `r` | `number` | Radius (0-1 relative). Default: `0.5` |

@@ -73,17 +73,17 @@ Math reference: [`docs/curves.md`](docs/curves.md).
 
 ## Documentation
 
-- [Configuration](docs/configuration.md) — Per-corner config, which API to use, framework usage
-- [Effects](docs/effects.md) — Borders, shadows, gradients, auto-effects
-- [Styling hooks](docs/styling.md) — `data-slot` / `data-state` attributes
-- [Gotchas](docs/gotchas.md) — `clip-path` quirks: focus outlines, overflow, scrollbars
-- [SSR](docs/ssr.md) — Server-side rendering and edge runtimes
-- [Performance](docs/performance.md) — Benchmarks and cache architecture
-- [API reference](docs/api.md) — Full export table
-- [Internals](docs/internals.md) — How borders, shadows, and resize handling work
-- [Browser support](docs/browser-support.md) — Compatibility matrix
-- [Migration](MIGRATION.md) — Upgrading between versions
-- [Curves](docs/curves.md) — Math reference for each curve type
+- [API reference](docs/api.md): full export table
+- [Migration](MIGRATION.md): upgrading between versions
+- [SSR](docs/ssr.md): server-side rendering and edge runtimes
+- [Curves](docs/curves.md): math reference for each curve type
+- [Browser support](docs/browser-support.md): compatibility matrix
+- [Styling hooks](docs/styling.md): `data-slot` / `data-state` attributes
+- [Effects](docs/effects.md): borders, shadows, gradients, auto-effects
+- [Performance](docs/performance.md): benchmarks and cache architecture
+- [Internals](docs/internals.md): how borders, shadows, and resize handling work
+- [Gotchas](docs/gotchas.md): `clip-path` quirks like focus outlines, overflow, scrollbars
+- [Configuration](docs/configuration.md): per-corner config, which API to use, framework usage
 
 ## Contributing
 
