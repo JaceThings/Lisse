@@ -1,6 +1,7 @@
+import { motion } from "framer-motion";
 import { Divider } from "./Divider.tsx";
 import { Stagger } from "./Stagger.tsx";
-import { playLissePronunciation } from "../lib/sounds.ts";
+import { LisseFloater, LisseGhost, useLisseDetach } from "./LisseDetach.tsx";
 
 // Definitions stay as <p> not <dl>: the visible "1, 2, b, 3" numbering is
 // part of the prose, so <dt>/<dd> would announce the leading digit twice.
@@ -12,6 +13,8 @@ interface HeaderProps {
 }
 
 export function Header({ staggerFrom }: HeaderProps) {
+  const { detach, headingRef, wobble, handleClick, onRehang } = useLisseDetach();
+  const detached = detach !== null;
   return (
     <header className="flex w-full flex-col gap-5">
       <div
@@ -21,13 +24,19 @@ export function Header({ staggerFrom }: HeaderProps) {
       >
         <Stagger index={staggerFrom}>
           <div className="flex items-end gap-2 whitespace-nowrap text-text-primary">
-            <h1
+            <motion.h1
+              ref={headingRef}
               id="lisse-heading"
-              className="text-[16px] leading-none font-[550] tracking-[-0.25px]"
-              onClick={playLissePronunciation}
+              className="relative text-[16px] leading-none font-[550] tracking-[-0.25px]"
+              onClick={handleClick}
+              animate={wobble}
+              style={{ transformOrigin: "50% 100%" }}
             >
-              lisse
-            </h1>
+              <span style={detached ? { visibility: "hidden" } : undefined}>
+                lisse
+              </span>
+              {detached ? <LisseGhost /> : null}
+            </motion.h1>
             <p className="text-[14px] leading-none font-[450] tracking-[-0.25px]">
               <span aria-hidden>
                 /lēs/ <em className="italic">adj.</em> [F.{" "}
@@ -71,6 +80,13 @@ export function Header({ staggerFrom }: HeaderProps) {
       <Stagger index={staggerFrom + 5}>
         <Divider />
       </Stagger>
+      {detach ? (
+        <LisseFloater
+          origin={detach.origin}
+          initialVel={detach.initialVel}
+          onRehang={onRehang}
+        />
+      ) : null}
     </header>
   );
 }

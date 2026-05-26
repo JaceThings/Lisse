@@ -21,12 +21,14 @@
     "@tailwindcss/vite": "^4.3.0",
     "agentation": "^3.0.2",
     "framer-motion": "^12.38.0",
+    "matter-js": "^0.20.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.15.1",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
+    "@types/matter-js": "^0.20.2",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
