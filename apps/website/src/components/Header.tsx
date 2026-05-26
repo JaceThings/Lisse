@@ -29,6 +29,14 @@ export function Header({ staggerFrom }: HeaderProps) {
               id="lisse-heading"
               className="relative text-[16px] leading-none font-[550] tracking-[-0.25px]"
               onClick={handleClick}
+              // Suppress the browser's word-select-on-multi-click while
+              // leaving single-click + drag-select working. detail is 1
+              // for the first click, 2/3/... for rapid follow-ups —
+              // preventDefault on those kills the highlight box without
+              // touching the cancellable single-click behaviour.
+              onMouseDown={(e) => {
+                if (e.detail > 1) e.preventDefault();
+              }}
               animate={wobble}
               style={{ transformOrigin: "50% 100%" }}
             >
