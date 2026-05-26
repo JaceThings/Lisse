@@ -8,7 +8,7 @@
     "predev": "tsx scripts/build-llms-full.ts",
     "dev": "vite",
     "prebuild": "tsx scripts/build-llms-full.ts",
-    "build": "tsc -b && vite build && tsx scripts/prerender-routes.ts",
+    "build": "tsc -b && vite build && tsx scripts/prerender-routes.ts && tsx scripts/write-version.ts",
     "preview": "vite preview --port 4173 --host",
     "typecheck": "tsc --noEmit",
     "build:llms": "tsx scripts/build-llms-full.ts"

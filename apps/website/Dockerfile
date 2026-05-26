@@ -39,6 +39,12 @@ COPY packages packages
 COPY apps/website apps/website
 COPY README.md ./
 
+# Commit SHA for the build's version.json (scripts/write-version.ts). Railway
+# provides RAILWAY_GIT_COMMIT_SHA and passes it as a build arg to declared
+# ARGs; a declared ARG is in scope as an env var for the RUN below. Unset
+# locally -> version.json falls back to "dev".
+ARG RAILWAY_GIT_COMMIT_SHA
+
 # Build the workspace packages so the website resolves @lisse/react via
 # their `dist/` outputs, then build the website itself.
 RUN pnpm -r --filter "./packages/*" build \
