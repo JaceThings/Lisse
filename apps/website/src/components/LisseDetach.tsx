@@ -62,7 +62,7 @@ const DETACH_INITIAL_VY = -3;     // px / step ≈ −180 px/s at 60 fps
 const DETACH_KICK_MAX = 1.5;      // px / step
 const DETACH_KICK_MIN = 0.7;
 
-const SNAP_RADIUS_PX = 32;        // centre-to-centre for the re-hang test
+const SNAP_RADIUS_PX = 22;        // centre-to-centre for the re-hang test
 const SNAP_SPRING = { type: "spring" as const, stiffness: 420, damping: 22, mass: 0.9 };
 
 // Magnetic snap zone — when the cursor enters this radius around the
@@ -70,7 +70,7 @@ const SNAP_SPRING = { type: "spring" as const, stiffness: 420, damping: 22, mass
 // origin, so the word "itches" home and the user gets a wider, more
 // forgiving drop zone. sqrt (ease-out) falloff: barely felt at the
 // edge, decisively grabby once the user crosses ~halfway in.
-const MAGNETIC_RADIUS_PX = 110;
+const MAGNETIC_RADIUS_PX = 70;
 const MAGNET_PULL_FACTOR = 0.65;
 
 // Minimum time the word must spend off the wall before the user can
