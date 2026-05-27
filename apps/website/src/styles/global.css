@@ -104,6 +104,15 @@ h3 {
   ) 16 15, default;
 }
 
+/* While the word is off the wall the heading is an empty ghost — the
+ * speaker cursor would invite a click that does nothing (handleClick
+ * already short-circuits when detached). Drop back to the default.
+ * Scoped under `[data-platform="mac"]` so its specificity beats the
+ * speaker-cursor block above on its own merits, not on cascade order. */
+[data-platform="mac"] #lisse-heading[data-detached] {
+  cursor: default;
+}
+
 /* Ghost lisse — the faded "hole" shown in the heading slot after the
  * word has popped off. The display-p3 declaration comes second so it
  * wins on wide-gamut displays; sRGB browsers fall through to the rgba

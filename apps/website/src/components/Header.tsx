@@ -27,6 +27,7 @@ export function Header({ staggerFrom }: HeaderProps) {
             <motion.h1
               ref={headingRef}
               id="lisse-heading"
+              data-detached={detached || undefined}
               className="relative text-[16px] leading-none font-[550] tracking-[-0.25px]"
               onClick={handleClick}
               // Suppress the browser's word-select-on-multi-click while
