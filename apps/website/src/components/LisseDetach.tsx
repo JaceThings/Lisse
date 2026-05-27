@@ -217,6 +217,20 @@ function toScreenSpace(dx: number, dy: number): { x: number; y: number } {
   return { x: dx * ca + dy * sa, y: -dx * sa + dy * ca };
 }
 
+/** Viewport the floating clone actually fills. The clone is position:fixed,
+ *  so it spans the *layout* viewport (the initial containing block), but
+ *  `window.innerHeight` reports the *visual* viewport — shorter by the
+ *  mobile browser's toolbar when it's showing. Using innerHeight put the
+ *  floor a toolbar's-height (~80 px) above the real bottom; clientHeight is
+ *  the layout viewport the fixed element bottoms out against. */
+function viewportSize() {
+  const d = document.documentElement;
+  return {
+    w: d.clientWidth || window.innerWidth,
+    h: d.clientHeight || window.innerHeight,
+  };
+}
+
 // ----- rAF helpers ---------------------------------------------------------
 // Module-level so they aren't recreated each frame; pure side effects on
 // the matter body so they can be unit-tested in isolation later.
@@ -482,6 +496,21 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
 
   // Fixed-timestep accumulator (see FIXED_DT_MS). Persisted across frames.
   const accumulatorRef = useRef(0);
+  // Previous + current physics state, kept so the rendered transform can be
+  // interpolated by the accumulator's leftover fraction. Without this the
+  // fixed 60 Hz step visibly judders on 120 Hz displays (rAF fires twice
+  // per step, so every other frame repeats a position). Seeded to the body's
+  // start pose so the first frame doesn't lerp from the origin.
+  const seedState = {
+    x: origin.x + origin.w / 2,
+    y: origin.y + origin.h / 2,
+    angle: 0,
+  };
+  const prevStateRef = useRef({ ...seedState });
+  const curStateRef = useRef({ ...seedState });
+  // Cached viewport, refreshed on resize/orientation rather than measured
+  // every frame (reading clientHeight forces a layout).
+  const vpRef = useRef(viewportSize());
 
   // Snap-back animation refs (rehang spring on translation + rotation).
   const phaseRef = useRef<"sim" | "snapping">("sim");
@@ -517,8 +546,10 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     bodyRef.current = body;
 
     const buildWalls = () => {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      const vp = viewportSize();
+      vpRef.current = vp;
+      const vw = vp.w;
+      const vh = vp.h;
       const t = WALL_THICKNESS;
       const opts: Matter.IChamferableBodyDefinition = {
         isStatic: true,
@@ -545,9 +576,13 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       Matter.Sleeping.set(body, false);
     };
     window.addEventListener("resize", onResize);
+    // visualViewport fires on toolbar show/hide and pinch-zoom, which
+    // window.resize misses on mobile — keep the floor pinned to the bottom.
+    window.visualViewport?.addEventListener("resize", onResize);
 
     return () => {
       window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
       if (dragConstraintRef.current) {
         Matter.World.remove(engine.world, dragConstraintRef.current);
       }
@@ -651,30 +686,44 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
 
     // Advance the solver in whole 1/60 s steps. Clamping the frame and the
     // substep count keeps a long stall from snowballing into a blow-up.
+    // Each step rolls current → previous so the render can interpolate.
     accumulatorRef.current += Math.min(deltaMs, MAX_FRAME_MS);
+    const vp = vpRef.current;
     let steps = 0;
     while (accumulatorRef.current >= FIXED_DT_MS && steps < MAX_SUBSTEPS) {
+      prevStateRef.current = curStateRef.current;
       const preVx = body.velocity.x;
       const preVy = body.velocity.y;
       Matter.Engine.update(engine, FIXED_DT_MS);
       if (!dragging) {
-        applyManualBounce(body, preVx, preVy, window.innerWidth, window.innerHeight);
+        applyManualBounce(body, preVx, preVy, vp.w, vp.h);
       } else {
         applyAngularMagnet(body, origin);
       }
       capVelocities(body);
+      curStateRef.current = {
+        x: body.position.x,
+        y: body.position.y,
+        angle: body.angle,
+      };
       accumulatorRef.current -= FIXED_DT_MS;
       steps++;
     }
     if (steps === MAX_SUBSTEPS) accumulatorRef.current = 0;
 
-    // Translate body world position into the motion values used by the
-    // rendered span. (x, y) is offset from the heading's original centre.
+    // Render the pose interpolated between the last two physics states by
+    // the accumulator's leftover fraction — this is what makes the motion
+    // read as butter-smooth regardless of the display's refresh rate.
+    // (x, y) is offset from the heading's original centre. Per-step angle
+    // deltas are tiny, so a plain lerp needs no shortest-path wrap.
+    const a = clamp(accumulatorRef.current / FIXED_DT_MS, 0, 1);
+    const p = prevStateRef.current;
+    const c = curStateRef.current;
     const cx0 = origin.x + origin.w / 2;
     const cy0 = origin.y + origin.h / 2;
-    x.set(body.position.x - cx0);
-    y.set(body.position.y - cy0);
-    rotate.set((body.angle * 180) / Math.PI);
+    x.set(lerp(p.x, c.x, a) - cx0);
+    y.set(lerp(p.y, c.y, a) - cy0);
+    rotate.set((lerp(p.angle, c.angle, a) * 180) / Math.PI);
 
     // Track sleeping-onset for auto-rehang.
     if (body.isSleeping) {
