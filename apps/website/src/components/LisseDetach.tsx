@@ -443,8 +443,21 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       Matter.World.remove(engine.world, wallsRef.current);
       wallsRef.current = buildWalls();
       Matter.World.add(engine.world, wallsRef.current);
-      // Wake the body so a now-out-of-bounds rest position gets shoved
-      // back inside by the contact solver on the next step.
+      // If a fast resize has stranded the body OUTSIDE the new viewport,
+      // matter won't see a collision (no AABB overlap with the walls) and
+      // it'll just keep falling away. Teleport it back in before the next
+      // step, then wake it so gravity resumes from a sane position.
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const margin = 1;
+      const halfW = (body.bounds.max.x - body.bounds.min.x) / 2;
+      const halfH = (body.bounds.max.y - body.bounds.min.y) / 2;
+      const clampedX = clamp(body.position.x, halfW + margin, vw - halfW - margin);
+      const clampedY = clamp(body.position.y, halfH + margin, vh - halfH - margin);
+      if (clampedX !== body.position.x || clampedY !== body.position.y) {
+        Matter.Body.setPosition(body, { x: clampedX, y: clampedY });
+        Matter.Body.setVelocity(body, { x: 0, y: 0 });
+      }
       Matter.Sleeping.set(body, false);
     };
     window.addEventListener("resize", onResize);
