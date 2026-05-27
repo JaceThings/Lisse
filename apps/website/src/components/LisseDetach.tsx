@@ -203,19 +203,10 @@ function requestSensorPermission(): void {
   }
 }
 
-/** Rotate a device-natural-frame vector into screen space. When the OS
- *  rotates the page (portrait → landscape) the orientation/motion axes
- *  stay pinned to the device's natural frame, so we counter-rotate by the
- *  screen angle. Identity at angle 0, so the dominant portrait case is
- *  exact and landscape is best-effort. */
-function toScreenSpace(dx: number, dy: number): { x: number; y: number } {
-  const angle =
-    (typeof screen !== "undefined" && screen.orientation?.angle) || 0;
-  const a = angle * DEG;
-  const ca = Math.cos(a);
-  const sa = Math.sin(a);
-  return { x: dx * ca + dy * sa, y: -dx * sa + dy * ca };
-}
+// The device-natural-frame → screen-space rotation (counter-rotating by
+// the screen orientation angle so a landscape page still maps tilt to the
+// right axes) is inlined at each sensor call site to stay allocation-free;
+// see onOrient / onMotion. Identity at angle 0, so portrait is exact.
 
 // ----- rAF helpers ---------------------------------------------------------
 // Module-level so they aren't recreated each frame; pure side effects on
@@ -579,6 +570,15 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   useEffect(() => {
     if (!supportsDeviceTilt()) return;
 
+    // These fire in a flood *while the device is moving*, so — like the rAF
+    // loop — they must not allocate: the screen-space rotation and the cap
+    // are inlined into scalars and written straight into the persistent
+    // refs. The earlier `toScreenSpace`/`capVector` object returns turned
+    // active tilting into a steady garbage stream, and the GC sweep of it
+    // was the periodic freeze.
+    const screenAngle = () =>
+      ((typeof screen !== "undefined" && screen.orientation?.angle) || 0) * DEG;
+
     // Orientation → gravity direction. beta/gamma are clamped to ±90° and
     // mapped through sin so the vector is naturally bounded; held upright
     // (beta≈90) gravity points straight down, laid flat it goes slack.
@@ -586,18 +586,27 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       if (e.beta == null || e.gamma == null) return;
       const gx = Math.sin(clamp(e.gamma, -90, 90) * DEG);
       const gy = Math.sin(clamp(e.beta, -90, 90) * DEG);
-      const s = toScreenSpace(gx, gy);
+      const ang = screenAngle();
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      let sx = gx * ca + gy * sa;
+      let sy = -gx * sa + gy * ca;
       // Cap to 1 g so a diagonal hold (both sins large) can't make gravity
       // stronger than upright — independent sins overstate the corner.
-      const capped = capVector(s.x, s.y, 1);
+      const mag2 = sx * sx + sy * sy;
+      if (mag2 > 1) {
+        const m = Math.sqrt(mag2);
+        sx /= m;
+        sy /= m;
+      }
       const t = tiltTargetRef.current;
-      t.x = capped.x;
-      t.y = capped.y;
+      t.x = sx;
+      t.y = sy;
       if (!tiltActiveRef.current) {
         // Seed the filter so the first reading doesn't drift in from the
         // default straight-down over the whole time constant.
-        tiltGravityRef.current.x = t.x;
-        tiltGravityRef.current.y = t.y;
+        tiltGravityRef.current.x = sx;
+        tiltGravityRef.current.y = sy;
         tiltActiveRef.current = true;
       }
     };
@@ -610,13 +619,16 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       if (Math.hypot(a.x, a.y) < SHAKE_THRESHOLD) return;
       // Inertia: the word lurches opposite the device's own acceleration.
       // device +y is screen-up, so screen-down flips the y sign.
-      const s = toScreenSpace(-a.x, a.y);
-      pendingImpulseRef.current.x += clamp(
-        s.x * SHAKE_IMPULSE_FACTOR, -SHAKE_IMPULSE_MAX, SHAKE_IMPULSE_MAX,
-      );
-      pendingImpulseRef.current.y += clamp(
-        s.y * SHAKE_IMPULSE_FACTOR, -SHAKE_IMPULSE_MAX, SHAKE_IMPULSE_MAX,
-      );
+      const ang = screenAngle();
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      const dx = -a.x;
+      const dy = a.y;
+      const sx = dx * ca + dy * sa;
+      const sy = -dx * sa + dy * ca;
+      const imp = pendingImpulseRef.current;
+      imp.x += clamp(sx * SHAKE_IMPULSE_FACTOR, -SHAKE_IMPULSE_MAX, SHAKE_IMPULSE_MAX);
+      imp.y += clamp(sy * SHAKE_IMPULSE_FACTOR, -SHAKE_IMPULSE_MAX, SHAKE_IMPULSE_MAX);
     };
 
     window.addEventListener("deviceorientation", onOrient);
