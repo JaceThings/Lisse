@@ -106,8 +106,10 @@ h3 {
 
 /* While the word is off the wall the heading is an empty ghost — the
  * speaker cursor would invite a click that does nothing (handleClick
- * already short-circuits when detached). Drop back to the default. */
-#lisse-heading[data-detached] {
+ * already short-circuits when detached). Drop back to the default.
+ * Scoped under `[data-platform="mac"]` so its specificity beats the
+ * speaker-cursor block above on its own merits, not on cascade order. */
+[data-platform="mac"] #lisse-heading[data-detached] {
   cursor: default;
 }
 
