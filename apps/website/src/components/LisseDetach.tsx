@@ -634,6 +634,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
 
   const endDrag = () => {
     pointerIdRef.current = null;
+    if (phaseRef.current === "snapping") return;
     const engine = engineRef.current;
     const body = bodyRef.current;
     if (engine && dragConstraintRef.current) {
