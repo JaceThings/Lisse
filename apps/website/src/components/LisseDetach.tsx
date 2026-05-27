@@ -589,11 +589,15 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       const s = toScreenSpace(gx, gy);
       // Cap to 1 g so a diagonal hold (both sins large) can't make gravity
       // stronger than upright — independent sins overstate the corner.
-      tiltTargetRef.current = capVector(s.x, s.y, 1);
+      const capped = capVector(s.x, s.y, 1);
+      const t = tiltTargetRef.current;
+      t.x = capped.x;
+      t.y = capped.y;
       if (!tiltActiveRef.current) {
         // Seed the filter so the first reading doesn't drift in from the
         // default straight-down over the whole time constant.
-        tiltGravityRef.current = { ...tiltTargetRef.current };
+        tiltGravityRef.current.x = t.x;
+        tiltGravityRef.current.y = t.y;
         tiltActiveRef.current = true;
       }
     };
@@ -634,20 +638,22 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
 
     // Steer gravity toward the smoothed tilt vector before stepping. Wake a
     // settled body once the direction shifts enough to be worth animating.
+    // All hot-path math mutates persistent refs in place — allocating fresh
+    // vectors/state objects every frame fed the GC a steady drip of garbage,
+    // and its periodic sweep was the ~1s hitch.
     if (tiltActiveRef.current) {
       const target = tiltTargetRef.current;
       const g = tiltGravityRef.current;
       const alpha = clamp(deltaMs / TILT_TIME_CONSTANT_MS, 0, 1);
-      const ng = {
-        x: g.x + (target.x - g.x) * alpha,
-        y: g.y + (target.y - g.y) * alpha,
-      };
-      if (body.isSleeping && Math.hypot(ng.x - g.x, ng.y - g.y) > TILT_WAKE_EPS) {
+      const ngx = g.x + (target.x - g.x) * alpha;
+      const ngy = g.y + (target.y - g.y) * alpha;
+      if (body.isSleeping && Math.hypot(ngx - g.x, ngy - g.y) > TILT_WAKE_EPS) {
         Matter.Sleeping.set(body, false);
       }
-      tiltGravityRef.current = ng;
-      engine.gravity.x = ng.x;
-      engine.gravity.y = ng.y;
+      g.x = ngx;
+      g.y = ngy;
+      engine.gravity.x = ngx;
+      engine.gravity.y = ngy;
     }
 
     // Drain any accumulated shake impulse into the body's velocity.
@@ -659,15 +665,21 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       );
       Matter.Body.setVelocity(body, capped);
     }
-    pendingImpulseRef.current = { x: 0, y: 0 };
+    imp.x = 0;
+    imp.y = 0;
 
     // Advance the solver in whole 1/60 s steps. Clamping the frame and the
     // substep count keeps a long stall from snowballing into a blow-up.
-    // Each step rolls current → previous so the render can interpolate.
+    // Each step rolls current → previous (field copy, no alloc) so the
+    // render can interpolate between the last two states.
     accumulatorRef.current += Math.min(deltaMs, MAX_FRAME_MS);
+    const prev = prevStateRef.current;
+    const cur = curStateRef.current;
     let steps = 0;
     while (accumulatorRef.current >= FIXED_DT_MS && steps < MAX_SUBSTEPS) {
-      prevStateRef.current = curStateRef.current;
+      prev.x = cur.x;
+      prev.y = cur.y;
+      prev.angle = cur.angle;
       const preVx = body.velocity.x;
       const preVy = body.velocity.y;
       Matter.Engine.update(engine, FIXED_DT_MS);
@@ -677,11 +689,9 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
         applyAngularMagnet(body, origin);
       }
       capVelocities(body);
-      curStateRef.current = {
-        x: body.position.x,
-        y: body.position.y,
-        angle: body.angle,
-      };
+      cur.x = body.position.x;
+      cur.y = body.position.y;
+      cur.angle = body.angle;
       accumulatorRef.current -= FIXED_DT_MS;
       steps++;
     }
@@ -693,8 +703,8 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     // (x, y) is offset from the heading's original centre. Per-step angle
     // deltas are tiny, so a plain lerp needs no shortest-path wrap.
     const a = clamp(accumulatorRef.current / FIXED_DT_MS, 0, 1);
-    const p = prevStateRef.current;
-    const c = curStateRef.current;
+    const p = prev;
+    const c = cur;
     const cx0 = origin.x + origin.w / 2;
     const cy0 = origin.y + origin.h / 2;
     x.set(lerp(p.x, c.x, a) - cx0);
