@@ -11,6 +11,18 @@
 // momentum on release, and contact friction all fall out of the rigid-
 // body simulation — the previous hand-rolled gravity + pendulum +
 // righting-torque code accumulated too many sign-error edge cases.
+//
+// On touch devices the fallen word is gravity-coupled to the phone:
+// `deviceorientation` steers the engine's gravity vector (tilt the
+// phone, the word rolls downhill) and `devicemotion` turns a deliberate
+// shake into an inertial impulse. Both sensors are gated behind a
+// coarse-pointer check and the iOS 13+ per-origin permission grant,
+// which we request from the detaching tap (a user gesture). The
+// simulation now advances on a FIXED timestep accumulator rather than
+// feeding raw rAF deltas into the solver — matter.js is not robust to
+// variable dt, and the jitter on slow/long frames came straight from
+// that. Sensor input is low-pass filtered so noise never reaches the
+// body.
 
 import Matter from "matter-js";
 import {
@@ -82,7 +94,32 @@ const MIN_DETACH_MS = 1400;
 
 const AUTO_REHANG_MS = 12_000;
 
-const MAX_DT_MS = 32;             // tab-switch / long-frame clamp
+// Fixed-timestep integration. matter.js integrates with a semi-implicit
+// scheme that is only stable near its tuned 60 fps step; feeding it the
+// raw rAF delta (which spikes on slow frames, scroll, or a backgrounded
+// tab) was the source of the visible jitter. We accumulate real time and
+// advance the solver in whole 1/60 s steps, capping the catch-up so a
+// long stall can't trigger a spiral of death.
+const FIXED_DT_MS = 1000 / 60;
+const MAX_SUBSTEPS = 5;
+const MAX_FRAME_MS = FIXED_DT_MS * MAX_SUBSTEPS; // drop backlog past this
+
+const DEG = Math.PI / 180;
+
+// Tilt → gravity. The smoothed gravity vector chases the live sensor
+// reading with this time constant; ~120 ms kills accelerometer noise
+// without the slope feeling laggy. We wake a sleeping body once the
+// vector shifts past the epsilon so a tilt re-animates a settled word.
+const TILT_TIME_CONSTANT_MS = 120;
+const TILT_WAKE_EPS = 0.015;
+
+// Shake → impulse. `devicemotion.acceleration` excludes gravity, so a
+// still phone reads ~0 ± sensor noise; only a deliberate jerk clears the
+// threshold. The impulse is inertial (opposite the device's own accel,
+// like a loose object lagging its container) and capped per event.
+const SHAKE_THRESHOLD = 6;        // m/s² before a shake registers
+const SHAKE_IMPULSE_FACTOR = 0.12;
+const SHAKE_IMPULSE_MAX = 8;      // px/step contributed per shake event
 
 // matter.js stores velocities in px-per-step / rad-per-step (60 fps).
 // Cap them to keep a sudden cursor jump from whipping the small (33×16-
@@ -137,6 +174,48 @@ const capVector = (vx: number, vy: number, max: number) => {
   const sp = Math.sqrt(sp2);
   return { x: (vx * max) / sp, y: (vy * max) / sp };
 };
+
+// ----- device sensors ------------------------------------------------------
+
+/** Tilt/shake coupling is touch-only by design ("only on mobile"). A
+ *  coarse pointer is the honest proxy for "phone or tablet in hand"; we
+ *  also require the orientation event to exist at all. */
+function supportsDeviceTilt(): boolean {
+  if (typeof window === "undefined") return false;
+  const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  return coarse && "DeviceOrientationEvent" in window;
+}
+
+/** iOS 13+ gates the motion/orientation sensors behind a per-origin grant
+ *  that MUST be requested from within a user-gesture call stack — hence
+ *  this fires from the detaching tap, not the floater's mount effect.
+ *  Fire-and-forget: once granted, the listeners the floater attaches
+ *  start receiving events; denied or unsupported is a silent no-op. */
+function requestSensorPermission(): void {
+  if (typeof window === "undefined") return;
+  for (const Ctor of [
+    (window as unknown as { DeviceOrientationEvent?: unknown }).DeviceOrientationEvent,
+    (window as unknown as { DeviceMotionEvent?: unknown }).DeviceMotionEvent,
+  ]) {
+    const req = (Ctor as { requestPermission?: () => Promise<string> } | undefined)
+      ?.requestPermission;
+    if (typeof req === "function") req.call(Ctor).catch(() => {});
+  }
+}
+
+/** Rotate a device-natural-frame vector into screen space. When the OS
+ *  rotates the page (portrait → landscape) the orientation/motion axes
+ *  stay pinned to the device's natural frame, so we counter-rotate by the
+ *  screen angle. Identity at angle 0, so the dominant portrait case is
+ *  exact and landscape is best-effort. */
+function toScreenSpace(dx: number, dy: number): { x: number; y: number } {
+  const angle =
+    (typeof screen !== "undefined" && screen.orientation?.angle) || 0;
+  const a = angle * DEG;
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  return { x: dx * ca + dy * sa, y: -dx * sa + dy * ca };
+}
 
 // ----- rAF helpers ---------------------------------------------------------
 // Module-level so they aren't recreated each frame; pure side effects on
@@ -292,6 +371,9 @@ export function useLisseDetach() {
       wobble.set({ rotate: 0, x: 0 });
       const el = headingRef.current;
       if (!el) return;
+      // This call stack is a real tap, so it's the one chance to clear
+      // iOS's sensor-permission gate before the floater wants the data.
+      if (supportsDeviceTilt()) requestSensorPermission();
       const origin = measure(el);
       const offsetX =
         clamp((clientX - (origin.x + origin.w / 2)) / (origin.w / 2), -1, 1);
@@ -386,6 +468,21 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   // recent velocity.
   const cursorTrailRef = useRef<{ x: number; y: number; t: number }[]>([]);
 
+  // ----- device-tilt state -------------------------------------------------
+  // `tiltTarget` is the live (screen-space, unit-capped) gravity direction
+  // straight from the sensor; `tiltGravity` is the low-pass-filtered value
+  // actually fed to the engine. `tiltActive` flips on the first reading so
+  // the desktop path leaves matter's default downward gravity untouched.
+  // `pendingImpulse` accumulates shake kicks between frames; the rAF loop
+  // drains it into the body's velocity.
+  const tiltTargetRef = useRef({ x: 0, y: 1 });
+  const tiltGravityRef = useRef({ x: 0, y: 1 });
+  const tiltActiveRef = useRef(false);
+  const pendingImpulseRef = useRef({ x: 0, y: 0 });
+
+  // Fixed-timestep accumulator (see FIXED_DT_MS). Persisted across frames.
+  const accumulatorRef = useRef(0);
+
   // Snap-back animation refs (rehang spring on translation + rotation).
   const phaseRef = useRef<"sim" | "snapping">("sim");
   const snapAnimX = useRef<AnimationPlaybackControls | null>(null);
@@ -466,6 +563,54 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ----- Couple the engine to the phone's sensors (touch only) -------------
+  useEffect(() => {
+    if (!supportsDeviceTilt()) return;
+
+    // Orientation → gravity direction. beta/gamma are clamped to ±90° and
+    // mapped through sin so the vector is naturally bounded; held upright
+    // (beta≈90) gravity points straight down, laid flat it goes slack.
+    const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.beta == null || e.gamma == null) return;
+      const gx = Math.sin(clamp(e.gamma, -90, 90) * DEG);
+      const gy = Math.sin(clamp(e.beta, -90, 90) * DEG);
+      const s = toScreenSpace(gx, gy);
+      // Cap to 1 g so a diagonal hold (both sins large) can't make gravity
+      // stronger than upright — independent sins overstate the corner.
+      tiltTargetRef.current = capVector(s.x, s.y, 1);
+      if (!tiltActiveRef.current) {
+        // Seed the filter so the first reading doesn't drift in from the
+        // default straight-down over the whole time constant.
+        tiltGravityRef.current = { ...tiltTargetRef.current };
+        tiltActiveRef.current = true;
+      }
+    };
+
+    // Motion → inertial shake impulse. acceleration excludes gravity, so a
+    // resting phone sits below threshold and never nudges the word.
+    const onMotion = (e: DeviceMotionEvent) => {
+      const a = e.acceleration;
+      if (!a || a.x == null || a.y == null) return;
+      if (Math.hypot(a.x, a.y) < SHAKE_THRESHOLD) return;
+      // Inertia: the word lurches opposite the device's own acceleration.
+      // device +y is screen-up, so screen-down flips the y sign.
+      const s = toScreenSpace(-a.x, a.y);
+      pendingImpulseRef.current.x += clamp(
+        s.x * SHAKE_IMPULSE_FACTOR, -SHAKE_IMPULSE_MAX, SHAKE_IMPULSE_MAX,
+      );
+      pendingImpulseRef.current.y += clamp(
+        s.y * SHAKE_IMPULSE_FACTOR, -SHAKE_IMPULSE_MAX, SHAKE_IMPULSE_MAX,
+      );
+    };
+
+    window.addEventListener("deviceorientation", onOrient);
+    window.addEventListener("devicemotion", onMotion);
+    return () => {
+      window.removeEventListener("deviceorientation", onOrient);
+      window.removeEventListener("devicemotion", onMotion);
+    };
+  }, []);
+
   // ----- Step the simulation each animation frame --------------------------
   useAnimationFrame((_, deltaMs) => {
     const engine = engineRef.current;
@@ -473,19 +618,55 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     if (!engine || !body) return;
     if (phaseRef.current === "snapping") return;
 
-    const dt = Math.min(deltaMs, MAX_DT_MS);
-    // Capture pre-step velocity for the manual bounce override.
-    const preVx = body.velocity.x;
-    const preVy = body.velocity.y;
-    Matter.Engine.update(engine, dt);
-
     const dragging = isDragging();
-    if (!dragging) {
-      applyManualBounce(body, preVx, preVy, window.innerWidth, window.innerHeight);
-    } else {
-      applyAngularMagnet(body, origin);
+
+    // Steer gravity toward the smoothed tilt vector before stepping. Wake a
+    // settled body once the direction shifts enough to be worth animating.
+    if (tiltActiveRef.current) {
+      const target = tiltTargetRef.current;
+      const g = tiltGravityRef.current;
+      const alpha = clamp(deltaMs / TILT_TIME_CONSTANT_MS, 0, 1);
+      const ng = {
+        x: g.x + (target.x - g.x) * alpha,
+        y: g.y + (target.y - g.y) * alpha,
+      };
+      if (body.isSleeping && Math.hypot(ng.x - g.x, ng.y - g.y) > TILT_WAKE_EPS) {
+        Matter.Sleeping.set(body, false);
+      }
+      tiltGravityRef.current = ng;
+      engine.gravity.x = ng.x;
+      engine.gravity.y = ng.y;
     }
-    capVelocities(body);
+
+    // Drain any accumulated shake impulse into the body's velocity.
+    const imp = pendingImpulseRef.current;
+    if (!dragging && (imp.x !== 0 || imp.y !== 0)) {
+      Matter.Sleeping.set(body, false);
+      const capped = capVector(
+        body.velocity.x + imp.x, body.velocity.y + imp.y, MAX_VEL_PER_STEP,
+      );
+      Matter.Body.setVelocity(body, capped);
+    }
+    pendingImpulseRef.current = { x: 0, y: 0 };
+
+    // Advance the solver in whole 1/60 s steps. Clamping the frame and the
+    // substep count keeps a long stall from snowballing into a blow-up.
+    accumulatorRef.current += Math.min(deltaMs, MAX_FRAME_MS);
+    let steps = 0;
+    while (accumulatorRef.current >= FIXED_DT_MS && steps < MAX_SUBSTEPS) {
+      const preVx = body.velocity.x;
+      const preVy = body.velocity.y;
+      Matter.Engine.update(engine, FIXED_DT_MS);
+      if (!dragging) {
+        applyManualBounce(body, preVx, preVy, window.innerWidth, window.innerHeight);
+      } else {
+        applyAngularMagnet(body, origin);
+      }
+      capVelocities(body);
+      accumulatorRef.current -= FIXED_DT_MS;
+      steps++;
+    }
+    if (steps === MAX_SUBSTEPS) accumulatorRef.current = 0;
 
     // Translate body world position into the motion values used by the
     // rendered span. (x, y) is offset from the heading's original centre.
