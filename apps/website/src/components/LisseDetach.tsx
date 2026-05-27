@@ -567,7 +567,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   const onPointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
     const body = bodyRef.current;
     const engine = engineRef.current;
-    if (!body || !engine) return;
+    if (!body || !engine || phaseRef.current === "snapping") return;
     e.currentTarget.setPointerCapture(e.pointerId);
     pointerIdRef.current = e.pointerId;
     cursorTrailRef.current = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
