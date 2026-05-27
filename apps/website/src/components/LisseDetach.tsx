@@ -115,6 +115,109 @@ interface Origin {
   color: string;
 }
 
+/** How strongly the magnet pulls at `point` toward the centre of `origin`.
+ *  Returns the vector from `point` to origin centre and an ease-out (sqrt)
+ *  strength in [0, 1) — zero at the magnetic-zone edge, full close in.
+ *  Shared by the anchor bias, the angular pull, and the drop-zone check so
+ *  the three sites can't drift apart. */
+const magnetStrengthAt = (px: number, py: number, origin: Origin) => {
+  const dx = origin.x + origin.w / 2 - px;
+  const dy = origin.y + origin.h / 2 - py;
+  const dist = Math.hypot(dx, dy);
+  const strength =
+    dist < MAGNETIC_RADIUS_PX ? Math.sqrt(1 - dist / MAGNETIC_RADIUS_PX) : 0;
+  return { dx, dy, strength };
+};
+
+/** Clamp the magnitude of a 2D vector to `max`. Used at multiple sites
+ *  that all cap velocities expressed in matter's per-step units. */
+const capVector = (vx: number, vy: number, max: number) => {
+  const sp2 = vx * vx + vy * vy;
+  if (sp2 <= max * max) return { x: vx, y: vy };
+  const sp = Math.sqrt(sp2);
+  return { x: (vx * max) / sp, y: (vy * max) / sp };
+};
+
+// ----- rAF helpers ---------------------------------------------------------
+// Module-level so they aren't recreated each frame; pure side effects on
+// the matter body so they can be unit-tested in isolation later.
+
+/** Reflect velocity off whichever wall the body has just contacted, using
+ *  our own restitution. matter.js's solver absorbs most of the bounce on
+ *  hard impacts (apparent restitution ~0.13 against the configured value)
+ *  because position correction reshuffles velocity. We detect impact by
+ *  axis-aligned bounds + the pre-step velocity going INTO that wall.
+ *  Viewport bounds are passed in so the helper stays a pure function of
+ *  its arguments. */
+function applyManualBounce(
+  body: Matter.Body,
+  preVx: number,
+  preVy: number,
+  vw: number,
+  vh: number,
+) {
+  const b = body.bounds;
+  const postVx = body.velocity.x;
+  const postVy = body.velocity.y;
+  const IMPACT_THRESHOLD = 3; // px/step minimum to trigger a bounce
+  let bx = postVx;
+  let by = postVy;
+  let bounced = false;
+  if (b.max.y >= vh - 1 && preVy > IMPACT_THRESHOLD) {
+    by = -preVy * RESTITUTION;
+    bx = postVx * WALL_FRICTION_TANGENT;
+    bounced = true;
+  } else if (b.min.y <= 1 && preVy < -IMPACT_THRESHOLD) {
+    by = -preVy * RESTITUTION;
+    bx = postVx * WALL_FRICTION_TANGENT;
+    bounced = true;
+  }
+  if (b.min.x <= 1 && preVx < -IMPACT_THRESHOLD) {
+    bx = -preVx * RESTITUTION;
+    if (!bounced) by = postVy * WALL_FRICTION_TANGENT;
+    bounced = true;
+  } else if (b.max.x >= vw - 1 && preVx > IMPACT_THRESHOLD) {
+    bx = -preVx * RESTITUTION;
+    if (!bounced) by = postVy * WALL_FRICTION_TANGENT;
+    bounced = true;
+  }
+  if (bounced) {
+    Matter.Body.setVelocity(body, { x: bx, y: by });
+  }
+}
+
+/** Damped angular spring toward the nearest upright multiple of 2π,
+ *  blended by magnetic strength so it only kicks in near the slot. */
+function applyAngularMagnet(body: Matter.Body, origin: Origin) {
+  const { strength } = magnetStrengthAt(body.position.x, body.position.y, origin);
+  if (strength <= 0) return;
+  // Shortest signed delta from body.angle to nearest 2π multiple.
+  const twoPi = Math.PI * 2;
+  let delta = body.angle % twoPi;
+  if (delta > Math.PI) delta -= twoPi;
+  else if (delta < -Math.PI) delta += twoPi;
+  // Damped angular spring: ω' = −k·δ − c·ω, blended in by `strength` so
+  // it kicks in smoothly at the magnetic edge. Tuned by feel: held near
+  // origin the word reaches upright in ~0.5 s without visible overshoot.
+  const k = 0.045;
+  const c = 0.32;
+  const angAcc = (-k * delta - c * body.angularVelocity) * strength;
+  Matter.Body.setAngularVelocity(body, body.angularVelocity + angAcc);
+}
+
+/** Cap both angular and linear velocity to matter's per-step limits so a
+ *  cursor flick or numerical spike can't whip the body into a blur. */
+function capVelocities(body: Matter.Body) {
+  const av = body.angularVelocity;
+  if (Math.abs(av) > MAX_OMEGA_PER_STEP) {
+    Matter.Body.setAngularVelocity(body, Math.sign(av) * MAX_OMEGA_PER_STEP);
+  }
+  const capped = capVector(body.velocity.x, body.velocity.y, MAX_VEL_PER_STEP);
+  if (capped.x !== body.velocity.x || capped.y !== body.velocity.y) {
+    Matter.Body.setVelocity(body, capped);
+  }
+}
+
 interface DetachState {
   origin: Origin;
   initialVel: { x: number; y: number };
@@ -262,7 +365,6 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useMotionValue(0);
-  const elementRef = useRef<HTMLSpanElement | null>(null);
 
   // matter.js refs — engine, body, walls, drag constraint.
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -271,8 +373,10 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   const dragConstraintRef = useRef<Matter.Constraint | null>(null);
 
   // Drag state outside matter — for snap-back proximity, cursor capture.
+  // `pointerIdRef.current !== null` is the canonical "is dragging" check;
+  // a separate boolean would have to be kept in sync by hand.
   const pointerIdRef = useRef<number | null>(null);
-  const draggingRef = useRef(false);
+  const isDragging = () => pointerIdRef.current !== null;
   const lastRestStartRef = useRef<number | null>(null);
   const detachedAtRef = useRef(performance.now());
   // Cursor history during drag, used to compute the throw velocity at
@@ -370,100 +474,18 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     if (phaseRef.current === "snapping") return;
 
     const dt = Math.min(deltaMs, MAX_DT_MS);
-    // Capture pre-step velocity so we can detect matter's bounce-eating
-    // and override with our own restitution on hard impacts.
+    // Capture pre-step velocity for the manual bounce override.
     const preVx = body.velocity.x;
     const preVy = body.velocity.y;
     Matter.Engine.update(engine, dt);
 
-    // Manual bounce override. matter.js's solver absorbs most of the
-    // bounce on a hard impact (apparent restitution ~0.13 against the
-    // configured RESTITUTION) because position correction reshuffles
-    // velocity. Detect wall-direction impacts by checking the body's
-    // bounds AND that the pre-step velocity was going INTO that wall,
-    // then reflect with our own restitution.
-    if (!draggingRef.current) {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const b = body.bounds;
-      const postVx = body.velocity.x;
-      const postVy = body.velocity.y;
-      const IMPACT_THRESHOLD = 3; // px/step minimum to trigger a bounce
-      let bx = postVx;
-      let by = postVy;
-      let bounced = false;
-      if (b.max.y >= vh - 1 && preVy > IMPACT_THRESHOLD) {
-        by = -preVy * RESTITUTION;
-        bx = postVx * WALL_FRICTION_TANGENT;
-        bounced = true;
-      } else if (b.min.y <= 1 && preVy < -IMPACT_THRESHOLD) {
-        by = -preVy * RESTITUTION;
-        bx = postVx * WALL_FRICTION_TANGENT;
-        bounced = true;
-      }
-      if (b.min.x <= 1 && preVx < -IMPACT_THRESHOLD) {
-        bx = -preVx * RESTITUTION;
-        if (!bounced) by = postVy * WALL_FRICTION_TANGENT;
-        bounced = true;
-      } else if (b.max.x >= vw - 1 && preVx > IMPACT_THRESHOLD) {
-        bx = -preVx * RESTITUTION;
-        if (!bounced) by = postVy * WALL_FRICTION_TANGENT;
-        bounced = true;
-      }
-      if (bounced) {
-        Matter.Body.setVelocity(body, { x: bx, y: by });
-      }
+    const dragging = isDragging();
+    if (!dragging) {
+      applyManualBounce(body, preVx, preVy, window.innerWidth, window.innerHeight);
+    } else {
+      applyAngularMagnet(body, origin);
     }
-
-    // Angular magnetism: while held in the magnetic zone, nudge the
-    // body's rotation toward the nearest upright orientation, with
-    // strength scaling like the positional pull. Feels like the slot
-    // wants its word back — the closer you get, the straighter it sits.
-    if (draggingRef.current) {
-      const cx = origin.x + origin.w / 2;
-      const cy = origin.y + origin.h / 2;
-      const dxOrigin = cx - body.position.x;
-      const dyOrigin = cy - body.position.y;
-      const distOrigin = Math.hypot(dxOrigin, dyOrigin);
-      if (distOrigin < MAGNETIC_RADIUS_PX) {
-        const t = 1 - distOrigin / MAGNETIC_RADIUS_PX;
-        const strength = Math.sqrt(t);
-        // Shortest signed delta from body.angle to nearest 2π multiple.
-        const twoPi = Math.PI * 2;
-        let delta = body.angle % twoPi;
-        if (delta > Math.PI) delta -= twoPi;
-        else if (delta < -Math.PI) delta += twoPi;
-        // Damped angular spring: ω' = −k·δ − c·ω, blended in by
-        // `strength` so it kicks in smoothly at the magnetic edge.
-        // Tuned by feel: at hold near origin the word reaches upright
-        // in roughly half a second without visible overshoot.
-        const k = 0.045;
-        const c = 0.32;
-        const angAcc = (-k * delta - c * body.angularVelocity) * strength;
-        Matter.Body.setAngularVelocity(body, body.angularVelocity + angAcc);
-      }
-    }
-
-    // Velocity caps — fixed in matter's per-step units, applied after
-    // every integration step (not just before drag). Without this a
-    // fast cursor flick whips the body into hundreds of rotations/sec.
-    const av = body.angularVelocity;
-    if (Math.abs(av) > MAX_OMEGA_PER_STEP) {
-      Matter.Body.setAngularVelocity(
-        body,
-        Math.sign(av) * MAX_OMEGA_PER_STEP,
-      );
-    }
-    const vx = body.velocity.x;
-    const vy = body.velocity.y;
-    const sp2 = vx * vx + vy * vy;
-    if (sp2 > MAX_VEL_PER_STEP * MAX_VEL_PER_STEP) {
-      const sp = Math.sqrt(sp2);
-      Matter.Body.setVelocity(body, {
-        x: (vx * MAX_VEL_PER_STEP) / sp,
-        y: (vy * MAX_VEL_PER_STEP) / sp,
-      });
-    }
+    capVelocities(body);
 
     // Translate body world position into the motion values used by the
     // rendered span. (x, y) is offset from the heading's original centre.
@@ -548,7 +570,6 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     if (!body || !engine) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     pointerIdRef.current = e.pointerId;
-    draggingRef.current = true;
     cursorTrailRef.current = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
 
     // Wake the body so the engine integrates the drag impulses immediately.
@@ -591,20 +612,12 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     // the original slot. The RAW cursor position still feeds the trail
     // (so release velocity reflects what the user actually did) — only
     // the constraint's pointA gets shifted home-ward.
-    const originCx = origin.x + origin.w / 2;
-    const originCy = origin.y + origin.h / 2;
-    const dx = originCx - e.clientX;
-    const dy = originCy - e.clientY;
-    const dist = Math.hypot(dx, dy);
-    let anchorX = e.clientX;
-    let anchorY = e.clientY;
-    if (dist < MAGNETIC_RADIUS_PX && dist > 0) {
-      const t = 1 - dist / MAGNETIC_RADIUS_PX;
-      const pull = MAGNET_PULL_FACTOR * Math.sqrt(t);
-      anchorX += dx * pull;
-      anchorY += dy * pull;
-    }
-    constraint.pointA = { x: anchorX, y: anchorY };
+    const m = magnetStrengthAt(e.clientX, e.clientY, origin);
+    const pull = MAGNET_PULL_FACTOR * m.strength;
+    constraint.pointA = {
+      x: e.clientX + m.dx * pull,
+      y: e.clientY + m.dy * pull,
+    };
 
     const now = performance.now();
     cursorTrailRef.current.push({ x: e.clientX, y: e.clientY, t: now });
@@ -621,7 +634,6 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
 
   const endDrag = () => {
     pointerIdRef.current = null;
-    draggingRef.current = false;
     const engine = engineRef.current;
     const body = bodyRef.current;
     if (engine && dragConstraintRef.current) {
@@ -640,19 +652,9 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       const last = trail[trail.length - 1];
       const sdt = (last.t - first.t) / 1000;
       if (sdt > 1e-3) {
-        const vxPerSec = (last.x - first.x) / sdt;
-        const vyPerSec = (last.y - first.y) / sdt;
-        const vxStep = vxPerSec / 60;
-        const vyStep = vyPerSec / 60;
-        const sp = Math.hypot(vxStep, vyStep);
-        if (sp > MAX_VEL_PER_STEP) {
-          Matter.Body.setVelocity(body, {
-            x: (vxStep * MAX_VEL_PER_STEP) / sp,
-            y: (vyStep * MAX_VEL_PER_STEP) / sp,
-          });
-        } else {
-          Matter.Body.setVelocity(body, { x: vxStep, y: vyStep });
-        }
+        const vxStep = (last.x - first.x) / sdt / 60;
+        const vyStep = (last.y - first.y) / sdt / 60;
+        Matter.Body.setVelocity(body, capVector(vxStep, vyStep, MAX_VEL_PER_STEP));
       }
     }
     // Capture the cursor's final position before clearing the trail —
@@ -670,25 +672,16 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     const sinceDetach = performance.now() - detachedAtRef.current;
     const bodyClose = Math.hypot(x.get(), y.get()) < SNAP_RADIUS_PX;
     const cursorInMagnet = lastCursor
-      ? Math.hypot(
-          origin.x + origin.w / 2 - lastCursor.x,
-          origin.y + origin.h / 2 - lastCursor.y,
-        ) < MAGNETIC_RADIUS_PX
+      ? magnetStrengthAt(lastCursor.x, lastCursor.y, origin).strength > 0
       : false;
     if (sinceDetach >= MIN_DETACH_MS && (bodyClose || cursorInMagnet)) {
       triggerRehang();
     }
   };
 
-  const onPointerUp = (e: React.PointerEvent<HTMLSpanElement>) => {
-    if (pointerIdRef.current !== e.pointerId) return;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
-    endDrag();
-  };
-
-  const onPointerCancel = (e: React.PointerEvent<HTMLSpanElement>) => {
+  // pointerup and pointercancel resolve identically — release the
+  // capture if we still own it and finalise the drag.
+  const finishPointer = (e: React.PointerEvent<HTMLSpanElement>) => {
     if (pointerIdRef.current !== e.pointerId) return;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
@@ -725,11 +718,10 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
 
   return createPortal(
     <motion.span
-      ref={elementRef}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
+      onPointerUp={finishPointer}
+      onPointerCancel={finishPointer}
       whileTap={{ cursor: "grabbing" }}
       style={{ ...styleBase, x, y, rotate }}
       aria-hidden
