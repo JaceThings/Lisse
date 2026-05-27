@@ -217,20 +217,6 @@ function toScreenSpace(dx: number, dy: number): { x: number; y: number } {
   return { x: dx * ca + dy * sa, y: -dx * sa + dy * ca };
 }
 
-/** Viewport the floating clone actually fills. The clone is position:fixed,
- *  so it spans the *layout* viewport (the initial containing block), but
- *  `window.innerHeight` reports the *visual* viewport — shorter by the
- *  mobile browser's toolbar when it's showing. Using innerHeight put the
- *  floor a toolbar's-height (~80 px) above the real bottom; clientHeight is
- *  the layout viewport the fixed element bottoms out against. */
-function viewportSize() {
-  const d = document.documentElement;
-  return {
-    w: d.clientWidth || window.innerWidth,
-    h: d.clientHeight || window.innerHeight,
-  };
-}
-
 // ----- rAF helpers ---------------------------------------------------------
 // Module-level so they aren't recreated each frame; pure side effects on
 // the matter body so they can be unit-tested in isolation later.
@@ -508,9 +494,6 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   };
   const prevStateRef = useRef({ ...seedState });
   const curStateRef = useRef({ ...seedState });
-  // Cached viewport, refreshed on resize/orientation rather than measured
-  // every frame (reading clientHeight forces a layout).
-  const vpRef = useRef(viewportSize());
 
   // Snap-back animation refs (rehang spring on translation + rotation).
   const phaseRef = useRef<"sim" | "snapping">("sim");
@@ -546,10 +529,8 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     bodyRef.current = body;
 
     const buildWalls = () => {
-      const vp = viewportSize();
-      vpRef.current = vp;
-      const vw = vp.w;
-      const vh = vp.h;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
       const t = WALL_THICKNESS;
       const opts: Matter.IChamferableBodyDefinition = {
         isStatic: true,
@@ -576,13 +557,9 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       Matter.Sleeping.set(body, false);
     };
     window.addEventListener("resize", onResize);
-    // visualViewport fires on toolbar show/hide and pinch-zoom, which
-    // window.resize misses on mobile — keep the floor pinned to the bottom.
-    window.visualViewport?.addEventListener("resize", onResize);
 
     return () => {
       window.removeEventListener("resize", onResize);
-      window.visualViewport?.removeEventListener("resize", onResize);
       if (dragConstraintRef.current) {
         Matter.World.remove(engine.world, dragConstraintRef.current);
       }
@@ -688,7 +665,6 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     // substep count keeps a long stall from snowballing into a blow-up.
     // Each step rolls current → previous so the render can interpolate.
     accumulatorRef.current += Math.min(deltaMs, MAX_FRAME_MS);
-    const vp = vpRef.current;
     let steps = 0;
     while (accumulatorRef.current >= FIXED_DT_MS && steps < MAX_SUBSTEPS) {
       prevStateRef.current = curStateRef.current;
@@ -696,7 +672,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       const preVy = body.velocity.y;
       Matter.Engine.update(engine, FIXED_DT_MS);
       if (!dragging) {
-        applyManualBounce(body, preVx, preVy, vp.w, vp.h);
+        applyManualBounce(body, preVx, preVy, window.innerWidth, window.innerHeight);
       } else {
         applyAngularMagnet(body, origin);
       }
