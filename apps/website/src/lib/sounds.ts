@@ -9,6 +9,12 @@
 // other off. play() rejects under autoplay policy until first interaction;
 // the rejection is swallowed.
 
+const PRONUNCIATION_COUNT = 6;
+const PRONUNCIATION_FILES = Array.from(
+  { length: PRONUNCIATION_COUNT },
+  (_, i) => `/lisse-pronunciation-${i + 1}.webm`,
+);
+
 const SOUND_FILES = [
   "/click.webm",
   "/copy-success.webm",
@@ -18,6 +24,7 @@ const SOUND_FILES = [
   "/smoothing-enter.webm",
   "/smoothing-exit.webm",
   "/silent.webm",
+  ...PRONUNCIATION_FILES,
 ] as const;
 
 // Eager prefetch at module load (~62 KB total). `preload = "auto"` issues
@@ -32,6 +39,34 @@ function playFile(src: string, volume: number) {
   const inst = new Audio(src);
   inst.volume = volume;
   inst.play().catch(() => {});
+}
+
+// Random-without-replacement "bag" picker for the `lisse` pronunciation.
+// Every voice plays once before any repeats; on bag refill, the first pick
+// is never the same as the last clip played, so back-to-back clicks across
+// the reset boundary still feel varied.
+let pronunciationBag: number[] = [];
+let lastPronunciation: number | null = null;
+
+function refillPronunciationBag() {
+  const next = Array.from({ length: PRONUNCIATION_COUNT }, (_, i) => i);
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  // Bag is consumed from the end (pop) for O(1). Guard the *last* slot
+  // (next pick) against matching the previous play.
+  if (lastPronunciation !== null && next[next.length - 1] === lastPronunciation) {
+    [next[next.length - 1], next[0]] = [next[0], next[next.length - 1]];
+  }
+  pronunciationBag = next;
+}
+
+export function playLissePronunciation() {
+  if (pronunciationBag.length === 0) refillPronunciationBag();
+  const idx = pronunciationBag.pop()!;
+  lastPronunciation = idx;
+  playFile(PRONUNCIATION_FILES[idx], 0.9);
 }
 
 export const playClick = () => playFile("/click.webm", 0.6);

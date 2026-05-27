@@ -104,6 +104,23 @@ h3 {
   ) 16 15, default;
 }
 
+/* Ghost lisse — the faded "hole" shown in the heading slot after the
+ * word has popped off. The display-p3 declaration comes second so it
+ * wins on wide-gamut displays; sRGB browsers fall through to the rgba
+ * line. Done in CSS rather than inline so the cascade picks the right
+ * one — inline styles only accept a single `color` value at a time. */
+.lisse-ghost {
+  color: rgba(156, 145, 137, 0.31);
+  color: color(display-p3 0.6039 0.5686 0.5412 / 0.31);
+  font-family: "Inter Variable";
+  font-feature-settings: "cv05" on;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 550;
+  line-height: 100%;
+  letter-spacing: -0.25px;
+}
+
 /* The focus ring is rendered globally by <FocusRingOverlay> — it springs
  * between any element marked with [data-focus-ring]. Suppress the browser's
  * default outline on those targets so it doesn't double up with the overlay. */
