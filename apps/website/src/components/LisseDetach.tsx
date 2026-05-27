@@ -26,10 +26,8 @@
 
 import Matter from "matter-js";
 import {
-  motion,
   useAnimationControls,
   useAnimationFrame,
-  useMotionValue,
   useReducedMotion,
   animate,
   type AnimationPlaybackControls,
@@ -435,9 +433,24 @@ interface LisseFloaterProps {
 }
 
 export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotate = useMotionValue(0);
+  // The transform is written straight to this node every frame rather than
+  // routed through framer-motion MotionValues. framer rebuilds the transform
+  // and runs a full render cycle on every value change — i.e. every frame
+  // the word is *moving* — which on mobile produced enough per-frame garbage
+  // to trigger a GC sweep (the periodic freeze, only ever seen mid-motion).
+  // A direct style write is a single string assignment with none of that
+  // machinery, and we skip it entirely when the pose hasn't changed.
+  const spanRef = useRef<HTMLSpanElement | null>(null);
+  // Last pose written to the DOM, in heading-centre-relative px / degrees.
+  // Doubles as the snapshot the rehang spring starts from.
+  const renderRef = useRef({ x: 0, y: 0, rot: 0 });
+
+  const writeTransform = (tx: number, ty: number, deg: number) => {
+    const el = spanRef.current;
+    if (el) {
+      el.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(${deg}deg)`;
+    }
+  };
 
   // matter.js refs — engine, body, walls, drag constraint.
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -486,11 +499,11 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   const prevStateRef = useRef({ ...seedState });
   const curStateRef = useRef({ ...seedState });
 
-  // Snap-back animation refs (rehang spring on translation + rotation).
+  // Snap-back animation: a single spring on a 1→0 progress value, lerping
+  // the whole pose home. Equivalent to springing x/y/rot independently —
+  // they shared one spring config, so one normalized curve drives all three.
   const phaseRef = useRef<"sim" | "snapping">("sim");
-  const snapAnimX = useRef<AnimationPlaybackControls | null>(null);
-  const snapAnimY = useRef<AnimationPlaybackControls | null>(null);
-  const snapAnimR = useRef<AnimationPlaybackControls | null>(null);
+  const snapAnimRef = useRef<AnimationPlaybackControls | null>(null);
 
   // ----- Build the matter world once on mount ------------------------------
   // We compute viewport-space walls and seed the body at the heading's
@@ -715,13 +728,20 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     // (x, y) is offset from the heading's original centre. Per-step angle
     // deltas are tiny, so a plain lerp needs no shortest-path wrap.
     const a = clamp(accumulatorRef.current / FIXED_DT_MS, 0, 1);
-    const p = prev;
-    const c = cur;
     const cx0 = origin.x + origin.w / 2;
     const cy0 = origin.y + origin.h / 2;
-    x.set(lerp(p.x, c.x, a) - cx0);
-    y.set(lerp(p.y, c.y, a) - cy0);
-    rotate.set((lerp(p.angle, c.angle, a) * 180) / Math.PI);
+    const rx = lerp(prev.x, cur.x, a) - cx0;
+    const ry = lerp(prev.y, cur.y, a) - cy0;
+    const rrot = (lerp(prev.angle, cur.angle, a) * 180) / Math.PI;
+    const r = renderRef.current;
+    // Skip the write (and its string allocation) when nothing moved — keeps
+    // the resting word allocation-free, the same as framer's change check.
+    if (rx !== r.x || ry !== r.y || rrot !== r.rot) {
+      r.x = rx;
+      r.y = ry;
+      r.rot = rrot;
+      writeTransform(rx, ry, rrot);
+    }
 
     // Track sleeping-onset for auto-rehang.
     if (body.isSleeping) {
@@ -742,31 +762,34 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
       // Freeze the body so the engine doesn't fight the spring.
       Matter.Body.setStatic(body, true);
     }
-    snapAnimX.current?.stop();
-    snapAnimY.current?.stop();
-    snapAnimR.current?.stop();
-    // Wrap rotation to the shortest equivalent angle in (−180°, 180°]
-    // before springing to 0. Without this, a throw that spun the word
-    // 10× makes the snap-back animation unwind every one of those
-    // rotations visually. AND pass velocity: 0 to the rotation spring:
-    // framer-motion infers initial spring velocity from the motion
-    // value's recent change rate. If the body was spinning fast at
-    // rehang time, that inferred velocity launches the spring in the
-    // wrong direction at thousands of deg/s before it can recover.
-    const current = rotate.get();
-    let wrapped = current % 360;
-    if (wrapped > 180) wrapped -= 360;
-    else if (wrapped <= -180) wrapped += 360;
-    if (wrapped !== current) rotate.set(wrapped);
+    snapAnimRef.current?.stop();
+    // Snapshot the pose to spring home from. Wrap rotation to the shortest
+    // equivalent angle in (−180°, 180°] first — without it a throw that
+    // spun the word 10× would visibly unwind every one of those turns.
+    const sx = renderRef.current.x;
+    const sy = renderRef.current.y;
+    let sr = renderRef.current.rot % 360;
+    if (sr > 180) sr -= 360;
+    else if (sr <= -180) sr += 360;
 
-    snapAnimX.current = animate(x, 0, { ...SNAP_SPRING, velocity: 0 });
-    snapAnimY.current = animate(y, 0, {
+    // One spring on progress 1→0; onUpdate lerps the whole pose toward home.
+    // velocity:0 so the spring starts from rest rather than inheriting the
+    // body's spin (which could launch the rotation the wrong way).
+    snapAnimRef.current = animate(1, 0, {
       ...SNAP_SPRING,
       velocity: 0,
+      onUpdate: (k) => {
+        const x = sx * k;
+        const y = sy * k;
+        const rot = sr * k;
+        renderRef.current.x = x;
+        renderRef.current.y = y;
+        renderRef.current.rot = rot;
+        writeTransform(x, y, rot);
+      },
       onComplete: () => onRehang(),
     });
-    snapAnimR.current = animate(rotate, 0, { ...SNAP_SPRING, velocity: 0 });
-  }, [x, y, rotate, onRehang]);
+  }, [onRehang]);
 
   // Auto-rehang after AUTO_REHANG_MS of continuous sleep.
   useEffect(() => {
@@ -797,6 +820,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     const engine = engineRef.current;
     if (!body || !engine || phaseRef.current === "snapping") return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.style.cursor = "grabbing";
     pointerIdRef.current = e.pointerId;
     cursorTrailRef.current = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
 
@@ -899,7 +923,8 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
     // gated on the minimum detach time so the initial pop can't
     // accidentally snap back before the word has had time to fall.
     const sinceDetach = performance.now() - detachedAtRef.current;
-    const bodyClose = Math.hypot(x.get(), y.get()) < SNAP_RADIUS_PX;
+    const bodyClose =
+      Math.hypot(renderRef.current.x, renderRef.current.y) < SNAP_RADIUS_PX;
     const cursorInMagnet = lastCursor
       ? magnetStrengthAt(lastCursor.x, lastCursor.y, origin).strength > 0
       : false;
@@ -912,6 +937,7 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   // capture if we still own it and finalise the drag.
   const finishPointer = (e: React.PointerEvent<HTMLSpanElement>) => {
     if (pointerIdRef.current !== e.pointerId) return;
+    e.currentTarget.style.cursor = "grab";
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {}
@@ -946,17 +972,17 @@ export function LisseFloater({ origin, initialVel, onRehang }: LisseFloaterProps
   };
 
   return createPortal(
-    <motion.span
+    <span
+      ref={spanRef}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={finishPointer}
       onPointerCancel={finishPointer}
-      whileTap={{ cursor: "grabbing" }}
-      style={{ ...styleBase, x, y, rotate }}
+      style={styleBase}
       aria-hidden
     >
       lisse
-    </motion.span>,
+    </span>,
     document.body,
   );
 }
