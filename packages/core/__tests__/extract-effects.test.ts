@@ -55,6 +55,15 @@ describe("parseColor", () => {
     expect(parseColor("#ff0000")).toBeUndefined();
     expect(parseColor("hsl(0, 100%, 50%)")).toBeUndefined();
   });
+
+  it("rejects a ReDoS attack string in linear time", () => {
+    // Adjacent `\s*` quantifiers used to make this O(n^2); a long run of
+    // whitespace before a missing `)` would hang the matcher.
+    const attack = "rgb(9\t9\t9" + "\t".repeat(100_000);
+    const start = performance.now();
+    expect(parseColor(attack)).toBeUndefined();
+    expect(performance.now() - start).toBeLessThan(50);
+  });
 });
 
 describe("parseBorder", () => {

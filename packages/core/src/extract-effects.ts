@@ -19,7 +19,7 @@ export interface ExtractedEffects {
  */
 export function parseColor(raw: string): { hex: string; opacity: number } | undefined {
   const match = raw.match(
-    /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)\s*(?:[,/]\s*([\d.]+))?\s*\)$/,
+    /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/,
   );
   if (!match) return undefined;
   const r = Number(match[1]);
