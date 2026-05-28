@@ -34,7 +34,7 @@ import {
 } from "framer-motion";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { playLissePronunciation } from "../lib/sounds.ts";
+import { playLissePronunciation, playPop } from "../lib/sounds.ts";
 
 const THRESHOLD = 22;
 const WOBBLE_START = 8;
@@ -370,6 +370,7 @@ export function useLisseDetach() {
       // DETACH_KICK_MIN so a perfectly-centred click still drifts.
       const kickMag = lerp(DETACH_KICK_MIN, DETACH_KICK_MAX, Math.abs(offsetX));
       const kickSign = offsetX === 0 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(offsetX);
+      playPop();
       setDetach({
         origin,
         initialVel: { x: kickMag * kickSign, y: DETACH_INITIAL_VY },
