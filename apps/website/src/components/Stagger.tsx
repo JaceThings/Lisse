@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { useMemo, type ReactNode } from "react";
+import { motion, type MotionProps } from "framer-motion";
+import { useMemo, useRef, type ReactNode } from "react";
 
 interface StaggerProps {
   /** Stagger slot — child entrance is delayed by `index × STEP` seconds. */
@@ -35,31 +35,57 @@ const STEP = 0.08;
 const DURATION = 0.7;
 const EASE: [number, number, number, number] = [0.22, 0.61, 0.36, 1];
 
-export function Stagger({ index, children }: StaggerProps) {
-  // Computed once at mount; mid-cascade re-renders mustn't re-read the
-  // clock or framer-motion would snap in-flight items to final state.
+interface UseStaggerEntranceOptions {
+  /** Stagger slot — same semantics as `<Stagger index>`. */
+  index: number;
+  /** Hold the entrance at the initial (blurred, faded) state until this
+   * flips true. Use to gate the cascade on async readiness — e.g. a
+   * heavy section that needs its critical assets to be loaded before it
+   * fades in, so a slow network doesn't pop content into a container
+   * that has already faded itself in empty. Defaults to true. */
+  ready?: boolean;
+}
+
+type EntranceMotionProps = Pick<MotionProps, "initial" | "animate" | "transition">;
+
+/**
+ * Computes the motion props for a cascade entrance. Pull out into a hook so
+ * sections that need to drive their own root element (rather than a wrapper
+ * `<div>`) can apply the same entrance while gating it on extra conditions
+ * via the `ready` flag.
+ */
+export function useStaggerEntrance({
+  index,
+  ready = true,
+}: UseStaggerEntranceOptions): EntranceMotionProps {
+  // Lock readiness at mount: a late-arriving asset (ready: false → true)
+  // must still play a fresh fade rather than tripping the slot-passed
+  // shortcut, which exists only to make cross-route remounts instant.
+  const wasReadyAtMount = useRef(ready).current;
+
   const { skip, delay } = useMemo(() => {
     const targetMs = APP_MOUNT_MS + (INITIAL_DELAY + index * STEP) * 1000;
     const now = performance.now();
     return {
-      skip: hasFirstPainted && targetMs <= now,
+      skip: hasFirstPainted && targetMs <= now && wasReadyAtMount,
       delay: Math.max(0, (targetMs - now) / 1000),
     };
-  }, [index]);
+  }, [index, wasReadyAtMount, ready]);
 
-  return (
-    <motion.div
-      initial={
-        skip
-          ? false
-          : { opacity: 0, filter: `blur(${ENTRANCE_BLUR_PX}px)` }
-      }
-      animate={{ opacity: 1, filter: "blur(0px)" }}
-      transition={
-        skip ? { duration: 0 } : { duration: DURATION, ease: EASE, delay }
-      }
-    >
-      {children}
-    </motion.div>
-  );
+  const initial = skip
+    ? (false as const)
+    : { opacity: 0, filter: `blur(${ENTRANCE_BLUR_PX}px)` };
+  const animate = ready
+    ? { opacity: 1, filter: "blur(0px)" }
+    : { opacity: 0, filter: `blur(${ENTRANCE_BLUR_PX}px)` };
+  const transition = skip
+    ? { duration: 0 }
+    : { duration: DURATION, ease: EASE, delay };
+
+  return { initial, animate, transition };
+}
+
+export function Stagger({ index, children }: StaggerProps) {
+  const props = useStaggerEntrance({ index });
+  return <motion.div {...props}>{children}</motion.div>;
 }

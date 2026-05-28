@@ -77,7 +77,9 @@ export function Install({ staggerFrom }: InstallProps) {
       <h2 id="install-heading" className="sr-only">
         Install
       </h2>
-      <Divider />
+      <Stagger index={staggerFrom - 1}>
+        <Divider />
+      </Stagger>
       <div
         className="flex w-full flex-col gap-3"
         // Empirical 0.5 CSS px to land the rows on an integer device-pixel

@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { generatePath } from "@lisse/core";
 import { GridBackground } from "./GridBackground.tsx";
 import { TogglePill } from "./TogglePill.tsx";
+import { useStaggerEntrance } from "./Stagger.tsx";
 import { useTweenedNumber } from "../hooks/useTweenedNumber.ts";
 import {
   CheckIcon,
@@ -53,7 +55,52 @@ function describeState(smoothing: boolean, comparing: boolean): string {
   }`;
 }
 
-export function Demo() {
+// The masked grid wrapper is the slow part on cold loads: `mask-image`
+// pulls /grid-mask.svg and the inner GridBackground tiles /grid.svg
+// (~17 KB combined). Until both land, the masked region paints empty
+// — so the cascade fade would otherwise reveal a blank rectangle and
+// the content would pop in unceremoniously when the SVGs arrive. Gate
+// the section's entrance on the actual asset readiness; on fast loads
+// they're cached/already inflight and `loaded` flips before the
+// cascade slot even arrives, so the fade still rides the schedule.
+const DEMO_ASSETS = ["/grid-mask.svg", "/grid.svg"];
+
+function useImagesLoaded(urls: readonly string[]) {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    let pending = urls.length;
+    let cancelled = false;
+    const done = () => {
+      if (cancelled) return;
+      if (--pending === 0) setLoaded(true);
+    };
+    for (const url of urls) {
+      const img = new Image();
+      img.onload = done;
+      img.onerror = done;
+      img.src = url;
+      // Already in the HTTP cache or decoded — fire synchronously so we
+      // don't wait on a load event that will never come.
+      if (img.complete) done();
+    }
+    return () => {
+      cancelled = true;
+    };
+    // urls is a module-level constant; intentionally empty deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return loaded;
+}
+
+interface DemoProps {
+  /** Cascade slot for the demo's entrance fade. */
+  staggerIndex: number;
+}
+
+export function Demo({ staggerIndex }: DemoProps) {
+  const assetsLoaded = useImagesLoaded(DEMO_ASSETS);
+  const entrance = useStaggerEntrance({ index: staggerIndex, ready: assetsLoaded });
+
   const [smoothing, setSmoothing] = useState(true);
   const [comparing, setComparing] = useState(true);
   const toggleSmoothing = () => {
@@ -94,7 +141,8 @@ export function Demo() {
   );
 
   return (
-    <section
+    <motion.section
+      {...entrance}
       className="relative isolate w-full"
       style={{ height: "var(--grid-height)" }}
       aria-labelledby="demo-heading"
@@ -200,6 +248,6 @@ export function Demo() {
           label="Comparison"
         />
       </div>
-    </section>
+    </motion.section>
   );
 }
