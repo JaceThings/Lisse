@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { SmoothCorners } from "@lisse/react";
 import type { BorderConfig, ShadowConfig, SmoothCornerOptions } from "@lisse/core";
-import { IS_SAFARI } from "./is-safari.ts";
+import { useIsSafari } from "./is-safari.ts";
 
 interface PreviewProps {
   corners: SmoothCornerOptions;
@@ -84,6 +84,9 @@ export function Preview({
   fill = DEFAULT_FILL,
   size = DEFAULT_SIZE,
 }: PreviewProps) {
+  // Server + first client render use "svg"; Safari flips to "box-shadow"
+  // after mount (invisible at rest), keeping hydration markup matched.
+  const isSafari = useIsSafari();
   return (
     <div
       className="flex w-full items-center justify-center overflow-hidden p-3"
@@ -109,7 +112,7 @@ export function Preview({
           corners={corners}
           shadow={shadow}
           innerShadow={innerShadow}
-          shadowStrategy={IS_SAFARI ? "box-shadow" : "svg"}
+          shadowStrategy={isSafari ? "box-shadow" : "svg"}
           style={{
             width: size,
             height: size,

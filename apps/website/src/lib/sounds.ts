@@ -28,12 +28,15 @@ const SOUND_FILES = [
   ...PRONUNCIATION_FILES,
 ] as const;
 
-// Eager prefetch at module load (~62 KB total). `preload = "auto"` issues
-// an HTTP fetch and populates the browser cache so the first user
-// interaction plays without a cold-cache wait.
-for (const src of SOUND_FILES) {
-  const a = new Audio(src);
-  a.preload = "auto";
+// Eager prefetch at module load (~62 KB): `preload = "auto"` warms the cache so
+// the first interaction plays without a cold-cache wait.
+// SSR guard: Audio is undefined on Node, and this module is imported by every
+// route (Header, Footer), so an unguarded `new Audio()` crashes server render.
+if (typeof Audio !== "undefined") {
+  for (const src of SOUND_FILES) {
+    const a = new Audio(src);
+    a.preload = "auto";
+  }
 }
 
 function playFile(src: string, volume: number) {

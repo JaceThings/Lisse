@@ -20,11 +20,16 @@ const APP_MOUNT_MS = performance.now();
 // parse would push `now` past targetMs for early indices and suppress
 // the cascade entirely. Double-rAF lands on the frame after first paint.
 let hasFirstPainted = false;
-requestAnimationFrame(() => {
+// SSR guard: requestAnimationFrame is undefined on Node and this runs at module
+// import. On the server hasFirstPainted stays false (matching the client's
+// first render), so the cascade plays after hydration.
+if (typeof requestAnimationFrame !== "undefined") {
   requestAnimationFrame(() => {
-    hasFirstPainted = true;
+    requestAnimationFrame(() => {
+      hasFirstPainted = true;
+    });
   });
-});
+}
 
 // 0.35s pause then 0.08s steps × 0.7s per item — a body of 8 items
 // spans ~1.3s, slow enough to read as a cascade. Softer ease than the
