@@ -115,7 +115,29 @@ export function CurveTypeSection() {
     setExponent(v);
   }, []);
 
-  const d = useMemo(() => pathFromSamples(displaySamples), [displaySamples]);
+  // The morph preview samples the path with the browser's getPointAtLength
+  // (samplePath), which is client-only — on the server it returns [] and the
+  // path renders empty, then flashes in on hydration. So render the raw
+  // generatePath() curve (pure @lisse/core math, SSR-safe, visually identical)
+  // on the server and the first client render — hydration matches and the curve
+  // shows immediately — then switch to the sampled/morph path after mount.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const rawPath = useMemo(
+    () =>
+      generatePath(PREVIEW_SIZE, PREVIEW_SIZE, {
+        radius: animatedRadius,
+        smoothing: animatedSmoothing,
+        curve,
+        exponent: animatedExponent,
+      }),
+    [animatedRadius, animatedSmoothing, curve, animatedExponent],
+  );
+  const sampledPath = useMemo(
+    () => pathFromSamples(displaySamples),
+    [displaySamples],
+  );
+  const d = mounted ? sampledPath : rawPath;
 
   // One DOM-stable Slider whose value, label, and format swap with
   // curve so the thumb glides between squircle smoothing 0.6 (60 %)
