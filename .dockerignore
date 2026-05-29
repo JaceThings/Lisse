@@ -10,6 +10,9 @@ node_modules
 **/.vite
 **/*.tsbuildinfo
 **/.turbo
+**/.output
+**/.nitro
+**/.tanstack
 
 # Editor / OS noise
 .git
@@ -25,7 +28,9 @@ benchmarks
 # is a workspace member in pnpm-workspace.yaml.
 !benchmarks/package.json
 docs
-scripts
+# Root scripts dir only — anchored so it can't match apps/website/scripts,
+# which holds build-llms-full.ts (run by the website's prebuild).
+/scripts
 assets
 blueprint.md
 

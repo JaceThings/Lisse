@@ -1,11 +1,12 @@
 # syntax=docker/dockerfile:1.7
-# Multistage build for the corne.rs landing site.
+# Multistage build for the corne.rs landing site (TanStack Start, SSR).
 #
-# Stage 1: install workspace deps + build @lisse/* + the website.
-# Stage 2: serve the static `dist/` folder via nginx.
+# Stage 1: install workspace deps + build @lisse/* + the website. `vite build`
+#          emits .output/ — a self-contained Nitro node-server bundling the
+#          SSR handler, all deps, and the static public/ + client assets.
+# Stage 2: run that node server. No nginx, no static-file layer.
 
 ARG NODE_VERSION=20-bookworm-slim
-ARG NGINX_VERSION=1.27-alpine
 
 # ---------- builder ----------
 FROM node:${NODE_VERSION} AS builder
@@ -32,33 +33,34 @@ COPY apps/website/package.json apps/website/
 
 RUN pnpm install --frozen-lockfile
 
-# Now bring in the rest of the source. README.md is read by the
-# website's prebuild script (scripts/build-llms-full.ts) when generating
+# Now bring in the rest of the source. README.md is read by the website's
+# prebuild script (apps/website/scripts/build-llms-full.ts) when generating
 # public/llms-full.txt, so it has to be present in the build context.
 COPY packages packages
 COPY apps/website apps/website
 COPY README.md ./
 
-# Commit SHA for the build's version.json (scripts/write-version.ts). Railway
-# provides RAILWAY_GIT_COMMIT_SHA and passes it as a build arg to declared
-# ARGs; a declared ARG is in scope as an env var for the RUN below. Unset
-# locally -> version.json falls back to "dev".
-ARG RAILWAY_GIT_COMMIT_SHA
-
 # Build the workspace packages so the website resolves @lisse/react via
-# their `dist/` outputs, then build the website itself.
+# their `dist/` outputs, then build the website (prebuild → llms-full.txt;
+# build → vite build → .output/).
 RUN pnpm -r --filter "./packages/*" build \
     && pnpm --filter website build
 
 # ---------- runtime ----------
-FROM nginx:${NGINX_VERSION} AS runtime
+FROM node:${NODE_VERSION} AS runtime
 
-# SPA-friendly nginx config: serve dist/ and fall back to index.html.
-RUN rm /etc/nginx/conf.d/default.conf
-COPY apps/website/nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
+ENV NODE_ENV=production
 
-COPY --from=builder /workspace/apps/website/dist /usr/share/nginx/html
+# The Nitro node-server output is self-contained — it bundles every dep into
+# .output and serves public/ + hashed client assets itself. No node_modules,
+# no pnpm install. public/ (favicons, og-image.png, *.webm, grid.svg, fonts/,
+# robots.txt, sitemap.xml, llms.txt, generated llms-full.txt) ships inside
+# .output/public and is served automatically.
+COPY --from=builder /workspace/apps/website/.output ./.output
 
-EXPOSE 8080
+# The Nitro node-server (srvx) reads PORT and binds 0.0.0.0; Railway injects
+# PORT at runtime. Default is 3000 when PORT is unset. EXPOSE is informational.
+EXPOSE 3000
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", ".output/server/index.mjs"]

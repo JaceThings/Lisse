@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { useNavigate, useLocation, type LinkProps } from "react-router-dom";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Divider } from "../Divider.tsx";
 import { playClick } from "../../lib/sounds.ts";
 
@@ -27,7 +27,8 @@ function NavSlot({ children }: { children: ReactNode }) {
   );
 }
 
-interface ScrollLinkProps extends Omit<LinkProps, "to"> {
+interface ScrollLinkProps
+  extends Omit<React.ComponentPropsWithoutRef<"a">, "href"> {
   to: string;
 }
 
@@ -36,7 +37,7 @@ interface ScrollLinkProps extends Omit<LinkProps, "to"> {
 // with a distance-scaled timeout fallback.
 function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onClick?.(e);
     if (e.defaultPrevented) return;
@@ -47,14 +48,14 @@ function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
     // so the link is useful as a "jump to top" affordance.
     if (to !== pathname) playClick();
     if (window.scrollY <= 0) {
-      navigate(to);
+      navigate({ to });
       return;
     }
     let navigated = false;
     const go = () => {
       if (navigated) return;
       navigated = true;
-      navigate(to);
+      navigate({ to });
     };
     // `scrollend` is in lib.dom but missing in older Safari — feature-
     // detect at runtime; fall back to a distance-scaled timeout.
@@ -80,7 +81,8 @@ function ScrollLink({ to, onClick, ...rest }: ScrollLinkProps) {
 // Stagger between them would leave a footer-level gap with nothing to
 // space.
 export function Footer() {
-  const showHome = useLocation().pathname !== "/";
+  const showHome =
+    useRouterState({ select: (s) => s.location.pathname }) !== "/";
 
   return (
     <div className="flex w-full flex-col gap-5">

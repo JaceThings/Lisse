@@ -1,47 +1,30 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { nitro } from "nitro/vite";
+import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+// TanStack Start (SSR) replaces the old static Vite SPA build. The Start
+// plugin owns the client + server entries, generates src/routeTree.gen.ts
+// from src/routes/*, and emits a self-contained Node server we run directly
+// (no nginx, no prerender, no static-asset dance).
 export default defineConfig({
-  plugins: [tailwindcss(), react()],
   server: {
     port: 5173,
     host: true,
+    // Preserved verbatim — dev tunnels (cloudflared/ngrok) rely on these.
     allowedHosts: [".trycloudflare.com", ".ngrok.io", ".ngrok-free.app"],
   },
-  preview: {
-    port: 4173,
-    host: true,
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        // Split stable, large vendors into their own chunks so the browser
-        // cache survives app code changes. Route splits (Playground, What)
-        // are handled by React.lazy in App.tsx.
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return undefined;
-          if (
-            id.includes("/react-router") ||
-            id.includes("/react-dom/") ||
-            /\/react\/[^/]*$/.test(id) ||
-            id.includes("/react/index") ||
-            id.includes("/scheduler/")
-          ) {
-            return "react-vendor";
-          }
-          if (id.includes("/framer-motion/") || id.includes("/motion-dom/") || id.includes("/motion-utils/")) {
-            return "motion";
-          }
-          if (
-            id.includes("/@lisse/") ||
-            id.includes("/@numeric-text/")
-          ) {
-            return "lisse";
-          }
-          return undefined;
-        },
-      },
-    },
-  },
+  plugins: [
+    // Start FIRST — it generates the route tree and wires the SSR graph.
+    // (Bundles the router plugin internally; do NOT add @tanstack/router-plugin.)
+    tanstackStart(),
+    // Nitro assembles the SSR handler + static assets + a listening Node
+    // server into .output/ (node-server preset auto-detected) — a single
+    // self-contained process that binds PORT. This is what replaces nginx.
+    nitro(),
+    tailwindcss(),
+    // React LAST — must come after tanstackStart().
+    viteReact(),
+  ],
 });

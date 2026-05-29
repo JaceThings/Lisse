@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { IS_SAFARI } from "./is-safari.ts";
+import { useIsSafari } from "./is-safari.ts";
 
 // Safari path: measured `max-height` transition over a numeric pixel
 // value (no `auto` resolution) plus opacity. `contain: paint` bounds
@@ -15,7 +15,11 @@ const SAFARI_TRANSITION =
   `opacity ${SAFARI_DURATION_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`;
 
 export function Collapse({ show, children }: { show: boolean; children: ReactNode }) {
-  if (IS_SAFARI) return <SafariCollapse show={show}>{children}</SafariCollapse>;
+  // First render uses MotionCollapse on both server and client; Safari swaps
+  // to SafariCollapse after mount. Both start from a measured-null state (no
+  // animation from 0), so the one-time post-hydration swap doesn't pop.
+  const isSafari = useIsSafari();
+  if (isSafari) return <SafariCollapse show={show}>{children}</SafariCollapse>;
   return <MotionCollapse show={show}>{children}</MotionCollapse>;
 }
 
