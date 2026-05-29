@@ -23,6 +23,7 @@ const SOUND_FILES = [
   "/compare-exit.webm",
   "/smoothing-enter.webm",
   "/smoothing-exit.webm",
+  "/pop.webm",
   "/silent.webm",
   ...PRONUNCIATION_FILES,
 ] as const;
@@ -76,6 +77,7 @@ export const playCompareEnter = () => playFile("/compare-enter.webm", 0.06);
 export const playCompareExit = () => playFile("/compare-exit.webm", 0.06);
 export const playSmoothingEnter = () => playFile("/smoothing-enter.webm", 0.35);
 export const playSmoothingExit = () => playFile("/smoothing-exit.webm", 0.35);
+export const playPop = () => playFile("/pop.webm", 0.3);
 
 // === Tick (synthesised) ====================================================
 // 5.5 kHz sine partial (12 ms exp decay) + 3 ms white-noise burst through
