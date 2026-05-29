@@ -135,13 +135,31 @@ export function usePointerDrag({
     const raw = ratio * range + min;
     const targetValue = clamp(snap(raw, step), min, max);
     lastDragSteppedRef.current = targetValue;
+    // Step the fill started from, so the jump can tick each detent it
+    // crosses on the way to the tap. Closure-local, not a ref: it lives
+    // and dies with this one tween.
+    let lastTickStep = clamp(snap(reported.get(), step), min, max);
     if (prefersReducedMotion()) {
       reported.set(targetValue);
+      // No motion to ride, but a tap that changes the value still earns a
+      // single detent click — same feedback the drag path gives.
+      if (targetValue !== lastTickStep) playTick();
     } else {
       pointerAnimRef.current = animate(reported, targetValue, {
         type: "tween",
         duration: PROP_CHANGE_DURATION,
         ease: PROP_CHANGE_EASE,
+        // Tick once per integer the fill crosses, so a tap-to-jump sounds
+        // like the bar travelling through each detent rather than landing
+        // in silence. Large jumps collapse into a buzz under the audio
+        // layer's own rate cap, exactly as a fast drag does.
+        onUpdate: (latest) => {
+          const s = clamp(snap(latest, step), min, max);
+          if (s !== lastTickStep) {
+            lastTickStep = s;
+            playTick();
+          }
+        },
       });
     }
     if (targetValue !== value) onChange(targetValue, false);
