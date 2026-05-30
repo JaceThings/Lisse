@@ -32,6 +32,25 @@ Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
 
 > **Why an action instead of a component?** Svelte actions are the idiomatic way to attach behaviour to existing elements. Unlike React or Vue, there is no wrapper `<div>`. The action attaches directly to your element and inserts the SVG overlay into its parent, giving you full control over your DOM structure.
 
+## Using it as an attachment (Svelte 5.32+)
+
+[Attachments](https://svelte.dev/docs/svelte/@attach) are Svelte 5's modern alternative to actions. You don't need a separate API for them — the action plugs straight into Svelte's built-in [`fromAction`](https://svelte.dev/docs/svelte/svelte-attachments#fromAction):
+
+```svelte
+<script>
+  import { smoothCorners } from "@lisse/svelte";
+  import { fromAction } from "svelte/attachments";
+
+  let radius = $state(20);
+</script>
+
+<div {@attach fromAction(smoothCorners, () => ({ corners: { radius, smoothing: 0.6 } }))}>
+  Content
+</div>
+```
+
+Pass a getter (`() => config`) as the second argument so reactive changes flow through the action's `update()` in place — the same efficient path `use:` takes, with no teardown of the SVG overlay between updates. A static config can simply return a constant. The `use:` form keeps working unchanged, so existing code (and Svelte 3 / 4) is unaffected.
+
 ## `smoothCorners` Action
 
 The action takes a single `SmoothCornersConfig` parameter: `{ corners, effects?, autoEffects? }`. The `corners` property is required and accepts a `SmoothCornerOptions` object — uniform or per-corner.
