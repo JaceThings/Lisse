@@ -15,6 +15,15 @@ export default defineConfig({
     // Preserved verbatim — dev tunnels (cloudflared/ngrok) rely on these.
     allowedHosts: [".trycloudflare.com", ".ngrok.io", ".ngrok-free.app"],
   },
+  // `@numeric-text/react` ships a side-effect `import '@numeric-text/core/ssr.css'`.
+  // In SSR dev, node_modules are externalised by default, so Node's ESM loader
+  // gets handed the raw .css and throws "Unknown file extension .css" (a 500 on
+  // every route). Pulling these into the SSR transform pipeline lets Vite handle
+  // the CSS import — a no-op server-side — instead. The prod build already
+  // bundles past this through Rollup; this only fixes `pnpm dev`.
+  ssr: {
+    noExternal: ["@numeric-text/react", "@numeric-text/core"],
+  },
   plugins: [
     // Start FIRST — it generates the route tree and wires the SSR graph.
     // (Bundles the router plugin internally; do NOT add @tanstack/router-plugin.)
