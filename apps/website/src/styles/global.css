@@ -138,6 +138,39 @@ h3 {
   outline: none;
 }
 
+/* Footer nav link underline. A hairline that's faintly present at rest and
+ * strengthens on hover. Drawn with background gradients rather than
+ * `text-decoration` so the end-caps are rounded — the two `circle 1px`
+ * radial dots cap a `linear-gradient` body inset by 1px each side. The
+ * colour lives in `--footer-link-line`, registered as a typed @property so
+ * its alpha is transitionable inside the gradient (a plain custom property
+ * isn't). It sits on an inner span that hugs the text, leaving the link's
+ * `py-2` tap-target padding untouched. Reduced-motion users get the instant
+ * colour swap via the global transition-duration override below. */
+@property --footer-link-line {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: transparent;
+}
+.footer-link-underline {
+  --footer-link-line: color-mix(in srgb, var(--color-text-primary) 30%, transparent);
+  background:
+    radial-gradient(circle 1px at 100% 50%, var(--footer-link-line) 99%, transparent) 0 100% / 1px 2px no-repeat,
+    radial-gradient(circle 1px at 0% 50%, var(--footer-link-line) 99%, transparent) 100% 100% / 1px 2px no-repeat,
+    linear-gradient(var(--footer-link-line), var(--footer-link-line)) 50% 100% / calc(100% - 2px) 2px no-repeat;
+  padding-bottom: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: --footer-link-line 0.3s ease-out;
+}
+/* Gate the strengthen-on-hover on real hover so a tap on touch doesn't
+ * leave the line stuck at its hover alpha. */
+@media (hover: hover) {
+  .footer-link:hover .footer-link-underline {
+    --footer-link-line: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+  }
+}
+
 /* Lets `width: auto` participate in CSS transitions, so a pill button
    that sizes to its content can smoothly resize when its label changes
    without any JS measurement. Chrome 129+, Safari 26+; falls back to
