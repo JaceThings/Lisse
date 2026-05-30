@@ -74,6 +74,10 @@ export function FocusRingOverlay({
   const fadeRef = useRef<AnimationPlaybackControls | null>(null);
   const lastModality = useRef<"keyboard" | "mouse">("mouse");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The route-change effect below reuses the main effect's hide() via this
+  // ref, so its full reset (incl. the cross-section fade state) stays in one
+  // place rather than being half-duplicated.
+  const hideRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let fadingOut = false;
@@ -122,6 +126,7 @@ export function FocusRingOverlay({
       pendingTarget = null;
       fadeTo(0, FADE_OUT);
     };
+    hideRef.current = hide;
 
     const onFocusIn = (e: FocusEvent) => {
       const t = (e.target as HTMLElement | null)?.closest(RING_SELECTOR) as HTMLElement | null;
@@ -244,24 +249,17 @@ export function FocusRingOverlay({
       document.removeEventListener("keydown", onModalityKey, true);
       document.removeEventListener("pointerdown", onModalityPointer, true);
       fadeRef.current?.stop();
+      hideRef.current = null;
     };
   }, [x, y, w, h, xS, yS, wS, hS, opacity, offsetX, offsetY]);
 
-  // Route-change reset. The follow-poll already hides when the tracked
-  // element disconnects or its ancestor fades out mid-exit, which covers the
-  // common case. But that hinges on the body transition animating opacity; a
-  // ring anchored to persistent chrome (header/footer) or an instant route
-  // swap would leave the ring stranded over the incoming page. Drop the
-  // target and fade out unconditionally on navigation — the next genuine
-  // focusin re-acquires a real element. Stop any in-flight cross-section
-  // fade so its onComplete can't snap the ring back to a stale rect.
+  // Route-change reset — the follow-poll misses rings anchored to persistent
+  // chrome or instant route swaps. Reuse hide() so the cross-section fade
+  // state is reset too (a manual fade-out would leave fadingOut stuck true,
+  // killing the ring until reload). No-op when nothing's shown.
   useEffect(() => {
-    if (!visible.current) return;
-    visible.current = false;
-    targetRef.current = null;
-    fadeRef.current?.stop();
-    fadeRef.current = animate(opacity, 0, FADE_OUT);
-  }, [pathname, opacity]);
+    hideRef.current?.();
+  }, [pathname]);
 
   return (
     <motion.svg
