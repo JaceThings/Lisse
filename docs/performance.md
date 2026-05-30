@@ -2,7 +2,7 @@
 
 Lisse generates SVG path strings in JS — no WASM, no workers, no dependencies. An internal 64-entry LRU cache memoises the shape-only computation (everything that depends on `radius`, `smoothing`, `curve`, `exponent`, and the per-corner budget), so identical corner configs on different-sized elements skip the math entirely.
 
-Numbers below are measured via [`pnpm bench`](../benchmarks) on an M-series Mac with Node 22. Instruction-count-based CodSpeed gates run on every PR.
+Numbers below are measured via [`pnpm bench`](../benchmarks) on an M-series Mac with Node 22.
 
 ## Single corner
 
@@ -38,5 +38,4 @@ The JS hot path doesn't include browser paint, layout, or compositor work, which
 
 ```sh
 pnpm bench           # full suite (core + adapter)
-pnpm bench:ci        # core only (what CodSpeed runs in CI)
 ```

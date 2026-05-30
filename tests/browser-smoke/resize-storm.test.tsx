@@ -5,7 +5,7 @@
 //
 // This is the one test that actually exercises real layout + paint +
 // compositor behaviour — every other test in the suite runs in
-// happy-dom (no layout). Catches the failure class CodSpeed cannot.
+// happy-dom (no layout). Catches the failure class the JS benches cannot.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { cdp, server } from "@vitest/browser/context";
 import { createRoot, type Root } from "react-dom/client";
@@ -89,8 +89,7 @@ function startSizeStorm(el: HTMLElement, durationMs: number): () => void {
 // observed runner median frame times (66ms WebKit unthrottled, 150ms
 // Chromium under 6× CPU throttle) plus headroom — the goal is to
 // catch order-of-magnitude regressions, not pin precise frame times.
-// CodSpeed (runner-independent instruction counts) is the actual
-// per-PR perf gate.
+// For JS-hot-path micro-timing, `pnpm bench` is the tighter signal.
 const FRAME_BUDGET_MS = 200;
 const FRAME_BUDGET_THROTTLED_MS = 600;
 

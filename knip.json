@@ -12,7 +12,6 @@
       "project": ["scripts/**/*.ts"],
       "ignoreDependencies": [
         "@argos-ci/playwright",
-        "@codspeed/vitest-plugin",
         "size-limit",
         "@size-limit/preset-small-lib",
         "knip",

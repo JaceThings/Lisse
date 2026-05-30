@@ -2,17 +2,11 @@
 //
 // 9 benches covering the surfaces consumers spend time in:
 //   - generatePath, single corner, four curve types (×4)
-//   - generatePath, 500 elements in a tight loop, four curve types (×4)
+//   - generatePath, 100-element batch, four curve types (×4)
 //   - createSvgEffects + one update cycle (×1)
 //
-// CodSpeed wraps each `bench()` call with instruction counting so the
-// numbers are deterministic across CI runs. The framework-adapter bench
-// in `use-smooth-corners.bench.ts` covers the same surfaces with wall
-// time for local exploration.
-//
-// Soft-launch: CodSpeed posts a per-PR comment for the first 8 weeks
-// with no hard fail. Tighten thresholds once the false-positive rate is
-// known.
+// The framework-adapter bench in `use-smooth-corners.bench.ts` covers the
+// same surfaces at the adapter level. Run both with `pnpm bench`.
 import { bench, describe } from "vitest";
 import { generatePath, createSvgEffects } from "../packages/core/src/index.js";
 import type { CurveType } from "../packages/core/src/curves/index.js";
@@ -27,11 +21,8 @@ for (const curve of CURVES) {
   });
 }
 
-// Batch size capped at 100 because CodSpeed's Valgrind simulation hits
-// VG_N_SEGMENTS (max mmap regions) when string allocations balloon past
-// ~500 path generations per iteration. 100 still captures the scaling
-// story (linear in count); the local `pnpm bench` wall-clock numbers
-// for n=500 in the README are extrapolated.
+// 100-element batch captures the scaling story (linear in count) without
+// a multi-second per-iteration loop.
 for (const curve of CURVES) {
   describe(`generatePath 100-batch — ${curve}`, () => {
     bench(`100x generatePath ${curve}`, () => {

@@ -1,21 +1,16 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
-import codspeedPlugin from "@codspeed/vitest-plugin";
 
 /**
- * Benchmark config. Two surfaces:
+ * Benchmark config. Two surfaces, both run by `pnpm bench` on tinybench's
+ * wall-clock loop:
  *
  *   - `core.bench.ts` — JS hot paths in @lisse/core (generatePath,
- *     createSvgEffects). Instruction-count signal for CodSpeed.
- *   - `use-smooth-corners.bench.ts` — adapter-level wall-clock benches
- *     for local exploration. Also instruction-counted by CodSpeed.
- *
- * `@codspeed/vitest-plugin` is a no-op when not running under
- * `codspeed-vitest` so `pnpm bench` still works locally with raw
- * tinybench timing.
+ *     createSvgEffects).
+ *   - `use-smooth-corners.bench.ts` — adapter-level benches for local
+ *     exploration.
  */
 export default defineConfig({
-  plugins: [codspeedPlugin()],
   test: {
     environment: "happy-dom",
     include: ["**/*.bench.ts"],
