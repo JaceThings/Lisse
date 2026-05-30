@@ -20,7 +20,7 @@ layer should answer "did it change". They are not the same.
 | Adapter contract | `packages/*/​__tests__/contract.test.{ts,tsx}` | "Do React / Vue / Svelte feed the same props into core?" Shared fixture, 26 cases × 3 adapters. |
 | Browser smoke | `tests/browser-smoke/*.test.tsx` | "Does Lisse hold up on real browsers at 500-element scale?" Main / tagged-release only. |
 | Consumer smoke | `tests/consumer-smoke/*.{mjs,cjs}` | "Does the *packed* tarball install and import cleanly?" |
-| Perf | `benchmarks/*.bench.ts` | "Did the JS hot path regress?" CodSpeed instruction-count, no wall-clock noise. |
+| Perf | `benchmarks/*.bench.ts` | "Did the JS hot path regress?" Local `pnpm bench` (tinybench wall-clock). |
 | Size | `package.json#size-limit` | "Did the bundle size regress?" Per-package brotli-budgeted. |
 | Dead code | `knip.json` | "Are there unused exports / files / deps?" |
 
@@ -30,7 +30,7 @@ layer should answer "did it change". They are not the same.
 pnpm test                # all projects (core / react / vue / svelte)
 pnpm test --project=core # one project
 pnpm coverage            # with coverage report (writes coverage/lcov.info)
-pnpm bench               # benchmarks via vitest + CodSpeed plugin
+pnpm bench               # JS hot-path benchmarks (tinybench wall-clock)
 pnpm size                # bundle-size check (rebuilds dist/ first)
 pnpm knip                # dead-code check
 pnpm consumer-smoke      # pack tarballs, lint, install in fixture, import
@@ -112,34 +112,22 @@ Canonicalisation: paths flow through `svgpath(...).abs().round(4)`
 before storage. Cosmetic float drift never churns a snapshot; an
 actual geometry change always does.
 
-## CodSpeed (perf gate)
+## Benchmarks
 
-`@codspeed/vitest-plugin` wraps every `bench()` in instruction
-counting via Valgrind. Local `pnpm bench` runs tinybench's wall-clock
-loop (the plugin is a no-op without the CI runner).
+`pnpm bench` runs the `benchmarks/*.bench.ts` suite on tinybench's
+wall-clock loop (happy-dom, no browser). It covers the JS hot paths in
+core (`generatePath`, `createSvgEffects`) and the adapter layer
+(`use-smooth-corners.bench.ts`). Run it locally when you touch a hot
+path — there's no CI perf gate.
 
-**Soft launch:** CodSpeed posts a per-PR comment with the per-bench
-delta. **No hard fail** until the false-positive rate is known. To
-calibrate before flipping the gate:
-
-1. Run each bench 10-20 times against an unchanged base commit.
-2. Compute the empirical p99 absolute delta as the noise floor.
-3. Set the fail threshold to `max(2 × p99_noise, 1%)`.
-4. Validate the threshold against 10-15 boring PRs.
-5. Any bench needing a threshold above ~5% is unstable or low-value
-   — fix the bench, simplify it, or drop it from gating.
-
-Wall-clock heuristics ("wait 8 weeks") aren't calibration — measure.
-
-CodSpeed *measures* JS hot paths only — it does **not** capture
+The benches *measure* JS hot paths only — they do **not** capture
 paint, layout, compositor, or browser-specific rendering. Real perf
 is the job of the browser-smoke run, which measures frame times under
 6× CPU throttle on Chromium.
 
 ### Adding a bench
 
-Drop a new `*.bench.ts` in `benchmarks/`. Vitest auto-discovers.
-CodSpeed picks it up on the next CI run.
+Drop a new `*.bench.ts` in `benchmarks/`. Vitest auto-discovers it.
 
 ## Browser-smoke local run
 
@@ -188,7 +176,6 @@ changes.
 | `size-limit` red | Bundle bloat | Investigate; if intentional, raise the budget with a reason in the commit |
 | Browser smoke red | Real-browser regression — likely Safari-specific | Reproduce locally with `cd tests/browser-smoke && pnpm test`. Use the parked BrowserStack OSS credentials if it's iOS-only |
 | `knip` red on unused exports | A removed feature left dangling code | Delete the dead exports |
-| CodSpeed >5% regression (post soft-launch) | Hot path slower | Profile via the named bench; revert or justify with a benchmark-backed reason |
 
 ## BrowserStack OSS (parked credentials)
 
@@ -204,7 +191,7 @@ releases only. Until that day, the credentials sit unused.
 ## Test count snapshot
 
 - 411 unit tests (core / react / vue / svelte combined)
-- 9 CodSpeed benches
+- 9 JS hot-path benches
 - ~6 browser-smoke cases × 3 browsers = ~18 browser assertions
 - 4 consumer-smoke imports
 - 5 snapshot grids (one per curve family + one mixed)

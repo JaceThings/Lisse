@@ -154,9 +154,8 @@ interface CaseSpec {
   effects: Effects;
 }
 
-// n=500 used to be here but CodSpeed's Valgrind simulation hits
-// VG_N_SEGMENTS (max mmap regions) on that many SmoothCorners mounts
-// per iteration. n=100 still captures the scaling story.
+// Counts top out at 100 — enough to show the scaling story without a
+// multi-second per-iteration mount loop.
 const COUNTS = [1, 10, 50, 100];
 const AUTOS = [true, false];
 const EFFECTS: Effects[] = ["none", "innerBorder"];
