@@ -7,6 +7,7 @@ import {
   useTransform,
   type AnimationPlaybackControls,
 } from "framer-motion";
+import { useRouterState } from "@tanstack/react-router";
 import { generatePath } from "@lisse/core";
 
 // Persistent squircle ring tracking the focused `[data-focus-ring]`.
@@ -72,6 +73,7 @@ export function FocusRingOverlay({
   const targetRef = useRef<HTMLElement | null>(null);
   const fadeRef = useRef<AnimationPlaybackControls | null>(null);
   const lastModality = useRef<"keyboard" | "mouse">("mouse");
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     let fadingOut = false;
@@ -244,6 +246,22 @@ export function FocusRingOverlay({
       fadeRef.current?.stop();
     };
   }, [x, y, w, h, xS, yS, wS, hS, opacity, offsetX, offsetY]);
+
+  // Route-change reset. The follow-poll already hides when the tracked
+  // element disconnects or its ancestor fades out mid-exit, which covers the
+  // common case. But that hinges on the body transition animating opacity; a
+  // ring anchored to persistent chrome (header/footer) or an instant route
+  // swap would leave the ring stranded over the incoming page. Drop the
+  // target and fade out unconditionally on navigation — the next genuine
+  // focusin re-acquires a real element. Stop any in-flight cross-section
+  // fade so its onComplete can't snap the ring back to a stale rect.
+  useEffect(() => {
+    if (!visible.current) return;
+    visible.current = false;
+    targetRef.current = null;
+    fadeRef.current?.stop();
+    fadeRef.current = animate(opacity, 0, FADE_OUT);
+  }, [pathname, opacity]);
 
   return (
     <motion.svg

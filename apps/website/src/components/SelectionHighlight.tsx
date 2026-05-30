@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- constants are co-located with the single component that owns them */
 import { useEffect, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { createRafCoalescer } from "../utils/raf.ts";
 
 const TOUCH_MEDIA_QUERY = "(hover: none) and (pointer: coarse)";
@@ -285,6 +286,7 @@ export function SelectionHighlight() {
   // unstyleable callout arrow would visually conflict with our marker.
   // Subscribe to the MQL so hot-attaching a mouse to an iPad flips live.
   const [isTouchPrimary, setIsTouchPrimary] = useState(getIsTouchPrimary);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     const mql = window.matchMedia(TOUCH_MEDIA_QUERY);
@@ -292,6 +294,17 @@ export function SelectionHighlight() {
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
   }, []);
+
+  // On route change the selected text unmounts, but the browser keeps the
+  // now-orphaned Selection alive — so `selectionchange` never fires and the
+  // marker overlays stay visible, stranded over the incoming page's content.
+  // Collapse the selection (which fires `selectionchange` → measure → hideAll)
+  // and fire the explicit hide event as a belt-and-braces. The mount run is a
+  // harmless no-op (no selection exists yet).
+  useEffect(() => {
+    window.getSelection()?.removeAllRanges();
+    window.dispatchEvent(new Event(SELECTION_HIGHLIGHT_HIDE_EVENT));
+  }, [pathname]);
 
   useEffect(() => {
     if (isTouchPrimary) return;
