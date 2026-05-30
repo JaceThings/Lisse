@@ -7,6 +7,7 @@ import {
   useTransform,
   type AnimationPlaybackControls,
 } from "framer-motion";
+import { useRouterState } from "@tanstack/react-router";
 import { generatePath } from "@lisse/core";
 
 // Persistent squircle ring tracking the focused `[data-focus-ring]`.
@@ -72,6 +73,11 @@ export function FocusRingOverlay({
   const targetRef = useRef<HTMLElement | null>(null);
   const fadeRef = useRef<AnimationPlaybackControls | null>(null);
   const lastModality = useRef<"keyboard" | "mouse">("mouse");
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The route-change effect below reuses the main effect's hide() via this
+  // ref, so its full reset (incl. the cross-section fade state) stays in one
+  // place rather than being half-duplicated.
+  const hideRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let fadingOut = false;
@@ -120,6 +126,7 @@ export function FocusRingOverlay({
       pendingTarget = null;
       fadeTo(0, FADE_OUT);
     };
+    hideRef.current = hide;
 
     const onFocusIn = (e: FocusEvent) => {
       const t = (e.target as HTMLElement | null)?.closest(RING_SELECTOR) as HTMLElement | null;
@@ -242,8 +249,17 @@ export function FocusRingOverlay({
       document.removeEventListener("keydown", onModalityKey, true);
       document.removeEventListener("pointerdown", onModalityPointer, true);
       fadeRef.current?.stop();
+      hideRef.current = null;
     };
   }, [x, y, w, h, xS, yS, wS, hS, opacity, offsetX, offsetY]);
+
+  // Route-change reset — the follow-poll misses rings anchored to persistent
+  // chrome or instant route swaps. Reuse hide() so the cross-section fade
+  // state is reset too (a manual fade-out would leave fadingOut stuck true,
+  // killing the ring until reload). No-op when nothing's shown.
+  useEffect(() => {
+    hideRef.current?.();
+  }, [pathname]);
 
   return (
     <motion.svg
