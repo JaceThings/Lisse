@@ -4,8 +4,16 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Divider } from "../Divider.tsx";
 import { playClick } from "../../lib/sounds.ts";
 
-const LINK =
-  "py-2 -my-2 hover:text-text-primary transition-[color] duration-150 ease-out";
+// Full-contrast primary text by deliberate choice — these links sit at the
+// page foot and must read without hovering. `py-2 -my-2` grows the tap target
+// without shifting layout (the negative margin cancels the padding). The
+// hover underline lives on the inner span (see global.css); LinkText wraps
+// the text so the line hugs the glyphs, not the padded box.
+const LINK = "footer-link py-2 -my-2";
+
+function LinkText({ children }: { children: ReactNode }) {
+  return <span className="footer-link-underline">{children}</span>;
+}
 // Governs the home-link's width-collapse only; the whole-footer slide
 // is App.tsx's motion.footer + LayoutGroup pair.
 const NAV_LAYOUT_TRANSITION = {
@@ -91,7 +99,7 @@ export function Footer() {
         layout
         transition={NAV_LAYOUT_TRANSITION}
         aria-label="Site"
-        className="flex w-full items-start gap-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-secondary whitespace-nowrap"
+        className="flex w-full items-start gap-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-primary whitespace-nowrap"
       >
         {/* popLayout sets the exiting Home link to position:absolute so
             siblings slide to fill the gap in lockstep with the fade. */}
@@ -116,7 +124,7 @@ export function Footer() {
                 data-focus-ring
                 data-focus-inset-x="6"
               >
-                Home
+                <LinkText>Home</LinkText>
               </ScrollLink>
             </motion.span>
           )}
@@ -128,7 +136,7 @@ export function Footer() {
             data-focus-ring
             data-focus-inset-x="6"
           >
-            What?
+            <LinkText>What?</LinkText>
           </ScrollLink>
         </NavSlot>
         <NavSlot>
@@ -138,7 +146,7 @@ export function Footer() {
             data-focus-ring
             data-focus-inset-x="6"
           >
-            Playground
+            <LinkText>Playground</LinkText>
           </ScrollLink>
         </NavSlot>
         <NavSlot>
@@ -151,7 +159,7 @@ export function Footer() {
             rel="noreferrer"
             onClick={() => playClick()}
           >
-            Docs
+            <LinkText>Docs</LinkText>
           </a>
         </NavSlot>
       </motion.nav>
