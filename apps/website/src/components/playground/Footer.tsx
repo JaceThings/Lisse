@@ -4,12 +4,11 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Divider } from "../Divider.tsx";
 import { playClick } from "../../lib/sounds.ts";
 
-// Footer links render at full-strength primary text (the previous resting
-// state inherited `text-text-secondary` — a 75%-opacity taupe, ~2.8:1 on
-// the cream bg — which some people couldn't see). The hover affordance is a
-// hairline underline on the inner `.footer-link-underline` span (see
-// global.css). `py-2 -my-2` keeps a comfortable tap target without shifting
-// layout. Wrap link text in <LinkText> so the underline hugs the glyphs.
+// Full-contrast primary text by deliberate choice — these links sit at the
+// page foot and must read without hovering. `py-2 -my-2` grows the tap target
+// without shifting layout (the negative margin cancels the padding). The
+// hover underline lives on the inner span (see global.css); LinkText wraps
+// the text so the line hugs the glyphs, not the padded box.
 const LINK = "footer-link py-2 -my-2";
 
 function LinkText({ children }: { children: ReactNode }) {
