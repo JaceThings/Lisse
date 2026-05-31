@@ -1,0 +1,73 @@
+name: Purge Cloudflare cache on deploy
+
+# The website serves HTML shells with a long edge TTL (s-maxage) and relies on
+# a purge to evict them once a new deploy is live — otherwise Cloudflare keeps
+# serving a shell that points at asset hashes the new container no longer has.
+#
+# Each build stamps public/version.json with its commit SHA (served no-store via
+# the /version.json route rule), so we just poll the live site until it reports
+# THIS commit — that's proof the new container is serving — then purge the HTML
+# URLs. No Railway API needed.
+#
+# Required GitHub secrets:
+#   CLOUDFLARE_ZONE_ID     zone for corne.rs
+#   CLOUDFLARE_API_TOKEN   token with the Cache Purge permission
+
+on:
+  push:
+    branches: [main]
+    # Anything that changes the built site: the app, the workspace packages it
+    # bundles, or this workflow.
+    paths:
+      - "apps/website/**"
+      - "packages/**"
+      - ".github/workflows/purge-cf.yml"
+
+# A newer push supersedes an in-flight wait — no point purging for a deploy
+# that's already been replaced.
+concurrency:
+  group: purge-cf
+  cancel-in-progress: true
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for the new version to go live
+        id: wait
+        env:
+          SITE: https://corne.rs
+        run: |
+          set -euo pipefail
+          # ~15 min budget (60 x 15s) to cover build + deploy + cutover.
+          for attempt in $(seq 1 60); do
+            # Cache-buster defeats any intermediary; the route is no-store anyway.
+            live=$(curl -fsS "$SITE/version.json?cb=$(date +%s)" \
+              | jq -r '.version' 2>/dev/null || echo "")
+            echo "attempt $attempt: live=${live:0:7} want=${GITHUB_SHA:0:7}"
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              echo "purge=true" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            sleep 15
+          done
+          echo "version never flipped to $GITHUB_SHA within timeout — skipping purge"
+          echo "purge=false" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.wait.outputs.purge == 'true'
+        with:
+          node-version: 20
+
+      # The script only needs tsx and a dependency-free TS import, so run it
+      # straight with npx — no pnpm/workspace install required. Pin the major
+      # so npm can't resolve a hijacked release to run with the CF token in env
+      # (matches the workspace's tsx ^4.x).
+      - name: Purge Cloudflare
+        if: steps.wait.outputs.purge == 'true'
+        working-directory: apps/website
+        env:
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx -y tsx@4 scripts/purge-cf-cache.ts

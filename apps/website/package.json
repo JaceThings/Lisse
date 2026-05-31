@@ -7,7 +7,7 @@
   "scripts": {
     "predev": "tsx scripts/build-llms-full.ts",
     "dev": "vite dev",
-    "prebuild": "tsx scripts/build-llms-full.ts",
+    "prebuild": "tsx scripts/build-llms-full.ts && tsx scripts/write-version.ts",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "preview": "node .output/server/index.mjs",
