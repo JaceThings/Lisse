@@ -10,14 +10,10 @@
 // `no-store`, so a poll always sees the truth.
 
 import { writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const PUBLIC = join(HERE, "..", "public");
-
 const version = process.env.RAILWAY_GIT_COMMIT_SHA || "dev";
-const file = join(PUBLIC, "version.json");
+const file = fileURLToPath(new URL("../public/version.json", import.meta.url));
 
 await writeFile(file, `${JSON.stringify({ version })}\n`, "utf8");
-console.log(`wrote ${file.replace(PUBLIC, "public")} -> ${version}`);
+console.log(`wrote public/version.json -> ${version}`);

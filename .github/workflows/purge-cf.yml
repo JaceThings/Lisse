@@ -61,11 +61,13 @@ jobs:
           node-version: 20
 
       # The script only needs tsx and a dependency-free TS import, so run it
-      # straight with npx — no pnpm/workspace install required.
+      # straight with npx — no pnpm/workspace install required. Pin the major
+      # so npm can't resolve a hijacked release to run with the CF token in env
+      # (matches the workspace's tsx ^4.x).
       - name: Purge Cloudflare
         if: steps.wait.outputs.purge == 'true'
         working-directory: apps/website
         env:
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx -y tsx scripts/purge-cf-cache.ts
+        run: npx -y tsx@4 scripts/purge-cf-cache.ts
