@@ -40,9 +40,17 @@ COPY packages packages
 COPY apps/website apps/website
 COPY README.md ./
 
+# Commit SHA for the build's public/version.json (scripts/write-version.ts, run
+# by the website's prebuild). Railway injects RAILWAY_GIT_COMMIT_SHA and passes
+# it as a build arg to declared ARGs; a declared ARG is in scope as an env var
+# for the RUN below. Unset locally (or for non-GitHub deploys) → write-version
+# falls back to "dev", and the purge workflow's version poll simply times out
+# and skips — fail-safe, never a broken deploy.
+ARG RAILWAY_GIT_COMMIT_SHA
+
 # Build the workspace packages so the website resolves @lisse/react via
-# their `dist/` outputs, then build the website (prebuild → llms-full.txt;
-# build → vite build → .output/).
+# their `dist/` outputs, then build the website (prebuild → llms-full.txt +
+# version.json; build → vite build → .output/).
 RUN pnpm -r --filter "./packages/*" build \
     && pnpm --filter website build
 

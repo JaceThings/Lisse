@@ -31,7 +31,42 @@ export default defineConfig({
     // Nitro assembles the SSR handler + static assets + a listening Node
     // server into .output/ (node-server preset auto-detected) — a single
     // self-contained process that binds PORT. This is what replaces nginx.
-    nitro(),
+    //
+    // routeRules replace nginx's per-location Cache-Control. Each `headers`
+    // rule is middleware that runs `event.res.headers.set()` BEFORE both the
+    // static-asset handler and the TanStack Start SSR handler, so it governs
+    // hashed assets AND the rendered HTML; the more-specific glob wins on
+    // overlap (/assets/** and /version.json beat /**). Cloudflare needs a
+    // Cache Rule marking HTML "Eligible for cache" with Edge TTL "respect
+    // origin" for the edge to honour these — it bypasses HTML by default.
+    nitro({
+      routeRules: {
+        // Content-hashed build output — the filename changes when the bytes
+        // do, so it's safe to pin forever in every cache.
+        "/assets/**": {
+          headers: { "cache-control": "public, max-age=31536000, immutable" },
+        },
+        // Deploy marker the purge workflow polls — must always read true, so
+        // no cache anywhere (Nitro serves it from public/ before the $ catch-all).
+        "/version.json": {
+          headers: { "cache-control": "no-store" },
+        },
+        // SSR HTML + stable public files (favicons, og-image, *.webm, svg,
+        // robots/sitemap/llms). Browsers always revalidate (max-age=0) so a
+        // user never pins a stale shell pointing at asset hashes the new
+        // container dropped; Cloudflare holds it at the edge for a day and
+        // serves every visitor from a PoP; stale-while-revalidate refreshes
+        // in the background, so a missed deploy purge self-heals within ~24h
+        // instead of stranding. The deploy purge (.github/workflows/purge-cf.yml)
+        // gives an instant cutover; this TTL is the safety net under it.
+        "/**": {
+          headers: {
+            "cache-control":
+              "public, max-age=0, s-maxage=86400, stale-while-revalidate=86400",
+          },
+        },
+      },
+    }),
     tailwindcss(),
     // React LAST — must come after tanstackStart().
     viteReact(),
