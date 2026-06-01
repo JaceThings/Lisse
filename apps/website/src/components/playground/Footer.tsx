@@ -23,12 +23,12 @@ const NAV_LAYOUT_TRANSITION = {
 // Wraps a plain nav link so framer-motion tracks its position; when the
 // Home link enters or exits, siblings slide to their new flex positions
 // instead of snapping.
-function NavSlot({ children }: { children: ReactNode }) {
+function NavSlot({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <motion.span
       layout
       transition={NAV_LAYOUT_TRANSITION}
-      className="inline-flex"
+      className={`inline-flex${className ? ` ${className}` : ""}`}
     >
       {children}
     </motion.span>
@@ -160,6 +160,21 @@ export function Footer() {
             onClick={() => playClick()}
           >
             <LinkText>Docs</LinkText>
+          </a>
+        </NavSlot>
+        {/* ml-auto pins Follow to the far right; the auto margin absorbs the
+            Home link's enter/exit so it stays put while the left group shifts. */}
+        <NavSlot className="ml-auto">
+          <a
+            href="https://x.com/JaceThings"
+            className={LINK}
+            data-focus-ring
+            data-focus-inset-x="6"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => playClick()}
+          >
+            <LinkText>Follow</LinkText>
           </a>
         </NavSlot>
       </motion.nav>
