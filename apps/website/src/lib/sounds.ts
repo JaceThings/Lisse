@@ -82,6 +82,106 @@ export const playSmoothingEnter = () => playFile("/smoothing-enter.webm", 0.35);
 export const playSmoothingExit = () => playFile("/smoothing-exit.webm", 0.35);
 export const playPop = () => playFile("/pop.webm", 0.3);
 
+// === Rumble (synthesised) ==================================================
+// Continuous low-frequency drone that builds during the Lisse wobble phase.
+// Detuned sine + triangle oscillators with LFO frequency modulation create
+// a tense, physical shaking feel that escalates to the pop.
+
+const RUMBLE_BASE_FREQ = 48;
+const RUMBLE_HARMONIC_FREQ = 72;
+const RUMBLE_LFO_MIN_FREQ = 3;
+const RUMBLE_LFO_MAX_FREQ = 9;
+const RUMBLE_LFO_MIN_DEPTH = 1;
+const RUMBLE_LFO_MAX_DEPTH = 8;
+const RUMBLE_MIN_VOL = 0.015;
+const RUMBLE_MAX_VOL = 0.13;
+
+interface RumbleState {
+  osc1: OscillatorNode;
+  osc2: OscillatorNode;
+  lfo: OscillatorNode;
+  lfoGain: GainNode;
+  harmonicGain: GainNode;
+  master: GainNode;
+}
+
+let rumble: RumbleState | null = null;
+
+function ensureRumble(): RumbleState {
+  if (rumble) return rumble;
+  const c = audio();
+
+  const master = c.createGain();
+  master.gain.value = 0;
+  master.connect(c.destination);
+
+  const osc1 = c.createOscillator();
+  osc1.type = "sine";
+  osc1.frequency.value = RUMBLE_BASE_FREQ;
+  osc1.connect(master);
+
+  const harmonicGain = c.createGain();
+  harmonicGain.gain.value = 0.25;
+  const osc2 = c.createOscillator();
+  osc2.type = "triangle";
+  osc2.frequency.value = RUMBLE_HARMONIC_FREQ;
+  osc2.connect(harmonicGain).connect(master);
+
+  const lfo = c.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = RUMBLE_LFO_MIN_FREQ;
+  const lfoGain = c.createGain();
+  lfoGain.gain.value = RUMBLE_LFO_MIN_DEPTH;
+  lfo.connect(lfoGain);
+  lfoGain.connect(osc1.frequency);
+  lfoGain.connect(osc2.frequency);
+
+  osc1.start();
+  osc2.start();
+  lfo.start();
+
+  rumble = { osc1, osc2, lfo, lfoGain, harmonicGain, master };
+  return rumble;
+}
+
+export function setRumbleIntensity(t: number) {
+  if (t <= 0) {
+    stopRumble();
+    return;
+  }
+  const r = ensureRumble();
+  const c = audio();
+  const now = c.currentTime;
+  const vol = RUMBLE_MIN_VOL + (RUMBLE_MAX_VOL - RUMBLE_MIN_VOL) * t;
+  const lfoDepth = RUMBLE_LFO_MIN_DEPTH + (RUMBLE_LFO_MAX_DEPTH - RUMBLE_LFO_MIN_DEPTH) * t;
+  const lfoFreq = RUMBLE_LFO_MIN_FREQ + (RUMBLE_LFO_MAX_FREQ - RUMBLE_LFO_MIN_FREQ) * t;
+  const harmonicBlend = 0.25 + 0.45 * t;
+
+  r.master.gain.cancelScheduledValues(now);
+  r.master.gain.setTargetAtTime(vol, now, 0.06);
+  r.lfoGain.gain.cancelScheduledValues(now);
+  r.lfoGain.gain.setTargetAtTime(lfoDepth, now, 0.06);
+  r.lfo.frequency.cancelScheduledValues(now);
+  r.lfo.frequency.setTargetAtTime(lfoFreq, now, 0.06);
+  r.harmonicGain.gain.cancelScheduledValues(now);
+  r.harmonicGain.gain.setTargetAtTime(harmonicBlend, now, 0.06);
+}
+
+export function stopRumble() {
+  if (!rumble || !ctx) return;
+  const now = ctx.currentTime;
+  rumble.master.gain.cancelScheduledValues(now);
+  rumble.master.gain.setTargetAtTime(0, now, 0.035);
+  const r = rumble;
+  rumble = null;
+  setTimeout(() => {
+    try { r.osc1.stop(); } catch {}
+    try { r.osc2.stop(); } catch {}
+    try { r.lfo.stop(); } catch {}
+    try { r.master.disconnect(); } catch {}
+  }, 300);
+}
+
 // === Tick (synthesised) ====================================================
 // 5.5 kHz sine partial (12 ms exp decay) + 3 ms white-noise burst through
 // a Q=18 bandpass at 5.5 kHz. The resonant filter rings like a small rigid

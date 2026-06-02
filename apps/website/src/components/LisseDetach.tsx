@@ -27,7 +27,7 @@ import {
 } from "framer-motion";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { playLissePronunciation, playPop } from "../lib/sounds.ts";
+import { playLissePronunciation, playPop, setRumbleIntensity, stopRumble } from "../lib/sounds.ts";
 
 const THRESHOLD = 22;
 const WOBBLE_START = 8;
@@ -261,6 +261,12 @@ export function useLisseDetach() {
     cancelTimers();
     const tickDown = () => {
       countRef.current = Math.max(0, countRef.current - 1);
+      if (countRef.current >= WOBBLE_START) {
+        const t = Math.pow((countRef.current - WOBBLE_START) / (THRESHOLD - WOBBLE_START), 0.6);
+        setRumbleIntensity(t);
+      } else {
+        stopRumble();
+      }
       if (countRef.current > 0) {
         decayTimerRef.current = window.setTimeout(tickDown, DECAY_INTERVAL_MS);
       }
@@ -268,11 +274,12 @@ export function useLisseDetach() {
     decayTimerRef.current = window.setTimeout(tickDown, IDLE_GRACE_MS);
     resetTimerRef.current = window.setTimeout(() => {
       countRef.current = 0;
+      stopRumble();
       cancelTimers();
     }, HARD_RESET_MS);
   }, []);
 
-  useEffect(() => cancelTimers, []);
+  useEffect(() => () => { cancelTimers(); stopRumble(); }, []);
 
   const measure = (el: HTMLElement): Origin => {
     const r = el.getBoundingClientRect();
@@ -310,6 +317,7 @@ export function useLisseDetach() {
       // DETACH_KICK_MIN so a perfectly-centred click still drifts.
       const kickMag = lerp(DETACH_KICK_MIN, DETACH_KICK_MAX, Math.abs(offsetX));
       const kickSign = offsetX === 0 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(offsetX);
+      stopRumble();
       playPop();
       setDetach({
         origin,
@@ -355,6 +363,7 @@ export function useLisseDetach() {
           x: [0, T, -T, 0],
           transition: { duration: WOBBLE_DURATION_S },
         });
+        setRumbleIntensity(t);
       }
     },
     [reduced, detach, scheduleDecay, wobble, fireDetach],
