@@ -14,6 +14,8 @@ Pixel-perfect Figma squircles + three other corner curves.
 
 **[Live demo →](https://corne.rs)**
 
+**English** · [简体中文](./README.zh-Hans.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Português (BR)](./README.pt-BR.md) · [Русский](./README.ru.md) · [Deutsch](./README.de.md)
+
 </div>
 
 ## What is this?
