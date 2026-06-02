@@ -5,17 +5,21 @@
   "type": "module",
   "description": "corne.rs landing site for the Lisse squircle library",
   "scripts": {
-    "predev": "tsx scripts/build-llms-full.ts",
+    "predev": "tsx scripts/build-llms-full.ts && tsx scripts/build-sitemap.ts",
     "dev": "vite dev",
-    "prebuild": "tsx scripts/build-llms-full.ts && tsx scripts/write-version.ts",
+    "prebuild": "tsx scripts/build-llms-full.ts && tsx scripts/write-version.ts && tsx scripts/build-sitemap.ts",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "preview": "node .output/server/index.mjs",
+    "paraglide": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
+    "pretypecheck": "pnpm run paraglide",
     "typecheck": "tsc --noEmit",
+    "validate:translations": "tsx scripts/validate-translations.ts",
     "build:llms": "tsx scripts/build-llms-full.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",
+    "@inlang/paraglide-js": "^2.18.1",
     "@lisse/core": "workspace:*",
     "@lisse/react": "workspace:*",
     "@numeric-text/react": "^0.1.4",

@@ -11,6 +11,7 @@ import { Card } from "./Card.tsx";
 import { Divider } from "./Divider.tsx";
 import { Stagger } from "./Stagger.tsx";
 import { playCopySuccess } from "../lib/sounds.ts";
+import { m } from "../paraglide/messages.js";
 
 type RowDef = {
   pkg: string;
@@ -68,14 +69,14 @@ export function Install({ staggerFrom }: InstallProps) {
   }
 
   const announcement =
-    status.kind === "copied" ? `Copied ${status.pkg} install command to clipboard`
-    : status.kind === "error" ? `Unable to copy ${status.pkg} install command`
+    status.kind === "copied" ? m.install_copied_announcement({ pkg: status.pkg })
+    : status.kind === "error" ? m.install_error_announcement({ pkg: status.pkg })
     : "";
 
   return (
     <section className="flex w-full flex-col gap-5" aria-labelledby="install-heading">
       <h2 id="install-heading" className="sr-only">
-        Install
+        {m.install_heading()}
       </h2>
       <Stagger index={staggerFrom - 1}>
         <Divider />
@@ -98,7 +99,7 @@ export function Install({ staggerFrom }: InstallProps) {
                 className={ROW_HITAREA}
                 data-focus-ring
                 onClick={() => handleCopy(row)}
-                aria-label={`Copy ${row.command} to clipboard`}
+                aria-label={m.install_copy_command_label({ command: row.command })}
               >
                 <Card>
                   <div className={ROW_VISUAL}>

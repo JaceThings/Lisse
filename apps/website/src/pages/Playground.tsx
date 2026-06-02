@@ -9,11 +9,13 @@ import { CurveTypeSection } from "../components/playground/sections/CurveTypeSec
 import { PerCornerSection } from "../components/playground/sections/PerCornerSection.tsx";
 import { RadiusSection } from "../components/playground/sections/RadiusSection.tsx";
 import { ShadowSection } from "../components/playground/sections/ShadowSection.tsx";
-
-const BORDER_DESC =
-  "Stroke borders that follow the smooth corner path. Solid, dashed, dotted, double, groove, ridge — the standard CSS line styles.";
+import { m } from "../paraglide/messages.js";
 
 export function Playground() {
+  // Resolved per render so the request's active locale wins (a module-scope
+  // m.*() call would lock to the import-time locale and show English on every
+  // localized page). Shared by the three BorderSection variants below.
+  const borderDesc = m.playground_border_description();
   return (
     <PlaygroundTuningProvider value={DEFAULT_TUNING}>
       {/* Indices 0–5 are reserved for the Header; body starts at 6.
@@ -30,26 +32,26 @@ export function Playground() {
         </Stagger>
         <Stagger index={9}>
           <ShadowSection
-            title="Drop Shadow"
-            description="SVG-based drop shadows traced from the same squircle path as the element above. Matches the surface shape at any radius."
+            title={m.playground_drop_shadow_title()}
+            description={m.playground_drop_shadow_description()}
             kind="drop"
           />
         </Stagger>
         <Stagger index={10}>
           <ShadowSection
-            title="Inner Shadow"
-            description="Inset shadows rendered inside the smooth corner path. Useful for recessed surfaces, pressed states, or a soft fill underneath."
+            title={m.playground_inner_shadow_title()}
+            description={m.playground_inner_shadow_description()}
             kind="inner"
           />
         </Stagger>
         <Stagger index={11}>
-          <BorderSection title="Outer Border" description={BORDER_DESC} position="outer" />
+          <BorderSection title={m.playground_outer_border_title()} description={borderDesc} position="outer" />
         </Stagger>
         <Stagger index={12}>
-          <BorderSection title="Inner Border" description={BORDER_DESC} position="inner" />
+          <BorderSection title={m.playground_inner_border_title()} description={borderDesc} position="inner" />
         </Stagger>
         <Stagger index={13}>
-          <BorderSection title="Center Border" description={BORDER_DESC} position="middle" />
+          <BorderSection title={m.playground_center_border_title()} description={borderDesc} position="middle" />
         </Stagger>
         <Stagger index={14}>
           <CurveTypeSection />
