@@ -1,5 +1,5 @@
 {
-  "$comment": "Tokens that MUST appear verbatim in every translation. scripts/validate-translations.ts enforces: for any message whose English value contains one of these tokens, the translated value must contain the same token unchanged. Brand, coined terms, product/framework names, acronyms, and code identifiers.",
+  "$comment": "Tokens that MUST appear verbatim in EVERY locale. scripts/validate-translations.ts enforces: for any message whose English value contains one of these, the translation must contain the same token unchanged. Scope is deliberately narrow — only the brand, CSS identifiers, product/framework/org names, acronyms, and a contributor name. Coined/math terms (squircle, superellipse, clothoid, Euler, Bézier) are NOT enforced here: every target language has a natural rendering for them (native math term, transliteration, or capitalization), so they are handled per-locale via i18n/glossary.json and native review instead.",
   "tokens": [
     "lisse",
     "Lisse",
@@ -7,12 +7,6 @@
     "@lisse/react",
     "@lisse/vue",
     "@lisse/svelte",
-    "squircle",
-    "Squircle",
-    "superellipse",
-    "Superellipse",
-    "clothoid",
-    "Clothoid",
     "border-radius",
     "corner-shape",
     "Figma",
@@ -29,8 +23,6 @@
     "Vue",
     "Svelte",
     "npm",
-    "Bézier",
-    "Euler",
     "G1",
     "G2",
     "Daniel Furse"

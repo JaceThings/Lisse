@@ -1,24 +1,24 @@
 {
-  "$comment": "Terminology + register policy for Lisse website translations. Translators (human or AI) MUST follow this for every locale. Tokens that must appear verbatim in output are enforced by i18n/do-not-translate.json + scripts/validate-translations.ts.",
-  "register": "Precise, technical, developer-facing — not marketing-flowery. Use the formal/informal 'you' that is conventional for developer documentation in the target language (e.g. de: Sie or du per project norm; ja: です/ます; pt-BR: você). Keep UI labels and button text concise.",
+  "$comment": "Terminology + register policy for Lisse website translations. Translators (human or AI) MUST follow this for every locale. Tokens that must appear verbatim in EVERY locale are enforced by i18n/do-not-translate.json + scripts/validate-translations.ts. The coined/math terms below are handled per-locale (native term / transliteration / capitalization) and are NOT hard-enforced — they were reviewed against real native-speaker developer usage.",
+  "register": "Precise, technical, developer-facing — not marketing-flowery. Use the formal/informal 'you' that is conventional for developer documentation in the target language (e.g. de: du; ja: です・ます; ko: 합니다체; pt-BR: você; ru: вы). Keep UI labels and button text concise. Use locale number formatting where natural (e.g. de/pt decimal comma: 0,6).",
   "terms": {
-    "lisse": "Brand and npm scope (@lisse/*). NEVER translate or transliterate. Lowercase 'lisse' is the wordmark; 'Lisse' capitalized in running prose. Keep verbatim.",
-    "squircle": "Coined technical term. Keep VERBATIM in Latin-script locales. For zh-Hans / ja / ko, keep the Latin word 'squircle' verbatim (a parenthetical gloss on first use is allowed); a native reviewer should confirm before merge.",
-    "superellipse": "Coined math term. Same policy as 'squircle' — keep verbatim.",
-    "clothoid": "Math term (Euler spiral). Keep verbatim, or use the established local mathematical term if one is standard.",
-    "border-radius": "CSS property — it is code. Keep verbatim.",
-    "corner-shape": "CSS property — it is code. Keep verbatim.",
-    "G1 / G2": "Geometric-continuity notation. Keep verbatim.",
-    "Figma / Sketch / Apple / iOS / Chrome / Safari / Firefox / W3C": "Product, company and org names. Keep verbatim.",
-    "React / Vue / Svelte / SVG / CSS / npm": "Framework names, acronyms, tooling. Keep verbatim.",
-    "Bézier / Euler": "Names in math terms. Keep verbatim.",
+    "lisse": "Brand and npm scope (@lisse/*). NEVER translate or transliterate. Lowercase 'lisse' is the wordmark; 'Lisse' capitalized in running prose. Keep verbatim (enforced).",
+    "squircle": "Keep the Latin word in zh / ja / ko / pt-BR. In German, capitalize it as a noun (Squircle, Figma-Squircle). In Russian, transliterate and decline it in prose (сквиркл), keeping the Latin form only where it is the literal CSS `squircle` keyword. ja/ko may gloss once on first use (スクワークル / 스쿼클).",
+    "superellipse": "Use the established native mathematical term: zh 超椭圆, ja スーパー楕円, ko 초타원, pt-BR superelipse, ru суперэллипс, de Superellipse (capitalized German noun). Optionally gloss the English once in parentheses on first use.",
+    "clothoid": "Use the native term: zh 回旋曲线, ja クロソイド(曲線), ko 클로소이드, pt-BR clotoide, ru Клотоида, de Klothoide.",
+    "Euler / Bézier": "Latin (with accents) in Latin-script locales (de, pt). Native script in Russian (Эйлер, Безье). zh/ja/ko: hybrid is fine (e.g. 欧拉 / オイラー), gloss once at most.",
+    "border-radius / corner-shape": "CSS property names — code. Keep verbatim in every locale (enforced).",
+    "G1 / G2": "Geometric-continuity notation. Keep verbatim (enforced).",
+    "Figma / Sketch / Apple / iOS / Chrome / Safari / Firefox / W3C": "Product, company and org names. Keep verbatim (enforced).",
+    "React / Vue / Svelte / SVG / CSS / npm": "Framework names, acronyms, tooling. Keep verbatim (enforced).",
+    "playground / binding / feature flag / design system": "Loanwords — keep the form real developers use in the target language (most keep these in English; ru prefers Песочница for playground and avoids the literal 'флаг функции').",
     "un galet lisse / cheveux lisses / une courbe lisse": "French phrases in the dictionary-style header definition. Keep the French verbatim (they illustrate the word's French origin)."
   },
   "rules": [
     "Translate the VALUE only, never the key.",
     "Preserve every {placeholder} token exactly (same names, same count).",
     "Never alter text inside backticks `like this`, install commands, or math formulas/symbols (e.g. |x/R|^n + |y/R|^n = 1, n = 5, 1/R, κ).",
-    "Preserve leading/trailing whitespace and sentence-joining spacing exactly as in the English value.",
-    "Numbers, units and version strings (e.g. 16 pixels, 2013, 0.6, August 2025) stay as in the source unless locale number formatting clearly applies."
+    "Preserve sentence-joining spacing exactly as in the English value (some messages are fragments joined with spaces in the UI).",
+    "Read naturally to a native-speaker developer — avoid calques and over-literal phrasing."
   ]
 }
