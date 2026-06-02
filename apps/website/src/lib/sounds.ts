@@ -87,14 +87,18 @@ export const playPop = () => playFile("/pop.webm", 0.3);
 // Detuned sine + triangle oscillators with LFO frequency modulation create
 // a tense, physical shaking feel that escalates to the pop.
 
-const RUMBLE_BASE_FREQ = 48;
-const RUMBLE_HARMONIC_FREQ = 72;
-const RUMBLE_LFO_MIN_FREQ = 3;
-const RUMBLE_LFO_MAX_FREQ = 9;
-const RUMBLE_LFO_MIN_DEPTH = 1;
-const RUMBLE_LFO_MAX_DEPTH = 8;
-const RUMBLE_MIN_VOL = 0.015;
-const RUMBLE_MAX_VOL = 0.13;
+const RUMBLE_BASE_FREQ = 42;
+const RUMBLE_HARMONIC_FREQ = 68;
+const RUMBLE_LFO_MIN_FREQ = 5;
+const RUMBLE_LFO_MAX_FREQ = 14;
+const RUMBLE_LFO_MIN_DEPTH = 3;
+const RUMBLE_LFO_MAX_DEPTH = 16;
+const RUMBLE_MIN_VOL = 0.04;
+const RUMBLE_MAX_VOL = 0.26;
+const RUMBLE_PAN_LFO_MIN_FREQ = 3;
+const RUMBLE_PAN_LFO_MAX_FREQ = 12;
+const RUMBLE_PAN_MIN_DEPTH = 0.5;
+const RUMBLE_PAN_MAX_DEPTH = 1.0;
 
 interface RumbleState {
   osc1: OscillatorNode;
@@ -103,6 +107,9 @@ interface RumbleState {
   lfoGain: GainNode;
   harmonicGain: GainNode;
   master: GainNode;
+  panner: StereoPannerNode;
+  panLfo: OscillatorNode;
+  panLfoGain: GainNode;
 }
 
 let rumble: RumbleState | null = null;
@@ -111,9 +118,21 @@ function ensureRumble(): RumbleState {
   if (rumble) return rumble;
   const c = audio();
 
+  const panner = c.createStereoPanner();
+  panner.pan.value = 0;
+  panner.connect(c.destination);
+
+  const panLfo = c.createOscillator();
+  panLfo.type = "sine";
+  panLfo.frequency.value = RUMBLE_PAN_LFO_MIN_FREQ;
+  const panLfoGain = c.createGain();
+  panLfoGain.gain.value = RUMBLE_PAN_MIN_DEPTH;
+  panLfo.connect(panLfoGain);
+  panLfoGain.connect(panner.pan);
+
   const master = c.createGain();
   master.gain.value = 0;
-  master.connect(c.destination);
+  master.connect(panner);
 
   const osc1 = c.createOscillator();
   osc1.type = "sine";
@@ -139,8 +158,9 @@ function ensureRumble(): RumbleState {
   osc1.start();
   osc2.start();
   lfo.start();
+  panLfo.start();
 
-  rumble = { osc1, osc2, lfo, lfoGain, harmonicGain, master };
+  rumble = { osc1, osc2, lfo, lfoGain, harmonicGain, master, panner, panLfo, panLfoGain };
   return rumble;
 }
 
@@ -165,6 +185,13 @@ export function setRumbleIntensity(t: number) {
   r.lfo.frequency.setTargetAtTime(lfoFreq, now, 0.06);
   r.harmonicGain.gain.cancelScheduledValues(now);
   r.harmonicGain.gain.setTargetAtTime(harmonicBlend, now, 0.06);
+
+  const panFreq = RUMBLE_PAN_LFO_MIN_FREQ + (RUMBLE_PAN_LFO_MAX_FREQ - RUMBLE_PAN_LFO_MIN_FREQ) * t;
+  const panDepth = RUMBLE_PAN_MIN_DEPTH + (RUMBLE_PAN_MAX_DEPTH - RUMBLE_PAN_MIN_DEPTH) * t;
+  r.panLfo.frequency.cancelScheduledValues(now);
+  r.panLfo.frequency.setTargetAtTime(panFreq, now, 0.06);
+  r.panLfoGain.gain.cancelScheduledValues(now);
+  r.panLfoGain.gain.setTargetAtTime(panDepth, now, 0.06);
 }
 
 export function stopRumble() {
@@ -178,7 +205,9 @@ export function stopRumble() {
     try { r.osc1.stop(); } catch {}
     try { r.osc2.stop(); } catch {}
     try { r.lfo.stop(); } catch {}
+    try { r.panLfo.stop(); } catch {}
     try { r.master.disconnect(); } catch {}
+    try { r.panner.disconnect(); } catch {}
   }, 300);
 }
 
