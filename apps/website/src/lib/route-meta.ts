@@ -89,7 +89,7 @@ export function routeHead(path: string) {
   const messages = ROUTE_MESSAGES[path];
   const canonical = localizedUrl(messages ? path : "/", locale);
 
-  const links: Array<{ rel: string; href: string; hrefLang?: string }> = [
+  const links: Array<{ rel: string; href: string; hreflang?: string }> = [
     { rel: "canonical", href: canonical },
   ];
 
@@ -99,13 +99,13 @@ export function routeHead(path: string) {
     for (const alt of locales) {
       links.push({
         rel: "alternate",
-        hrefLang: alt,
+        hreflang: alt,
         href: localizedUrl(path, alt),
       });
     }
     links.push({
       rel: "alternate",
-      hrefLang: "x-default",
+      hreflang: "x-default",
       href: localizedUrl(path, baseLocale),
     });
   }
@@ -119,13 +119,11 @@ export function routeHead(path: string) {
         { property: "og:url", content: canonical },
         { name: "twitter:title", content: messages.title() },
         { name: "twitter:description", content: messages.description() },
+        // og:locale for the current page only. og:locale:alternate is
+        // intentionally omitted: TanStack dedupes meta by `property`, so
+        // multiple alternates collapse to one. hreflang alternates (the links
+        // above) are the authoritative multilingual signal for search engines.
         { property: "og:locale", content: ogLocale(locale) },
-        ...locales
-          .filter((l) => l !== locale)
-          .map((l) => ({
-            property: "og:locale:alternate",
-            content: ogLocale(l),
-          })),
       ]
     : undefined;
 
