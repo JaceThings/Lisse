@@ -1,8 +1,46 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { nitro } from "nitro/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+
+// Locale routing config is DERIVED from project.inlang/settings.json so that
+// adding a language is a one-line edit there (the compiled Paraglide runtime,
+// the URL patterns below, the <html lang>, hreflang alternates, the language
+// switcher, and the sitemap all read back from that single source of truth).
+const inlang = JSON.parse(
+  readFileSync(new URL("./project.inlang/settings.json", import.meta.url), "utf8"),
+) as { baseLocale: string; locales: string[] };
+
+// URL path segment per locale. Default = the lowercased BCP-47 tag, with a few
+// explicit overrides so multi-part tags get clean, conventional lowercase URLs
+// (/pt-br/, /zh-hans/) while the catalog/hreflang keep the proper BCP-47 casing.
+const URL_SEGMENT: Record<string, string> = {
+  "pt-BR": "pt-br",
+  "zh-Hans": "zh-hans",
+  "zh-Hant": "zh-hant",
+};
+const segment = (locale: string) => URL_SEGMENT[locale] ?? locale.toLowerCase();
+
+// The base locale (English) stays at the bare path with NO prefix; every other
+// locale gets an additive `/<segment>/` prefix. The base catch-all MUST be last
+// so prefixed locales match first.
+const localeUrlPatterns = [
+  {
+    pattern: "/:path(.*)?",
+    localized: [
+      ...inlang.locales
+        .filter((locale) => locale !== inlang.baseLocale)
+        .map(
+          (locale) =>
+            [locale, `/${segment(locale)}/:path(.*)?`] as [string, string],
+        ),
+      [inlang.baseLocale, "/:path(.*)?"] as [string, string],
+    ],
+  },
+];
 
 // TanStack Start (SSR) replaces the old static Vite SPA build. The Start
 // plugin owns the client + server entries, generates src/routeTree.gen.ts
@@ -25,7 +63,19 @@ export default defineConfig({
     noExternal: ["@numeric-text/react", "@numeric-text/core"],
   },
   plugins: [
-    // Start FIRST — it generates the route tree and wires the SSR graph.
+    // Paraglide BEFORE Start: it compiles project.inlang -> src/paraglide on
+    // build/dev start, so the generated runtime/messages exist before Start
+    // transforms the graph. URL-first strategy keeps the locale in the path
+    // (distinct Cloudflare cache keys, no Set-Cookie on cacheable HTML).
+    paraglideVitePlugin({
+      project: "./project.inlang",
+      outdir: "./src/paraglide",
+      outputStructure: "message-modules",
+      cookieName: "PARAGLIDE_LOCALE",
+      strategy: ["url", "cookie", "preferredLanguage", "baseLocale"],
+      urlPatterns: localeUrlPatterns,
+    }),
+    // Start — it generates the route tree and wires the SSR graph.
     // (Bundles the router plugin internally; do NOT add @tanstack/router-plugin.)
     tanstackStart(),
     // Nitro assembles the SSR handler + static assets + a listening Node

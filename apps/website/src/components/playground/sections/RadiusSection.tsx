@@ -7,17 +7,18 @@ import { Section } from "../Section.tsx";
 import { Slider } from "../Slider.tsx";
 import { useStateSpring } from "../springs.ts";
 import { ROW_DIVIDER } from "../styles.ts";
+import { m } from "../../../paraglide/messages.js";
 
 type RadiusPreset = "0" | "20" | "50" | "custom";
 
-const RADIUS_PRESETS = [
-  { value: "0", label: "Radius: 0" },
-  { value: "20", label: "Radius: 20" },
-  { value: "50", label: "Radius: 50" },
-  { value: "custom", label: "Custom" },
-] as const satisfies ReadonlyArray<{ value: RadiusPreset; label: string }>;
-
 export function RadiusSection() {
+  const RADIUS_PRESETS = [
+    { value: "0", label: m.section_radius_preset_0() },
+    { value: "20", label: m.section_radius_preset_20() },
+    { value: "50", label: m.section_radius_preset_50() },
+    { value: "custom", label: m.section_radius_preset_custom() },
+  ] as const satisfies ReadonlyArray<{ value: RadiusPreset; label: string }>;
+
   const [preset, setPreset] = useState<RadiusPreset>("20");
   const [radius, setRadius] = useState(20);
   const [fromDrag, setFromDrag] = useState(false);
@@ -42,14 +43,14 @@ export function RadiusSection() {
 
   return (
     <Section
-      title="Radius"
-      description="Control the corner radius. Higher values produce rounder corners — at the maximum, the box becomes a full circle."
+      title={m.section_radius_title()}
+      description={m.section_radius_desc()}
     >
       <FigureCard>
         <Preview corners={{ radius: animatedRadius, smoothing: 0.6 }} />
         <div className={`w-full ${ROW_DIVIDER}`}>
           <RadioPillGroup
-            ariaLabel="Radius preset"
+            ariaLabel={m.section_radius_preset_aria()}
             options={RADIUS_PRESETS}
             value={preset}
             onChange={onPresetChange}
@@ -59,7 +60,7 @@ export function RadiusSection() {
         <Collapse show={preset === "custom"}>
           <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
             <Slider
-              label="Radius"
+              label={m.section_radius_slider_label()}
               value={radius}
               min={0}
               max={50}

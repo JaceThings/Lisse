@@ -20,6 +20,7 @@ import {
 } from "../lib/curves.ts";
 import { buildOverlay, type MorphedOverlay } from "../lib/overlay.ts";
 import { serializeSvg } from "../lib/svg-export.ts";
+import { m } from "../paraglide/messages.js";
 
 // Fixed-size viewBox. The corner is repositioned each frame so the
 // curve stays *centred* in the figure regardless of how small the
@@ -175,7 +176,7 @@ function Diagram({
       overflow="visible"
       className="block h-auto w-full"
       role="img"
-      aria-label="Corner curve construction with curvature comb. Two straight edges meet at a corner, replaced by the selected smoothing curve. A green comb shows the curvature at each point along the curve."
+      aria-label={m.math_diagram_aria_label()}
     >
       {/* Straight edges — `x1`/`y2` extend past the viewBox so the
           stroke fills the wrapper's padding too, producing the
@@ -303,7 +304,7 @@ function Diagram({
           textAnchor="middle"
           opacity={overlay.arcRadiusReadout.opacity}
         >
-          center · R = {overlay.arcRadiusReadout.R.toFixed(1)}
+          {m.math_arc_radius_readout({ r: overlay.arcRadiusReadout.R.toFixed(1) })}
         </text>
       ) : null}
     </svg>
@@ -339,14 +340,14 @@ const formatRadius = (v: number) => `${Math.round(v)} px`;
 const formatExponent = (v: number) => v.toFixed(2);
 const formatCombDensity = (v: number) => {
   const n = Math.round(v);
-  return n === 0 ? "smooth curve" : `${n} whiskers`;
+  return n === 0 ? m.math_comb_density_smooth() : m.math_comb_density_whiskers({ n });
 };
 
-const CURVE_LABELS: Record<CurveType, { label: string; gn: "G1" | "G2"; sub: string }> = {
-  arc: { label: "Arc", gn: "G1", sub: "CSS border-radius" },
-  squircle: { label: "Squircle", gn: "G1", sub: "Lisse default · Figma" },
-  superellipse: { label: "Superellipse", gn: "G2", sub: "CSS corner-shape" },
-  clothoid: { label: "Clothoid", gn: "G2", sub: "Euler-spiral blend" },
+const CURVE_LABELS: Record<CurveType, { label: () => string; gn: "G1" | "G2"; sub: () => string }> = {
+  arc: { label: m.math_curve_arc_label, gn: "G1", sub: m.math_curve_arc_sub },
+  squircle: { label: m.math_curve_squircle_label, gn: "G1", sub: m.math_curve_squircle_sub },
+  superellipse: { label: m.math_curve_superellipse_label, gn: "G2", sub: m.math_curve_superellipse_sub },
+  clothoid: { label: m.math_curve_clothoid_label, gn: "G2", sub: m.math_curve_clothoid_sub },
 };
 
 const CURVE_ORDER: CurveType[] = ["arc", "squircle", "superellipse", "clothoid"];
@@ -358,7 +359,7 @@ interface CurvePickerProps {
 
 function CurvePicker({ value, onChange }: CurvePickerProps) {
   return (
-    <div role="radiogroup" aria-label="Curve type" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div role="radiogroup" aria-label={m.math_curve_type_aria_label()} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {CURVE_ORDER.map((type) => {
         const meta = CURVE_LABELS[type];
         const active = value === type;
@@ -378,7 +379,7 @@ function CurvePicker({ value, onChange }: CurvePickerProps) {
             }
           >
             <span className="flex w-full items-baseline justify-between">
-              <span className="text-[13px] font-medium tracking-[-0.25px]">{meta.label}</span>
+              <span className="text-[13px] font-medium tracking-[-0.25px]">{meta.label()}</span>
               <span
                 className="text-[10px] font-medium tracking-[-0.1px] text-[rgba(126,117,108,0.7)]"
                 style={{ fontFamily: "var(--font-mono)" }}
@@ -387,7 +388,7 @@ function CurvePicker({ value, onChange }: CurvePickerProps) {
               </span>
             </span>
             <span className="text-[11px] tracking-[-0.15px] text-[rgba(126,117,108,0.7)]">
-              {meta.sub}
+              {meta.sub()}
             </span>
           </button>
         );
@@ -500,7 +501,7 @@ export function MathPage() {
   const shapeValue = showExponent
     ? (exponent - EXPONENT_MIN) / (EXPONENT_MAX - EXPONENT_MIN)
     : smoothing;
-  const shapeLabel = showExponent ? "Exponent (n)" : "Smoothing";
+  const shapeLabel = showExponent ? m.math_shape_label_exponent() : m.math_shape_label_smoothing();
   const shapeFormat = useCallback(
     (t: number) =>
       showExponent
@@ -524,13 +525,8 @@ export function MathPage() {
       <section className="flex w-full flex-col gap-6">
         <Stagger index={6}>
           <p className={BODY}>
-            Four candidate corner constructions, drawn from the same maths.
-            The green comb is the curvature at each point along the curve —
-            whisker length is proportional to κ. <strong>G1</strong> means
-            tangents match at the seam but curvature can step (the comb has
-            a discontinuity). <strong>G2</strong> means curvature is
-            continuous, so the comb flows through the joins. Pick a curve
-            and slide R/smoothing to see how each behaves.
+            {m.math_intro_lead()} <strong>G1</strong> {m.math_intro_g1()}{" "}
+            <strong>G2</strong> {m.math_intro_g2()}
           </p>
         </Stagger>
 
@@ -559,7 +555,7 @@ export function MathPage() {
                 <span
                   className="rounded-md bg-[rgba(115,87,74,0.08)] px-2 py-1 text-[11px] font-medium tracking-[-0.1px] text-text-input"
                   style={{ fontFamily: "var(--font-mono)" }}
-                  aria-label={`Continuity: ${geometry.curve.g2 ? "G2" : "G1"}`}
+                  aria-label={m.math_continuity_aria_label({ gn: geometry.curve.g2 ? "G2" : "G1" })}
                 >
                   {geometry.curve.g2 ? "G2" : "G1"}
                 </span>
@@ -568,22 +564,22 @@ export function MathPage() {
                   onClick={handleCopy}
                   data-focus-ring
                   className="rounded-md bg-[rgba(115,87,74,0.08)] px-2.5 py-1 text-[11px] font-medium tracking-[-0.15px] text-text-input transition-colors hover:bg-[rgba(115,87,74,0.14)]"
-                  aria-label="Copy SVG to clipboard"
+                  aria-label={m.math_copy_svg_aria_label()}
                 >
                   {copyState === "copied"
-                    ? "Copied"
+                    ? m.math_copy_copied()
                     : copyState === "failed"
-                    ? "Copy failed"
-                    : "Copy SVG"}
+                    ? m.math_copy_failed()
+                    : m.math_copy_svg()}
                 </button>
                 <button
                   type="button"
                   onClick={handleDownload}
                   data-focus-ring
                   className="rounded-md bg-[rgba(115,87,74,0.08)] px-2.5 py-1 text-[11px] font-medium tracking-[-0.15px] text-text-input transition-colors hover:bg-[rgba(115,87,74,0.14)]"
-                  aria-label="Download SVG"
+                  aria-label={m.math_download_svg_aria_label()}
                 >
-                  Download
+                  {m.math_download()}
                 </button>
               </div>
             </div>
@@ -628,7 +624,7 @@ export function MathPage() {
               className="flex flex-col gap-5"
             >
               <Slider
-                label="Corner radius"
+                label={m.math_slider_corner_radius()}
                 value={radius}
                 min={RADIUS_MIN}
                 max={RADIUS_MAX}
@@ -637,7 +633,7 @@ export function MathPage() {
                 format={formatRadius}
               />
               <Slider
-                label="Comb density"
+                label={m.math_slider_comb_density()}
                 value={combDensity}
                 min={COMB_DENSITY_MIN}
                 max={COMB_DENSITY_MAX}
@@ -659,52 +655,34 @@ export function MathPage() {
 
         <Stagger index={12}>
           <p className={BODY}>
-            <strong>Arc</strong> is what CSS <code>border-radius</code> draws:
-            a quarter circle bolted onto the straight edges. Tangents match
-            but curvature jumps from 0 on the edge to 1/R inside the arc in
-            a single step — that's the seam designers complain about.
+            <strong>{m.math_curve_arc_label()}</strong> {m.math_arc_body_before_code()}{" "}
+            <code>border-radius</code> {m.math_arc_body_after_code()}
           </p>
         </Stagger>
 
         <Stagger index={13}>
           <p className={BODY}>
-            <strong>Squircle</strong> is Lisse's current shape and what
-            Figma ships. Two cubic Bézier shoulders ease into a smaller
-            central circular arc. Curvature ramps gradually instead of
-            jumping, but there's still a small step at P3 / P4 where each
-            shoulder meets the arc — visible on the comb as the
-            "Batman hat." This is G1, not G2.
+            <strong>{m.math_curve_squircle_label()}</strong> {m.math_squircle_body()}
           </p>
         </Stagger>
 
         <Stagger index={14}>
           <p className={BODY}>
-            <strong>Superellipse</strong>{" "}
-            <code>|x/R|^n + |y/R|^n = 1</code> is what CSS{" "}
-            <code>corner-shape: squircle</code> resolves to (with n = 4).
-            For any n &gt; 2 the curvature is exactly 0 where the curve
-            meets each edge — so it's G2 with no shoulder construction
-            needed. Different curvature distribution from the
-            Apple/Figma shape, though: it reads as a distinct family
-            rather than a smoother version of the same curve.
+            <strong>{m.math_curve_superellipse_label()}</strong>{" "}
+            <code>|x/R|^n + |y/R|^n = 1</code> {m.math_superellipse_body_mid()}{" "}
+            <code>corner-shape: squircle</code> {m.math_superellipse_body_after()}
           </p>
         </Stagger>
 
         <Stagger index={15}>
           <p className={BODY}>
-            <strong>Clothoid</strong> blends each straight edge into a
-            central circular arc with an Euler-spiral segment whose
-            curvature ramps linearly along arc length — 0 at the edge,
-            1/R at the arc. G2 everywhere by construction (κ matches at
-            every seam), with a recognisably different character from
-            the Apple/Figma squircle: rounder at the apex, longer in
-            the corner extent. Classic highway-transition geometry.
+            <strong>{m.math_curve_clothoid_label()}</strong> {m.math_clothoid_body()}
           </p>
         </Stagger>
 
         <Stagger index={16}>
           <p className={`${BODY} text-text-secondary`}>
-            Math derivations and source citations live in{" "}
+            {m.math_docs_reference()}{" "}
             <code className="text-[13px]" style={{ fontFamily: "var(--font-mono)" }}>
               docs/curves.md
             </code>

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Divider } from "./Divider.tsx";
 import { Stagger } from "./Stagger.tsx";
 import { LisseFloater, LisseGhost, useLisseDetach } from "./LisseDetach.tsx";
+import { m } from "../paraglide/messages.js";
 
 // Definitions stay as <p> not <dl>: the visible "1, 2, b, 3" numbering is
 // part of the prose, so <dt>/<dd> would announce the leading digit twice.
@@ -48,40 +49,39 @@ export function Header({ staggerFrom }: HeaderProps) {
             </motion.h1>
             <p className="text-[14px] leading-none font-[450] tracking-[-0.25px]">
               <span aria-hidden>
-                /lēs/ <em className="italic">adj.</em> [F.{" "}
+                /lēs/ <em className="italic">{m.header_pos_adjective()}</em>{" "}
+                [{m.header_etymology_french_abbr()}{" "}
                 <em className="italic">lisse</em>,{" "}
-                <em className="italic">smooth</em>]
+                <em className="italic">{m.header_etymology_smooth()}</em>]
               </span>
-              <span className="sr-only">
-                Pronounced lees, adjective, from French lisse meaning smooth.
-              </span>
+              <span className="sr-only">{m.header_pronunciation_sr()}</span>
             </p>
           </div>
         </Stagger>
         <div className="flex flex-col gap-2 pl-2 text-text-secondary">
           <Stagger index={staggerFrom + 1}>
             <p className={DEF}>
-              <span className="font-[550] proportional-nums">1</span> having an even, unbroken
-              surface; smooth to the touch (
-              <em className="italic">un galet lisse</em>).
+              <span className="font-[550] proportional-nums">1</span>{" "}
+              {m.header_def_1()} (
+              <em className="italic">{m.header_def_1_example()}</em>).
             </p>
           </Stagger>
           <Stagger index={staggerFrom + 2}>
             <p className={DEF}>
-              <span className="font-[550] proportional-nums">2</span> a sleek; without break or
-              rough patch (cheveux lisses).
+              <span className="font-[550] proportional-nums">2</span>{" "}
+              {m.header_def_2()}
             </p>
           </Stagger>
           <Stagger index={staggerFrom + 3}>
             <p className={`pl-2 ${DEF}`}>
-              <span className="font-[550] proportional-nums">b</span> (of a curve, line, or
-              transition) continuous; without abrupt change (une courbe lisse).
+              <span className="font-[550] proportional-nums">b</span>{" "}
+              {m.header_def_b()}
             </p>
           </Stagger>
           <Stagger index={staggerFrom + 4}>
             <p className={DEF}>
-              <span className="font-[550] proportional-nums">3</span> fig. polished,
-              frictionless; flowing without interruption.
+              <span className="font-[550] proportional-nums">3</span>{" "}
+              {m.header_def_3()}
             </p>
           </Stagger>
         </div>

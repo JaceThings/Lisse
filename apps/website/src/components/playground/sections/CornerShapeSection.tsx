@@ -7,15 +7,16 @@ import { Section } from "../Section.tsx";
 import { Slider } from "../Slider.tsx";
 import { useStateSpring } from "../springs.ts";
 import { ROW_DIVIDER } from "../styles.ts";
+import { m } from "../../../paraglide/messages.js";
 
 type SmoothingPreset = "off" | "on";
 
-const SMOOTHING_PRESETS = [
-  { value: "off", label: "Without Smoothing" },
-  { value: "on", label: "With Smoothing" },
-] as const satisfies ReadonlyArray<{ value: SmoothingPreset; label: string }>;
-
 export function CornerShapeSection() {
+  const SMOOTHING_PRESETS = [
+    { value: "off", label: m.section_cornershape_preset_off() },
+    { value: "on", label: m.section_cornershape_preset_on() },
+  ] as const satisfies ReadonlyArray<{ value: SmoothingPreset; label: string }>;
+
   const [preset, setPreset] = useState<SmoothingPreset>("on");
   const [smoothing, setSmoothing] = useState(0.6);
   const [fromDrag, setFromDrag] = useState(false);
@@ -40,7 +41,10 @@ export function CornerShapeSection() {
   // Annotate the iOS/Apple/Figma squircle default with its name; every other
   // value reads as a plain two-decimal number.
   const formatSmoothing = useCallback(
-    (v: number) => (Math.abs(v - 0.6) < 0.005 ? "iOS – 0.60" : v.toFixed(2)),
+    (v: number) =>
+      Math.abs(v - 0.6) < 0.005
+        ? m.section_cornershape_ios_label({ value: v.toFixed(2) })
+        : v.toFixed(2),
     [],
   );
   const formatSmoothingSeed = useCallback((v: number) => v.toFixed(2), []);
@@ -48,14 +52,14 @@ export function CornerShapeSection() {
 
   return (
     <Section
-      title="Corner Shape"
-      description="Smoothing controls how gradually the curve transitions into the straight edge. 0 gives a circular arc, 1 a full squircle."
+      title={m.section_cornershape_title()}
+      description={m.section_cornershape_desc()}
     >
       <FigureCard>
         <Preview corners={{ radius: 20, smoothing: animatedSmoothing }} />
         <div className={`w-full ${ROW_DIVIDER}`}>
           <RadioPillGroup
-            ariaLabel="Smoothing preset"
+            ariaLabel={m.section_cornershape_preset_aria()}
             options={SMOOTHING_PRESETS}
             value={preset}
             onChange={onPresetChange}
@@ -64,7 +68,7 @@ export function CornerShapeSection() {
         <Collapse show={preset === "on"}>
           <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
             <Slider
-              label="Smoothing"
+              label={m.section_cornershape_slider_label()}
               value={smoothing}
               min={0}
               max={1}

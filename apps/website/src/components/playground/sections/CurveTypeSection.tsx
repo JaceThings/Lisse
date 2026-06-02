@@ -16,13 +16,7 @@ import {
   samplePath,
   type SampledPath,
 } from "../../../lib/sample-path.ts";
-
-const CURVE_PRESETS = [
-  { value: "arc", label: "Arc" },
-  { value: "squircle", label: "Squircle" },
-  { value: "superellipse", label: "Superellipse" },
-  { value: "clothoid", label: "Clothoid" },
-] as const satisfies ReadonlyArray<{ value: CurveType; label: string }>;
+import { m } from "../../../paraglide/messages.js";
 
 const EXPONENT_MIN = 2.5;
 const EXPONENT_MAX = 8;
@@ -37,6 +31,13 @@ const MORPH_EASE = [0.32, 0.72, 0, 1] as const;
 const FILL = "#7e766d";
 
 export function CurveTypeSection() {
+  const CURVE_PRESETS = [
+    { value: "arc", label: m.section_curvetype_preset_arc() },
+    { value: "squircle", label: m.section_curvetype_preset_squircle() },
+    { value: "superellipse", label: m.section_curvetype_preset_superellipse() },
+    { value: "clothoid", label: m.section_curvetype_preset_clothoid() },
+  ] as const satisfies ReadonlyArray<{ value: CurveType; label: string }>;
+
   const [curve, setCurve] = useState<CurveType>("squircle");
   const [radius, setRadius] = useState(20);
   const [smoothing, setSmoothing] = useState(0.6);
@@ -172,7 +173,9 @@ export function CurveTypeSection() {
   const shapeValue = showExponent
     ? (exponent - EXPONENT_MIN) / (EXPONENT_MAX - EXPONENT_MIN)
     : smoothing;
-  const shapeLabel = showExponent ? "Exponent (n)" : "Smoothing";
+  const shapeLabel = showExponent
+    ? m.section_curvetype_exponent_label()
+    : m.section_curvetype_smoothing_label();
   const shapeFormat = useCallback(
     (t: number) =>
       showExponent
@@ -193,8 +196,8 @@ export function CurveTypeSection() {
 
   return (
     <Section
-      title="Curve Type"
-      description="Pick the corner construction. Squircle is the Lisse default (Figma's curve). Arc is CSS border-radius. Superellipse is the CSS corner-shape family (n = 5 — closest to Figma 0.6). Clothoid is the G2 Euler-spiral blend."
+      title={m.section_curvetype_title()}
+      description={m.section_curvetype_desc()}
     >
       <FigureCard>
         <div
@@ -213,7 +216,7 @@ export function CurveTypeSection() {
         </div>
         <div className={`w-full ${ROW_DIVIDER}`}>
           <RadioPillGroup
-            ariaLabel="Curve type"
+            ariaLabel={m.section_curvetype_preset_aria()}
             options={CURVE_PRESETS}
             value={curve}
             onChange={onCurveChange}
@@ -222,7 +225,7 @@ export function CurveTypeSection() {
         </div>
         <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
           <Slider
-            label="Radius"
+            label={m.section_curvetype_radius_label()}
             value={radius}
             min={0}
             max={50}

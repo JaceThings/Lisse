@@ -23,6 +23,8 @@ jobs:
       # typechecks) can resolve the library `dist/` exports.
       - run: pnpm build
       - run: pnpm typecheck
+      - name: Validate translation catalogs
+        run: pnpm --filter website validate:translations
       - name: Run tests with coverage
         run: pnpm coverage
       - name: Upload coverage to Codecov

@@ -8,25 +8,10 @@ import { Section } from "../Section.tsx";
 import { Slider } from "../Slider.tsx";
 import { useBorderKnobSpring, useStateSpring } from "../springs.ts";
 import { ROW_DIVIDER } from "../styles.ts";
+import { m } from "../../../paraglide/messages.js";
 
 type BorderPreset = "none" | "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge";
 type DashCap = "butt" | "square" | "round";
-
-const BORDER_PRESETS = [
-  { value: "none", label: "None" },
-  { value: "solid", label: "Solid" },
-  { value: "dashed", label: "Dashed" },
-  { value: "dotted", label: "Dotted" },
-  { value: "double", label: "Double" },
-  { value: "groove", label: "Groove" },
-  { value: "ridge", label: "Ridge" },
-] as const satisfies ReadonlyArray<{ value: BorderPreset; label: string }>;
-
-const DASH_CAP_PRESETS = [
-  { value: "butt", label: "None" },
-  { value: "square", label: "Square" },
-  { value: "round", label: "Round" },
-] as const satisfies ReadonlyArray<{ value: DashCap; label: string }>;
 
 const BORDER_COLOUR = "#eec494";
 
@@ -49,6 +34,22 @@ const POSITION_DEFAULTS: Record<
 };
 
 export function BorderSection({ title, description, position }: BorderSectionProps) {
+  const BORDER_PRESETS = [
+    { value: "none", label: m.section_border_preset_none() },
+    { value: "solid", label: m.section_border_preset_solid() },
+    { value: "dashed", label: m.section_border_preset_dashed() },
+    { value: "dotted", label: m.section_border_preset_dotted() },
+    { value: "double", label: m.section_border_preset_double() },
+    { value: "groove", label: m.section_border_preset_groove() },
+    { value: "ridge", label: m.section_border_preset_ridge() },
+  ] as const satisfies ReadonlyArray<{ value: BorderPreset; label: string }>;
+
+  const DASH_CAP_PRESETS = [
+    { value: "butt", label: m.section_border_dashcap_none() },
+    { value: "square", label: m.section_border_dashcap_square() },
+    { value: "round", label: m.section_border_dashcap_round() },
+  ] as const satisfies ReadonlyArray<{ value: DashCap; label: string }>;
+
   const defaults = POSITION_DEFAULTS[position];
   const [preset, setPreset] = useState<BorderPreset>(defaults.preset);
   const [thickness, setThickness] = useState(defaults.thickness);
@@ -117,7 +118,7 @@ export function BorderSection({ title, description, position }: BorderSectionPro
         />
         <div className={`w-full ${ROW_DIVIDER}`}>
           <RadioPillGroup
-            ariaLabel={`${title} style`}
+            ariaLabel={m.section_border_preset_aria({ title })}
             options={BORDER_PRESETS}
             value={preset}
             onChange={onPresetChange}
@@ -126,13 +127,13 @@ export function BorderSection({ title, description, position }: BorderSectionPro
         </div>
         <Collapse show={showThickness}>
           <div className={`flex w-full flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
-            <Slider label="Thickness" value={thickness} min={1} max={20} onChange={setThickness} />
+            <Slider label={m.section_border_thickness_label()} value={thickness} min={1} max={20} onChange={setThickness} />
           </div>
         </Collapse>
         <Collapse show={showDashRow}>
           <div className={`w-full ${ROW_DIVIDER}`}>
             <RadioPillGroup
-              ariaLabel={`${title} dash cap`}
+              ariaLabel={m.section_border_dashcap_aria({ title })}
               options={DASH_CAP_PRESETS}
               value={dashCap}
               onChange={setDashCap}
@@ -140,10 +141,10 @@ export function BorderSection({ title, description, position }: BorderSectionPro
           </div>
           <div className={`flex w-full flex-wrap content-center items-center justify-center ${ROW_DIVIDER}`}>
             <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center p-4">
-              <Slider label="Dash" value={dash} min={0} max={30} onChange={setDash} />
+              <Slider label={m.section_border_dash_label()} value={dash} min={0} max={30} onChange={setDash} />
             </div>
             <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4">
-              <Slider label="Gap" value={gap} min={0} max={30} onChange={setGap} />
+              <Slider label={m.section_border_gap_label()} value={gap} min={0} max={30} onChange={setGap} />
             </div>
           </div>
         </Collapse>

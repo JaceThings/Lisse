@@ -80,6 +80,27 @@ A maintainer will review, request changes if needed, and merge once CI is green.
 3. Merging that version-packages PR triggers the release workflow.
 4. Publishing to npm happens via OIDC trusted publishing, so no long-lived tokens are involved.
 
+## Translations (website i18n)
+
+The website (`apps/website`, [corne.rs](https://corne.rs)) is localized with [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs). English is the source of truth; every locale lives in `apps/website/messages/<locale>.json`. Locale routing is URL-prefixed — English at the bare path (`/what`), other locales at `/<locale>/what` (e.g. `/de/what`) — and is derived from `apps/website/project.inlang/settings.json`, so the language switcher, hreflang alternates, `<html lang>`, and sitemap all expand automatically.
+
+**Translation policy** lives in two committed files and is enforced in CI:
+
+- `apps/website/i18n/glossary.json` — register and per-term rules.
+- `apps/website/i18n/do-not-translate.json` — tokens that must appear verbatim (the brand `lisse`/`@lisse/*`, coined terms `squircle`/`superellipse`, product names, code, math). Never translate code snippets, install commands, or math formulas.
+
+**To add a language** (one PR per language, e.g. `feat/i18n-ja`):
+
+1. Add the BCP-47 locale to `locales` in `apps/website/project.inlang/settings.json` (single source of truth).
+2. Create `apps/website/messages/<locale>.json` with the same keys as `en.json`, translating the values per the glossary/do-not-translate rules.
+3. Add a translated `README.<locale>.md` and add the language to the switcher line at the top of every README.
+4. Run `pnpm --filter website validate:translations` (valid JSON, identical key set, placeholders + do-not-translate tokens preserved) and `pnpm --filter website typecheck`. CI runs both.
+5. Add yourself to the status table below as the locale maintainer.
+
+| Locale | Language | Maintainer | Status |
+| --- | --- | --- | --- |
+| `en` | English | — | source |
+
 ## Style notes
 
 - British spellings in prose where it's natural (colour, behaviour, organisation).

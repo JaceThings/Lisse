@@ -6,6 +6,7 @@ import {
   createRootRoute,
   useRouterState,
 } from "@tanstack/react-router";
+import { getLocale, getTextDirection } from "../paraglide/runtime.js";
 import {
   AnimatePresence,
   LayoutGroup,
@@ -25,7 +26,8 @@ import { Layout } from "../components/Layout.tsx";
 import { SelectionHighlight } from "../components/SelectionHighlight.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 import { Footer } from "../components/playground/Footer.tsx";
-import { ROUTE_META, SITE_ORIGIN } from "../lib/route-meta.ts";
+import { SITE_ORIGIN, ogLocale } from "../lib/route-meta.ts";
+import { m } from "../paraglide/messages.js";
 import { Home } from "../pages/Home.tsx";
 import { What } from "../pages/What.tsx";
 import { Playground } from "../pages/Playground.tsx";
@@ -36,23 +38,24 @@ const FADE_MS = 250;
 const FOOTER_SLIDE_MS = 350;
 const EASE = [0.4, 0, 0.2, 1] as const;
 
-// Site-wide defaults = the home route's meta (single source of truth in
-// route-meta.ts). Per-route head() overrides these for deeper matches.
-const { title: DEFAULT_TITLE, description: DESCRIPTION } = ROUTE_META["/"];
-
 export const Route = createRootRoute({
+  // Site-wide default meta = the home route's localized title/description.
+  // Per-route head() overrides title/description/og/canonical for deeper
+  // matches; these remain for unlisted internal pages. Built per-request so the
+  // m.* messages + getLocale() resolve the URL's locale under concurrent SSR.
   head: () => ({
     meta: [
       { charSet: "UTF-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1.0" },
-      { title: DEFAULT_TITLE },
-      { name: "description", content: DESCRIPTION },
+      { title: m.meta_home_title() },
+      { name: "description", content: m.meta_home_description() },
       { name: "theme-color", content: "#f7f6f2" },
       { name: "robots", content: "index,follow" },
 
       { property: "og:type", content: "website" },
-      { property: "og:title", content: DEFAULT_TITLE },
-      { property: "og:description", content: DESCRIPTION },
+      { property: "og:locale", content: ogLocale(getLocale()) },
+      { property: "og:title", content: m.meta_home_title() },
+      { property: "og:description", content: m.meta_home_description() },
       { property: "og:url", content: `${SITE_ORIGIN}/` },
       { property: "og:image", content: `${SITE_ORIGIN}/og-image.png` },
       { property: "og:image:width", content: "1200" },
@@ -61,8 +64,8 @@ export const Route = createRootRoute({
       { property: "og:image:alt", content: "lisse" },
 
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: DEFAULT_TITLE },
-      { name: "twitter:description", content: DESCRIPTION },
+      { name: "twitter:title", content: m.meta_home_title() },
+      { name: "twitter:description", content: m.meta_home_description() },
       { name: "twitter:image", content: `${SITE_ORIGIN}/og-image.png` },
 
       // Structured data — index.html's @graph split into two equivalent
@@ -73,8 +76,7 @@ export const Route = createRootRoute({
           "@type": "SoftwareApplication",
           name: "Lisse",
           alternateName: "@lisse/core",
-          description:
-            "JavaScript library that draws squircle corners — the same continuous curve Figma and iOS use. Bindings for React, Vue, and Svelte, plus a framework-agnostic core. Per-corner control, borders, and shadows included.",
+          description: m.meta_app_description(),
           applicationCategory: "DeveloperApplication",
           operatingSystem: "Cross-platform (browser, Node, edge runtimes)",
           url: "https://corne.rs/",
@@ -200,8 +202,13 @@ function PersistentFooter() {
 }
 
 function RootComponent() {
+  // Locale resolved per-request from the URL (server: via paraglideMiddleware +
+  // AsyncLocalStorage; client: from the path). dir is derived so RTL locales,
+  // if added later, flip automatically. Both are "en"/"ltr" until other locales
+  // are registered in project.inlang/settings.json.
+  const locale = getLocale();
   return (
-    <html lang="en">
+    <html lang={locale} dir={getTextDirection(locale)}>
       <head>
         <HeadContent />
       </head>

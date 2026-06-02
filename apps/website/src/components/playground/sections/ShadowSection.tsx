@@ -8,15 +8,9 @@ import { Section } from "../Section.tsx";
 import { Slider } from "../Slider.tsx";
 import { useStateSpring } from "../springs.ts";
 import { ROW_DIVIDER } from "../styles.ts";
+import { m } from "../../../paraglide/messages.js";
 
 type ShadowPreset = "none" | "subtle" | "medium" | "custom";
-
-const SHADOW_PRESETS = [
-  { value: "none", label: "None" },
-  { value: "subtle", label: "Subtle" },
-  { value: "medium", label: "Medium" },
-  { value: "custom", label: "Custom" },
-] as const satisfies ReadonlyArray<{ value: ShadowPreset; label: string }>;
 
 const SHADOW_COLOUR = "#7e756c";
 
@@ -31,6 +25,13 @@ interface ShadowSectionProps {
 }
 
 export function ShadowSection({ title, description, kind }: ShadowSectionProps) {
+  const SHADOW_PRESETS = [
+    { value: "none", label: m.section_shadow_preset_none() },
+    { value: "subtle", label: m.section_shadow_preset_subtle() },
+    { value: "medium", label: m.section_shadow_preset_medium() },
+    { value: "custom", label: m.section_shadow_preset_custom() },
+  ] as const satisfies ReadonlyArray<{ value: ShadowPreset; label: string }>;
+
   // Inner shadows look like a blur-bomb at drop-shadow defaults — tight
   // 3px blur reads as a soft edge instead of a halo.
   const defaults = kind === "inner"
@@ -134,7 +135,7 @@ export function ShadowSection({ title, description, kind }: ShadowSectionProps) 
         />
         <div className={`w-full ${ROW_DIVIDER}`}>
           <RadioPillGroup
-            ariaLabel={`${title} preset`}
+            ariaLabel={m.section_shadow_preset_aria({ title })}
             options={SHADOW_PRESETS}
             value={preset}
             onChange={onPresetChange}
@@ -143,16 +144,16 @@ export function ShadowSection({ title, description, kind }: ShadowSectionProps) 
         <Collapse show={preset === "custom"}>
           <div className="flex w-full flex-wrap items-start">
             <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center p-4 ${ROW_DIVIDER}`}>
-              <Slider label="X" value={x} min={-20} max={20} onChange={onXChange} />
+              <Slider label={m.section_shadow_x_label()} value={x} min={-20} max={20} onChange={onXChange} />
             </div>
             <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4 ${ROW_DIVIDER} max-[560px]:shadow-none`}>
-              <Slider label="Y" value={y} min={-20} max={20} onChange={onYChange} />
+              <Slider label={m.section_shadow_y_label()} value={y} min={-20} max={20} onChange={onYChange} />
             </div>
             <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center p-4">
-              <Slider label="Blur" value={blur} min={0} max={40} onChange={onBlurChange} />
+              <Slider label={m.section_shadow_blur_label()} value={blur} min={0} max={40} onChange={onBlurChange} />
             </div>
             <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4">
-              <Slider label="Spread" value={spread} min={-20} max={40} onChange={onSpreadChange} />
+              <Slider label={m.section_shadow_spread_label()} value={spread} min={-20} max={40} onChange={onSpreadChange} />
             </div>
           </div>
         </Collapse>
