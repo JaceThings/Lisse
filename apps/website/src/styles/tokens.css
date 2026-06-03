@@ -44,8 +44,8 @@
   --color-divider-to: rgba(115, 87, 74, 0);
 
   /* Type */
-  --font-sans: "Inter Variable", system-ui, -apple-system, BlinkMacSystemFont,
-    sans-serif;
+  --font-sans: "Inter Variable", "Noto Sans JP Variable", system-ui, -apple-system,
+    BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
   --font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 

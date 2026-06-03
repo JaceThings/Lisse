@@ -17,6 +17,9 @@ import {
 // Style order is load-bearing.
 import "@fontsource-variable/inter/standard.css";
 import "@fontsource-variable/inter/standard-italic.css";
+// Japanese (and other CJK) glyphs: Inter ships none, so without this the browser
+// falls back to a thin OS font. Unicode-range-split, so non-JA pages fetch nothing.
+import "@fontsource-variable/noto-sans-jp/wght.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 

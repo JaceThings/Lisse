@@ -37,6 +37,15 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Japanese renders through Noto Sans JP (Inter ships no CJK glyphs). macOS
+ * grayscale antialiasing thins CJK strokes, so nudge the base weight up a touch
+ * in `ja` — the body copy then matches Inter's Latin weight instead of looking
+ * spindly. Only the inherited base weight shifts; elements with an explicit
+ * font-weight keep theirs. */
+body:lang(ja) {
+  font-weight: 540;
+}
+
 p {
   text-wrap: pretty;
   /* Justified body text relies on hyphenation to avoid huge word-spacing
