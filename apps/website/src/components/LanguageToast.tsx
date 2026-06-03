@@ -135,6 +135,7 @@ export function LanguageToast() {
           key="lang-toast"
           lang={offer}
           role="region"
+          aria-label={copy.prompt}
           className="fixed right-4 bottom-4 z-50 w-[277px] max-w-[calc(100vw-2rem)]"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
