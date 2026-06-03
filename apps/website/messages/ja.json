@@ -103,7 +103,7 @@
   "section_border_preset_double": "二重線",
   "section_border_preset_groove": "溝",
   "section_border_preset_none": "なし",
-  "section_border_preset_ridge": "ridge",
+  "section_border_preset_ridge": "隆起",
   "section_border_preset_solid": "実線",
   "section_border_thickness_label": "太さ",
   "section_cornershape_desc": "スムージングは、曲線がどれだけ緩やかに直線エッジへ遷移するかを制御します。0 で円弧、1 で完全な squircle になります。",
