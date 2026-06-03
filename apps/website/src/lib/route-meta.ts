@@ -11,21 +11,20 @@ import {
   locales,
 } from "../paraglide/runtime.js";
 import { m } from "../paraglide/messages.js";
-
-export const SITE_ORIGIN = "https://corne.rs";
+import { SITE_ORIGIN, type IndexableRoute } from "./site.ts";
 
 // The locale union derived from project.inlang/settings.json (compiled into the
 // runtime's `locales` tuple). Widens automatically as languages are registered.
 type Loc = (typeof locales)[number];
 
-// Listed paths get a localized <title>/<meta description> + self-referential
-// hreflang. Unlisted internal paths (/math, /curves-test) pass no meta — they
-// inherit the root default title and canonicalise to the localized home, exactly
-// like the pre-i18n behaviour (canonical -> "/").
-const ROUTE_MESSAGES: Record<
-  string,
-  { title: () => string; description: () => string }
-> = {
+type RouteMeta = { title: () => string; description: () => string };
+
+// Per-route SEO copy. Keyed by IndexableRoute so this map and the sitemap's
+// route list (both off site.ts's INDEXABLE_ROUTES) can't drift — a missing or
+// stray key is a compile error. Unlisted internal paths (/math, /curves-test)
+// carry no meta: they inherit the root default title and canonicalise to the
+// localized home, exactly like the pre-i18n behaviour (canonical -> "/").
+const ROUTE_MESSAGES: Record<IndexableRoute, RouteMeta> = {
   "/": {
     title: () => m.meta_home_title(),
     description: () => m.meta_home_description(),
@@ -86,7 +85,7 @@ function localizedUrl(path: string, locale: Loc): string {
 // locale variant ships an identical, self-including alternate set.
 export function routeHead(path: string) {
   const locale = getLocale();
-  const messages = ROUTE_MESSAGES[path];
+  const messages = (ROUTE_MESSAGES as Record<string, RouteMeta>)[path];
   const canonical = localizedUrl(messages ? path : "/", locale);
 
   const links: Array<{ rel: string; href: string; hreflang?: string }> = [

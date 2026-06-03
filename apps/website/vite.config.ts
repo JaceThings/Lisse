@@ -5,6 +5,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { nitro } from "nitro/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { segment } from "./src/lib/site.ts";
 
 // Locale routing config is DERIVED from project.inlang/settings.json so that
 // adding a language is a one-line edit there (the compiled Paraglide runtime,
@@ -13,16 +14,6 @@ import tailwindcss from "@tailwindcss/vite";
 const inlang = JSON.parse(
   readFileSync(new URL("./project.inlang/settings.json", import.meta.url), "utf8"),
 ) as { baseLocale: string; locales: string[] };
-
-// URL path segment per locale. Default = the lowercased BCP-47 tag, with a few
-// explicit overrides so multi-part tags get clean, conventional lowercase URLs
-// (/pt-br/, /zh-hans/) while the catalog/hreflang keep the proper BCP-47 casing.
-const URL_SEGMENT: Record<string, string> = {
-  "pt-BR": "pt-br",
-  "zh-Hans": "zh-hans",
-  "zh-Hant": "zh-hant",
-};
-const segment = (locale: string) => URL_SEGMENT[locale] ?? locale.toLowerCase();
 
 // The base locale (English) stays at the bare path with NO prefix; every other
 // locale gets an additive `/<segment>/` prefix. The base catch-all MUST be last

@@ -12,21 +12,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const SITE_ORIGIN = "https://corne.rs";
-
-// Canonical, indexable routes — keep in sync with ROUTE_MESSAGES in
-// src/lib/route-meta.ts. Internal/unlisted pages (/math, /curves-test) are
-// intentionally excluded, matching their canonical -> home behaviour.
-const ROUTES = ["/", "/what", "/playground"];
-
-// Lowercase URL segment per locale (matches vite.config.ts). Falls back to the
-// lowercased BCP-47 tag.
-const URL_SEGMENT: Record<string, string> = {
-  "pt-BR": "pt-br",
-  "zh-Hans": "zh-hans",
-  "zh-Hant": "zh-hant",
-};
-const segment = (locale: string) => URL_SEGMENT[locale] ?? locale.toLowerCase();
+import { INDEXABLE_ROUTES, SITE_ORIGIN, segment } from "../src/lib/site.ts";
 
 const settings = JSON.parse(
   readFileSync(
@@ -52,7 +38,7 @@ lines.push(
     : '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
 );
 
-for (const route of ROUTES) {
+for (const route of INDEXABLE_ROUTES) {
   for (const locale of locales) {
     if (!multi) {
       lines.push(`  <url><loc>${url(route, locale)}</loc></url>`);
@@ -75,5 +61,5 @@ lines.push("</urlset>");
 const file = fileURLToPath(new URL("../public/sitemap.xml", import.meta.url));
 writeFileSync(file, lines.join("\n") + "\n", "utf8");
 console.log(
-  `wrote public/sitemap.xml -> ${ROUTES.length} route(s) × ${locales.length} locale(s)`,
+  `wrote public/sitemap.xml -> ${INDEXABLE_ROUTES.length} route(s) × ${locales.length} locale(s)`,
 );
