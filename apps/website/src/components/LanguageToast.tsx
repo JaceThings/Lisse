@@ -34,15 +34,19 @@ const ALL = locales as readonly string[];
 // cookie — one answer, either way, retires it for good.
 const PROMPT_COOKIE = "lisse_lang_prompt";
 const setCookie = (name: string, value: string) => {
-  document.cookie = `${name}=${value};path=/;max-age=31536000;samesite=lax`;
+  document.cookie = `${name}=${value};path=/;max-age=31536000;samesite=lax;secure`;
+};
+// Persist a chosen locale and mark the prompt answered.
+const remember = (loc: string) => {
+  setCookie("PARAGLIDE_LOCALE", loc);
+  setCookie(PROMPT_COOKIE, "1");
 };
 const responded = () => new RegExp(`(?:^|; )${PROMPT_COOKIE}=`).test(document.cookie);
 
 // Switch to `loc`: remember it, then re-localise the current path (de-localised
 // first, so ?lang=en works from /ja/ too) and navigate, dropping the ?lang param.
 function gotoLocale(loc: string, replace: boolean) {
-  setCookie("PARAGLIDE_LOCALE", loc);
-  setCookie(PROMPT_COOKIE, "1");
+  remember(loc);
   const url = new URL(location.href);
   url.searchParams.delete("lang");
   url.searchParams.delete("toast");
@@ -77,6 +81,7 @@ const BTN =
 export function LanguageToast() {
   const [offer, setOffer] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     // ?lang= is the permanent manual override — honoured even after a prior
@@ -85,11 +90,11 @@ export function LanguageToast() {
     const forced = params.get("lang");
     if (forced && ALL.includes(forced)) {
       if (forced === getLocale()) {
-        // Already on it — just remember and strip the param, no reload.
-        setCookie("PARAGLIDE_LOCALE", forced);
-        setCookie(PROMPT_COOKIE, "1");
+        // Already on it — remember and strip the params, no reload.
+        remember(forced);
         const u = new URL(location.href);
         u.searchParams.delete("lang");
+        u.searchParams.delete("toast");
         history.replaceState(null, "", `${u.pathname}${u.search}${u.hash}`);
       } else {
         gotoLocale(forced, true);
@@ -102,6 +107,7 @@ export function LanguageToast() {
     if (demo && OFFER[demo] && demo !== getLocale()) {
       setOffer(demo);
       setOpen(true);
+      setPreview(true);
       return;
     }
     if (responded()) return;
@@ -117,7 +123,8 @@ export function LanguageToast() {
 
   const accept = () => gotoLocale(offer, false);
   const dismiss = () => {
-    setCookie(PROMPT_COOKIE, "1");
+    // A ?toast= preview must not persist — it'd suppress the real prompt for QA.
+    if (!preview) setCookie(PROMPT_COOKIE, "1");
     setOpen(false);
   };
 
