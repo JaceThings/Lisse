@@ -37,6 +37,13 @@ body {
   color: var(--color-text-primary);
 }
 
+/* `ja` renders in Noto Sans JP (Inter has no CJK glyphs); macOS grayscale AA
+ * thins CJK strokes, so nudge the base weight to 540 to match Inter's Latin
+ * weight. Explicit font-weights elsewhere are unaffected. */
+body:lang(ja) {
+  font-weight: 540;
+}
+
 p {
   text-wrap: pretty;
   /* Justified body text relies on hyphenation to avoid huge word-spacing

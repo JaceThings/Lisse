@@ -11,21 +11,18 @@ import {
   locales,
 } from "../paraglide/runtime.js";
 import { m } from "../paraglide/messages.js";
-
-export const SITE_ORIGIN = "https://corne.rs";
+import { SITE_ORIGIN, type IndexableRoute } from "./site.ts";
 
 // The locale union derived from project.inlang/settings.json (compiled into the
 // runtime's `locales` tuple). Widens automatically as languages are registered.
 type Loc = (typeof locales)[number];
 
-// Listed paths get a localized <title>/<meta description> + self-referential
-// hreflang. Unlisted internal paths (/math, /curves-test) pass no meta — they
-// inherit the root default title and canonicalise to the localized home, exactly
-// like the pre-i18n behaviour (canonical -> "/").
-const ROUTE_MESSAGES: Record<
-  string,
-  { title: () => string; description: () => string }
-> = {
+type RouteMeta = { title: () => string; description: () => string };
+
+// Per-route SEO copy. Keyed by IndexableRoute so this and the sitemap can't
+// drift from site.ts — a missing or stray key is a compile error. Unlisted
+// paths (/math, /curves-test) get no meta; they canonicalise to home.
+const ROUTE_MESSAGES: Record<IndexableRoute, RouteMeta> = {
   "/": {
     title: () => m.meta_home_title(),
     description: () => m.meta_home_description(),
@@ -55,20 +52,6 @@ const OG_LOCALE: Record<string, string> = {
 export const ogLocale = (locale: string) =>
   OG_LOCALE[locale] ?? locale.replace("-", "_");
 
-// Endonyms — each language's name in its OWN script, shown verbatim in the
-// language switcher regardless of the active locale (never translated, never a
-// flag). Falls back to the raw tag for an unmapped locale.
-const LOCALE_NAMES: Record<string, string> = {
-  en: "English",
-  de: "Deutsch",
-  ja: "日本語",
-  ko: "한국어",
-  "pt-BR": "Português",
-  ru: "Русский",
-  "zh-Hans": "简体中文",
-};
-export const localeName = (locale: string) => LOCALE_NAMES[locale] ?? locale;
-
 // Absolute, locale-prefixed URL for an internal (de-localized) path. Home keeps
 // its trailing slash ("/", "/de/"); other paths have none ("/what", "/de/what")
 // — matching the router's canonical (redirect) form.
@@ -86,7 +69,7 @@ function localizedUrl(path: string, locale: Loc): string {
 // locale variant ships an identical, self-including alternate set.
 export function routeHead(path: string) {
   const locale = getLocale();
-  const messages = ROUTE_MESSAGES[path];
+  const messages = (ROUTE_MESSAGES as Record<string, RouteMeta>)[path];
   const canonical = localizedUrl(messages ? path : "/", locale);
 
   const links: Array<{ rel: string; href: string; hreflang?: string }> = [

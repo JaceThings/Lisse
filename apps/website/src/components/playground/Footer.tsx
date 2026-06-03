@@ -2,7 +2,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Divider } from "../Divider.tsx";
-import { LanguageSwitcher } from "../LanguageSwitcher.tsx";
 import { playClick } from "../../lib/sounds.ts";
 import { m } from "../../paraglide/messages.js";
 
@@ -180,7 +179,6 @@ export function Footer() {
           </a>
         </NavSlot>
       </motion.nav>
-      <LanguageSwitcher />
     </div>
   );
 }

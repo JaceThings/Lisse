@@ -33,11 +33,9 @@
 //   CLOUDFLARE_ZONE_ID    zone for corne.rs
 //   CLOUDFLARE_API_TOKEN  token with the "Cache Purge" permission on that zone
 
-// Inlined rather than imported from src/lib/route-meta.ts: that module now pulls
-// in Paraglide's generated runtime (src/paraglide/*), which doesn't exist in this
-// build-free purge job (npx tsx, no install/compile). Same self-contained origin
-// as scripts/build-sitemap.ts.
-const SITE_ORIGIN = "https://corne.rs";
+// site.ts is dependency-free, so this build-free job (tsx) can import it —
+// unlike route-meta.ts, which pulls in the Paraglide runtime.
+import { SITE_ORIGIN } from "../src/lib/site.ts";
 
 const zoneId = process.env.CLOUDFLARE_ZONE_ID;
 const apiToken = process.env.CLOUDFLARE_API_TOKEN;

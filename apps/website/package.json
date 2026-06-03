@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",
+    "@fontsource-variable/noto-sans-jp": "^5.2.10",
     "@inlang/paraglide-js": "^2.18.1",
     "@lisse/core": "workspace:*",
     "@lisse/react": "workspace:*",

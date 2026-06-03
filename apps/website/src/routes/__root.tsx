@@ -17,6 +17,9 @@ import {
 // Style order is load-bearing.
 import "@fontsource-variable/inter/standard.css";
 import "@fontsource-variable/inter/standard-italic.css";
+// Inter has no CJK glyphs; without this, Japanese falls back to a thin OS font.
+// Subset by unicode-range, so non-JA pages fetch nothing.
+import "@fontsource-variable/noto-sans-jp/wght.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 
@@ -24,9 +27,11 @@ import { FocusRingOverlay } from "../components/FocusRingOverlay.tsx";
 import { Header } from "../components/Header.tsx";
 import { Layout } from "../components/Layout.tsx";
 import { SelectionHighlight } from "../components/SelectionHighlight.tsx";
+import { LanguageToast } from "../components/LanguageToast.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 import { Footer } from "../components/playground/Footer.tsx";
-import { SITE_ORIGIN, ogLocale } from "../lib/route-meta.ts";
+import { ogLocale } from "../lib/route-meta.ts";
+import { SITE_ORIGIN } from "../lib/site.ts";
 import { m } from "../paraglide/messages.js";
 import { Home } from "../pages/Home.tsx";
 import { What } from "../pages/What.tsx";
@@ -223,6 +228,7 @@ function RootComponent() {
           </LayoutGroup>
           <FocusRingOverlay />
           <SelectionHighlight />
+          <LanguageToast />
           <DevAgentation />
         </MotionConfig>
         <Scripts />
