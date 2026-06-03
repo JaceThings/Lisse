@@ -1,27 +1,18 @@
-// Site + locale-routing constants shared by three kinds of consumer:
-//   - app code (src/**, e.g. route-meta.ts),
-//   - build-free scripts (scripts/*.ts, run via `tsx` with no install/compile),
-//   - the Vite config (vite.config.ts).
-//
-// MUST stay dependency-free — no Paraglide runtime, no framework, no imports.
-// route-meta.ts pulls in Paraglide's generated runtime, so the scripts and the
-// Vite config can't import from it (that coupling is what crashed the Cloudflare
-// purge job). This leaf module is the single source those copies stood in for.
+// Locale + site constants shared by app code, the build-free scripts (tsx, no
+// compile) and vite.config.ts. Stays dependency-free on purpose: importing
+// route-meta.ts instead drags in the Paraglide runtime the scripts and Vite
+// config don't have — the coupling that crashed the purge job.
 
-/** Canonical production origin. No trailing slash. */
+/** Production origin, no trailing slash. */
 export const SITE_ORIGIN = "https://corne.rs";
 
-/** Canonical, indexable routes as de-localized paths. Internal/unlisted pages
- *  (/math, /curves-test) are intentionally excluded — they carry no SEO meta
- *  and canonicalise to the localized home. Drives both the per-route SEO head
- *  (route-meta.ts) and the sitemap (scripts/build-sitemap.ts). */
+/** Indexable routes (de-localized). /math and /curves-test are excluded — no
+ *  SEO meta, they canonicalise to home. Source for route-meta and the sitemap. */
 export const INDEXABLE_ROUTES = ["/", "/what", "/playground"] as const;
 export type IndexableRoute = (typeof INDEXABLE_ROUTES)[number];
 
-/** URL path segment per locale. Default = the lowercased BCP-47 tag; the
- *  explicit overrides give multi-part tags clean, conventional lowercase URLs
- *  (/pt-br/, /zh-hans/) while the message catalog and hreflang keep the proper
- *  BCP-47 casing. */
+/** URL segment per locale. Defaults to the lowercased tag; the overrides give
+ *  multi-part tags clean lowercase URLs (/pt-br/) while hreflang keeps BCP-47 casing. */
 export const URL_SEGMENT: Record<string, string> = {
   "pt-BR": "pt-br",
   "zh-Hans": "zh-hans",

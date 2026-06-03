@@ -19,11 +19,9 @@ type Loc = (typeof locales)[number];
 
 type RouteMeta = { title: () => string; description: () => string };
 
-// Per-route SEO copy. Keyed by IndexableRoute so this map and the sitemap's
-// route list (both off site.ts's INDEXABLE_ROUTES) can't drift — a missing or
-// stray key is a compile error. Unlisted internal paths (/math, /curves-test)
-// carry no meta: they inherit the root default title and canonicalise to the
-// localized home, exactly like the pre-i18n behaviour (canonical -> "/").
+// Per-route SEO copy. Keyed by IndexableRoute so this and the sitemap can't
+// drift from site.ts — a missing or stray key is a compile error. Unlisted
+// paths (/math, /curves-test) get no meta; they canonicalise to home.
 const ROUTE_MESSAGES: Record<IndexableRoute, RouteMeta> = {
   "/": {
     title: () => m.meta_home_title(),

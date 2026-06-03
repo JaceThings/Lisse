@@ -33,8 +33,8 @@
 //   CLOUDFLARE_ZONE_ID    zone for corne.rs
 //   CLOUDFLARE_API_TOKEN  token with the "Cache Purge" permission on that zone
 
-// site.ts is dependency-free (no Paraglide runtime), so this build-free purge
-// job (npx tsx, no install/compile) can import it — unlike route-meta.ts.
+// site.ts is dependency-free, so this build-free job (tsx) can import it —
+// unlike route-meta.ts, which pulls in the Paraglide runtime.
 import { SITE_ORIGIN } from "../src/lib/site.ts";
 
 const zoneId = process.env.CLOUDFLARE_ZONE_ID;
