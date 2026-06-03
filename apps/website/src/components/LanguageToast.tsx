@@ -45,6 +45,7 @@ function gotoLocale(loc: string, replace: boolean) {
   setCookie(PROMPT_COOKIE, "1");
   const url = new URL(location.href);
   url.searchParams.delete("lang");
+  url.searchParams.delete("toast");
   const href = localizeHref(
     deLocalizeHref(`${url.pathname}${url.search}${url.hash}`),
     { locale: loc as Locale },
@@ -80,7 +81,8 @@ export function LanguageToast() {
   useEffect(() => {
     // ?lang= is the permanent manual override — honoured even after a prior
     // answer, so anyone (and crawlers) can always force a locale.
-    const forced = new URLSearchParams(location.search).get("lang");
+    const params = new URLSearchParams(location.search);
+    const forced = params.get("lang");
     if (forced && ALL.includes(forced)) {
       if (forced === getLocale()) {
         // Already on it — just remember and strip the param, no reload.
@@ -92,6 +94,14 @@ export function LanguageToast() {
       } else {
         gotoLocale(forced, true);
       }
+      return;
+    }
+    // ?toast=<locale> force-shows the suggestion for previewing/QA, regardless
+    // of browser language or a prior answer.
+    const demo = params.get("toast");
+    if (demo && OFFER[demo] && demo !== getLocale()) {
+      setOffer(demo);
+      setOpen(true);
       return;
     }
     if (responded()) return;
