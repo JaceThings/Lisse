@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SmoothCorners } from "@lisse/react";
 import type { ShadowConfig } from "@lisse/core";
-import { baseLocale, getLocale, locales } from "../paraglide/runtime.js";
-import { segment } from "../lib/site.ts";
+import {
+  type Locale,
+  deLocalizeHref,
+  getLocale,
+  locales,
+  localizeHref,
+} from "../paraglide/runtime.js";
 
 // Offer copy written in the language being offered, so the reader who needs it
 // understands it. Not Paraglide m.* — those follow the page locale; this is the
@@ -33,6 +38,21 @@ const setCookie = (name: string, value: string) => {
 };
 const responded = () => new RegExp(`(?:^|; )${PROMPT_COOKIE}=`).test(document.cookie);
 
+// Switch to `loc`: remember it, then re-localise the current path (de-localised
+// first, so ?lang=en works from /ja/ too) and navigate, dropping the ?lang param.
+function gotoLocale(loc: string, replace: boolean) {
+  setCookie("PARAGLIDE_LOCALE", loc);
+  setCookie(PROMPT_COOKIE, "1");
+  const url = new URL(location.href);
+  url.searchParams.delete("lang");
+  const href = localizeHref(
+    deLocalizeHref(`${url.pathname}${url.search}${url.hash}`),
+    { locale: loc as Locale },
+  );
+  if (replace) location.replace(href);
+  else location.assign(href);
+}
+
 // Best browser-preferred locale we support — exact tag (pt-BR) first, then base
 // language (de) — or null.
 function preferred(): string | null {
@@ -58,6 +78,22 @@ export function LanguageToast() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    // ?lang= is the permanent manual override — honoured even after a prior
+    // answer, so anyone (and crawlers) can always force a locale.
+    const forced = new URLSearchParams(location.search).get("lang");
+    if (forced && ALL.includes(forced)) {
+      if (forced === getLocale()) {
+        // Already on it — just remember and strip the param, no reload.
+        setCookie("PARAGLIDE_LOCALE", forced);
+        setCookie(PROMPT_COOKIE, "1");
+        const u = new URL(location.href);
+        u.searchParams.delete("lang");
+        history.replaceState(null, "", `${u.pathname}${u.search}${u.hash}`);
+      } else {
+        gotoLocale(forced, true);
+      }
+      return;
+    }
     if (responded()) return;
     const want = preferred();
     if (want && want !== getLocale() && OFFER[want]) {
@@ -69,13 +105,7 @@ export function LanguageToast() {
   if (!offer) return null;
   const copy = OFFER[offer];
 
-  const accept = () => {
-    setCookie(PROMPT_COOKIE, "1");
-    setCookie("PARAGLIDE_LOCALE", offer);
-    const prefix = offer === baseLocale ? "" : `/${segment(offer)}`;
-    const p = location.pathname;
-    location.assign(`${prefix}${p === "/" ? "/" : p}${location.search}${location.hash}`);
-  };
+  const accept = () => gotoLocale(offer, false);
   const dismiss = () => {
     setCookie(PROMPT_COOKIE, "1");
     setOpen(false);
