@@ -27,6 +27,7 @@ import { FocusRingOverlay } from "../components/FocusRingOverlay.tsx";
 import { Header } from "../components/Header.tsx";
 import { Layout } from "../components/Layout.tsx";
 import { SelectionHighlight } from "../components/SelectionHighlight.tsx";
+import { LanguageToast } from "../components/LanguageToast.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 import { Footer } from "../components/playground/Footer.tsx";
 import { ogLocale } from "../lib/route-meta.ts";
@@ -227,6 +228,7 @@ function RootComponent() {
           </LayoutGroup>
           <FocusRingOverlay />
           <SelectionHighlight />
+          <LanguageToast />
           <DevAgentation />
         </MotionConfig>
         <Scripts />

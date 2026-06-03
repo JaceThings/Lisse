@@ -52,20 +52,6 @@ const OG_LOCALE: Record<string, string> = {
 export const ogLocale = (locale: string) =>
   OG_LOCALE[locale] ?? locale.replace("-", "_");
 
-// Endonyms — each language's name in its OWN script, shown verbatim in the
-// language switcher regardless of the active locale (never translated, never a
-// flag). Falls back to the raw tag for an unmapped locale.
-const LOCALE_NAMES: Record<string, string> = {
-  en: "English",
-  de: "Deutsch",
-  ja: "日本語",
-  ko: "한국어",
-  "pt-BR": "Português",
-  ru: "Русский",
-  "zh-Hans": "简体中文",
-};
-export const localeName = (locale: string) => LOCALE_NAMES[locale] ?? locale;
-
 // Absolute, locale-prefixed URL for an internal (de-localized) path. Home keeps
 // its trailing slash ("/", "/de/"); other paths have none ("/what", "/de/what")
 // — matching the router's canonical (redirect) form.
