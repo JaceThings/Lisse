@@ -17,6 +17,7 @@ import {
   playSmoothingEnter,
   playSmoothingExit,
 } from "../lib/sounds.ts";
+import { m } from "../paraglide/messages.js";
 
 const SQUIRCLE_SMOOTHING = 0.6;
 // Path generated once at the desktop max (510 px); the wrapper sizes
@@ -45,13 +46,13 @@ const COMPARE_ICON = 16;
 
 function describeState(smoothing: boolean, comparing: boolean): string {
   const smoothingPart = smoothing
-    ? "Smoothing is on; the demo square uses Lisse's squircle corners."
-    : "Smoothing is off; the demo square uses standard CSS quarter-circle corners.";
+    ? m.demo_state_smoothing_on()
+    : m.demo_state_smoothing_off();
   if (!comparing) return smoothingPart;
-  return `Comparison view active. ${smoothingPart}${
+  return `${m.demo_state_compare_active()} ${smoothingPart}${
     smoothing
-      ? " The four red wedges show how far the squircle pulls in from the CSS-rounded back."
-      : " The front collapses onto the back, so no red corners are visible."
+      ? ` ${m.demo_state_compare_smoothing_on()}`
+      : ` ${m.demo_state_compare_smoothing_off()}`
   }`;
 }
 
@@ -148,7 +149,7 @@ export function Demo({ staggerIndex }: DemoProps) {
       aria-labelledby="demo-heading"
     >
       <h2 id="demo-heading" className="sr-only">
-        Squircle demo
+        {m.demo_heading()}
       </h2>
 
       {/* Masked layer holding both grid and squircle. Extends 10px past
@@ -229,23 +230,23 @@ export function Demo({ staggerIndex }: DemoProps) {
         <TogglePill
           pressed={smoothing}
           onToggle={toggleSmoothing}
-          ariaLabel={smoothing ? "Disable smoothing" : "Enable smoothing"}
+          ariaLabel={smoothing ? m.demo_smoothing_disable() : m.demo_smoothing_enable()}
           toneClass={smoothing ? "text-accent-green" : "text-accent-red"}
           iconSize={SMOOTHING_ICON}
           pressedIcon={<CheckIcon width={SMOOTHING_ICON} height={SMOOTHING_ICON} />}
           unpressedIcon={<XMarkIcon width={SMOOTHING_ICON} height={SMOOTHING_ICON} />}
-          label={smoothing ? "Smoothing" : "No Smoothing"}
+          label={smoothing ? m.demo_smoothing_label_on() : m.demo_smoothing_label_off()}
         />
 
         <TogglePill
           pressed={comparing}
           onToggle={toggleCompare}
-          ariaLabel={comparing ? "Exit comparison view" : "Enter comparison view"}
+          ariaLabel={comparing ? m.demo_compare_exit() : m.demo_compare_enter()}
           toneClass="text-text-input"
           iconSize={COMPARE_ICON}
           pressedIcon={<OverlayFilledIcon width={COMPARE_ICON} height={COMPARE_ICON} />}
           unpressedIcon={<OverlayOutlineIcon width={COMPARE_ICON} height={COMPARE_ICON} />}
-          label="Comparison"
+          label={m.demo_compare_label()}
         />
       </div>
     </motion.section>

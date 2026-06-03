@@ -2,7 +2,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Divider } from "../Divider.tsx";
+import { LanguageSwitcher } from "../LanguageSwitcher.tsx";
 import { playClick } from "../../lib/sounds.ts";
+import { m } from "../../paraglide/messages.js";
 
 // Full-contrast primary text by deliberate choice — these links sit at the
 // page foot and must read without hovering. `py-2 -my-2` grows the tap target
@@ -98,7 +100,7 @@ export function Footer() {
       <motion.nav
         layout
         transition={NAV_LAYOUT_TRANSITION}
-        aria-label="Site"
+        aria-label={m.nav_aria_site()}
         className="flex w-full items-start gap-4 text-[14px] leading-[1.2] font-medium tracking-[-0.25px] text-text-primary whitespace-nowrap"
       >
         {/* popLayout sets the exiting Home link to position:absolute so
@@ -124,7 +126,7 @@ export function Footer() {
                 data-focus-ring
                 data-focus-inset-x="6"
               >
-                <LinkText>Home</LinkText>
+                <LinkText>{m.nav_home()}</LinkText>
               </ScrollLink>
             </motion.span>
           )}
@@ -136,7 +138,7 @@ export function Footer() {
             data-focus-ring
             data-focus-inset-x="6"
           >
-            <LinkText>What?</LinkText>
+            <LinkText>{m.nav_what()}</LinkText>
           </ScrollLink>
         </NavSlot>
         <NavSlot>
@@ -146,7 +148,7 @@ export function Footer() {
             data-focus-ring
             data-focus-inset-x="6"
           >
-            <LinkText>Playground</LinkText>
+            <LinkText>{m.nav_playground()}</LinkText>
           </ScrollLink>
         </NavSlot>
         <NavSlot>
@@ -159,7 +161,7 @@ export function Footer() {
             rel="noreferrer"
             onClick={() => playClick()}
           >
-            <LinkText>Docs</LinkText>
+            <LinkText>{m.nav_docs()}</LinkText>
           </a>
         </NavSlot>
         {/* ml-auto pins Follow to the far right; the auto margin absorbs the
@@ -174,10 +176,11 @@ export function Footer() {
             rel="noreferrer"
             onClick={() => playClick()}
           >
-            <LinkText>Follow</LinkText>
+            <LinkText>{m.nav_follow()}</LinkText>
           </a>
         </NavSlot>
       </motion.nav>
+      <LanguageSwitcher />
     </div>
   );
 }

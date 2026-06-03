@@ -7,21 +7,22 @@ import { Section } from "../Section.tsx";
 import { Slider } from "../Slider.tsx";
 import { useStateSpring } from "../springs.ts";
 import { ROW_DIVIDER } from "../styles.ts";
+import { m } from "../../../paraglide/messages.js";
 
 type PerCornerPreset = "all" | "top" | "single" | "custom";
-
-const PER_CORNER_PRESETS = [
-  { value: "all", label: "All Equal" },
-  { value: "top", label: "Top Only" },
-  { value: "single", label: "Single" },
-  { value: "custom", label: "Custom" },
-] as const satisfies ReadonlyArray<{ value: PerCornerPreset; label: string }>;
 
 type CornerKnob = "tl" | "tr" | "bl" | "br";
 type CornerFromDrag = Record<CornerKnob, boolean>;
 const NO_CORNER_DRAG: CornerFromDrag = { tl: false, tr: false, bl: false, br: false };
 
 export function PerCornerSection() {
+  const PER_CORNER_PRESETS = [
+    { value: "all", label: m.section_percorner_preset_all() },
+    { value: "top", label: m.section_percorner_preset_top() },
+    { value: "single", label: m.section_percorner_preset_single() },
+    { value: "custom", label: m.section_percorner_preset_custom() },
+  ] as const satisfies ReadonlyArray<{ value: PerCornerPreset; label: string }>;
+
   const [preset, setPreset] = useState<PerCornerPreset>("custom");
   const [tl, setTl] = useState(20);
   const [tr, setTr] = useState(20);
@@ -100,14 +101,14 @@ export function PerCornerSection() {
 
   return (
     <Section
-      title="Per-Corner Radius"
-      description="Each corner can have its own radius and smoothing, independently controlled. Useful for asymmetric shapes like tabs and chips."
+      title={m.section_percorner_title()}
+      description={m.section_percorner_desc()}
     >
       <FigureCard>
         <Preview corners={corners} />
         <div className={`w-full ${ROW_DIVIDER}`}>
           <RadioPillGroup
-            ariaLabel="Per-corner preset"
+            ariaLabel={m.section_percorner_preset_aria()}
             options={PER_CORNER_PRESETS}
             value={preset}
             onChange={onPresetChange}
@@ -117,16 +118,16 @@ export function PerCornerSection() {
         <Collapse show={preset === "custom"}>
           <div className="flex w-full flex-wrap items-start">
             <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-4 pr-[14px] py-4 ${ROW_DIVIDER}`}>
-              <Slider label="Top Left" value={tl} min={0} max={50} onChange={onTlChange} />
+              <Slider label={m.section_percorner_top_left_label()} value={tl} min={0} max={50} onChange={onTlChange} />
             </div>
             <div className={`flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4 ${ROW_DIVIDER} max-[560px]:shadow-none`}>
-              <Slider label="Top Right" value={tr} min={0} max={50} onChange={onTrChange} />
+              <Slider label={m.section_percorner_top_right_label()} value={tr} min={0} max={50} onChange={onTrChange} />
             </div>
             <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-4 pr-[14px] py-4">
-              <Slider label="Bottom Left" value={bl} min={0} max={50} onChange={onBlChange} />
+              <Slider label={m.section_percorner_bottom_left_label()} value={bl} min={0} max={50} onChange={onBlChange} />
             </div>
             <div className="flex flex-1 min-w-[210px] flex-col items-center justify-center pl-[14px] pr-4 py-4">
-              <Slider label="Bottom Right" value={br} min={0} max={50} onChange={onBrChange} />
+              <Slider label={m.section_percorner_bottom_right_label()} value={br} min={0} max={50} onChange={onBrChange} />
             </div>
           </div>
         </Collapse>
