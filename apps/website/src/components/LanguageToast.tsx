@@ -15,6 +15,7 @@ import {
 // target's. Confirm wording with native contributors before adding locales.
 const OFFER: Record<string, { prompt: string; accept: string; dismiss: string }> = {
   ja: { prompt: "このページを日本語で表示しますか？", accept: "日本語で表示", dismiss: "英語のまま" },
+  ko: { prompt: "이 페이지를 한국어로 볼까요?", accept: "한국어로 보기", dismiss: "영어로 유지" },
   de: { prompt: "Diese Seite auf Deutsch anzeigen?", accept: "Auf Deutsch", dismiss: "Bei Englisch bleiben" },
   en: { prompt: "View this page in English?", accept: "English", dismiss: "Not now" },
 };
