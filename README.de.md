@@ -14,7 +14,7 @@ Pixelgenaue Figma-Squircles + drei weitere Eckkurven.
 
 **[Live-Demo →](https://corne.rs)**
 
-[English](./README.md) · [日本語](./README.ja.md) · **Deutsch**
+[English](./README.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · **Deutsch**
 
 </div>
 
