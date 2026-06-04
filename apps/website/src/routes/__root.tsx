@@ -17,9 +17,10 @@ import {
 // Style order is load-bearing.
 import "@fontsource-variable/inter/standard.css";
 import "@fontsource-variable/inter/standard-italic.css";
-// Inter has no CJK glyphs; without this, Japanese falls back to a thin OS font.
-// Subset by unicode-range, so non-JA pages fetch nothing.
+// Inter has no CJK glyphs; without these, Japanese/Korean fall back to a thin OS
+// font. Subset by unicode-range, so non-CJK pages fetch nothing.
 import "@fontsource-variable/noto-sans-jp/wght.css";
+import "@fontsource-variable/noto-sans-kr/wght.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 

@@ -71,6 +71,9 @@ importers:
       '@fontsource-variable/noto-sans-jp':
         specifier: ^5.2.10
         version: 5.2.10
+      '@fontsource-variable/noto-sans-kr':
+        specifier: ^5.2.10
+        version: 5.2.10
       '@inlang/paraglide-js':
         specifier: ^2.18.1
         version: 2.18.1(typescript@5.9.3)
@@ -920,6 +923,9 @@ packages:
 
   '@fontsource-variable/noto-sans-jp@5.2.10':
     resolution: {integrity: sha512-m0XfZ38rZtCaGAuAQL0cBPQ6fc/RguYEOqw66zvuLOV9vNRUBf9MFqyoazTu2JVCRIcnkrxbwF29UUaHHgTKdg==}
+
+  '@fontsource-variable/noto-sans-kr@5.2.10':
+    resolution: {integrity: sha512-UZOO7HF44Rt5+7SCeFMHYVgbKu36Jet6IxrAd7jjEkQMVDmeefwd0H8V5pSZydvBOOxClk3V5cQsujJqGHhQMw==}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -4458,6 +4464,8 @@ snapshots:
   '@fontsource-variable/inter@5.2.8': {}
 
   '@fontsource-variable/noto-sans-jp@5.2.10': {}
+
+  '@fontsource-variable/noto-sans-kr@5.2.10': {}
 
   '@img/colour@1.1.0': {}
 
