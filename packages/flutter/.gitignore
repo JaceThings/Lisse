@@ -1,0 +1,13 @@
+# Dart/Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.iml
+.idea/
+.metadata
+
+# Local dev scratch — reference fixtures + parity harness, never published
+.dev/

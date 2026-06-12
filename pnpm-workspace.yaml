@@ -1,5 +1,6 @@
 packages:
   - "packages/*"
+  - "!packages/flutter" # Dart/Flutter package — not part of the JS workspace
   - "apps/*"
   - "benchmarks"
   - "tests/browser-smoke"
