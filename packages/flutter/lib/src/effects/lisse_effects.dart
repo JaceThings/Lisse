@@ -9,10 +9,6 @@ import '../ui_path.dart';
 /// Visual style of a [LisseBorderLayer] stroke.
 enum LisseBorderStyle { solid, dashed, dotted, doubleLine, groove, ridge }
 
-/// Conceptual placement of a border layer. Cosmetic — layers paint from the
-/// outer edge inward in list order regardless — but handy for readability.
-enum LisseBorderPosition { outer, middle, inner }
-
 /// An inner shadow cast inside the silhouette. Flutter has no native inner
 /// shadow; [SmoothBox] paints this above the fill and below the content.
 @immutable
@@ -51,7 +47,6 @@ class LisseBorderLayer {
     this.gradient,
     this.opacity = 1,
     this.style = LisseBorderStyle.solid,
-    this.position = LisseBorderPosition.outer,
     this.dash,
     this.gap,
     this.cap = StrokeCap.butt,
@@ -68,7 +63,6 @@ class LisseBorderLayer {
   final Gradient? gradient;
   final double opacity;
   final LisseBorderStyle style;
-  final LisseBorderPosition position;
 
   /// Dash length for dashed/dotted styles. Sensible defaults derive from
   /// [width] when null.
@@ -86,14 +80,13 @@ class LisseBorderLayer {
       other.gradient == gradient &&
       other.opacity == opacity &&
       other.style == style &&
-      other.position == position &&
       other.dash == dash &&
       other.gap == gap &&
       other.cap == cap;
 
   @override
-  int get hashCode => Object.hash(
-      width, color, gradient, opacity, style, position, dash, gap, cap);
+  int get hashCode =>
+      Object.hash(width, color, gradient, opacity, style, dash, gap, cap);
 }
 
 double _sigma(double radius) => radius <= 0 ? 0 : radius * 0.57735 + 0.5;

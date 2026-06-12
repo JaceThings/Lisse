@@ -15,10 +15,6 @@ export 'src/border/lisse_border.dart' show LisseBorder;
 export 'src/ui_path.dart' show lissePath;
 
 export 'src/effects/lisse_effects.dart'
-    show
-        LisseInnerShadow,
-        LisseBorderLayer,
-        LisseBorderStyle,
-        LisseBorderPosition;
+    show LisseInnerShadow, LisseBorderLayer, LisseBorderStyle;
 export 'src/widgets/smooth_box.dart' show SmoothBox;
 export 'src/widgets/smooth_clip.dart' show SmoothClip;

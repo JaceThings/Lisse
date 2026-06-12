@@ -30,9 +30,6 @@ bool _hasNonFiniteKeyField(CurveBuilderInput input) {
       !input.roundingAndSmoothingBudget.isFinite;
 }
 
-/// Number of times the cache served a memoised result. Test-only.
-int debugCornerCacheHits = 0;
-
 /// Returns memoised corner output, computing and caching on a miss.
 CornerOutput getCachedBuilderOutput(
   LisseCurve curve,
@@ -43,7 +40,7 @@ CornerOutput getCachedBuilderOutput(
   final String k = _key(curve, input);
   final CornerOutput? cached = _cache[k];
   if (cached != null) {
-    debugCornerCacheHits++;
+    // Touch by remove + re-insert so the entry moves to the LRU tail.
     _cache.remove(k);
     _cache[k] = cached;
     return cached;
@@ -59,7 +56,4 @@ CornerOutput getCachedBuilderOutput(
 /// Clears the entire cache (tests / per-request SSR-style reset).
 void clearCurveCache() {
   _cache.clear();
-  debugCornerCacheHits = 0;
 }
-
-int get debugCurveCacheSize => _cache.length;
