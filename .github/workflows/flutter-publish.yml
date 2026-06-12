@@ -1,0 +1,27 @@
+# Publishes packages/flutter to pub.dev on a `flutter-v*` tag via OIDC
+# trusted publishing — no stored credentials. Enable it once on pub.dev:
+# package admin → Automated publishing → GitHub Actions, repo JaceThings/Lisse,
+# tag pattern `flutter-v{{version}}`.
+name: flutter-publish
+
+on:
+  push:
+    tags: ["flutter-v*"]
+
+defaults:
+  run:
+    working-directory: packages/flutter
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required for pub.dev OIDC
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart pub publish --force

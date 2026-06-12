@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - example/**
+    - .dev/**
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_final_locals: true
