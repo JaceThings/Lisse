@@ -1,6 +1,6 @@
 import 'lisse_curve.dart';
 
-/// Configuration for a single corner.
+/// Configuration for a single corner. Immutable: all fields are final.
 class LisseCorner {
   /// Corner radius in logical pixels.
   final double radius;
@@ -80,7 +80,7 @@ class LisseCorner {
       Object.hash(radius, curve, smoothing, exponent, preserveSmoothing);
 }
 
-/// Per-corner configuration for a rectangle.
+/// Per-corner configuration for a rectangle. Immutable: all fields are final.
 class LisseCorners {
   final LisseCorner topLeft;
   final LisseCorner topRight;
@@ -132,6 +132,47 @@ class LisseCorners {
       topRight.radius <= 0 &&
       bottomRight.radius <= 0 &&
       bottomLeft.radius <= 0;
+
+  LisseCorners copyWith({
+    LisseCorner? topLeft,
+    LisseCorner? topRight,
+    LisseCorner? bottomRight,
+    LisseCorner? bottomLeft,
+  }) {
+    return LisseCorners(
+      topLeft: topLeft ?? this.topLeft,
+      topRight: topRight ?? this.topRight,
+      bottomRight: bottomRight ?? this.bottomRight,
+      bottomLeft: bottomLeft ?? this.bottomLeft,
+    );
+  }
+
+  /// Each corner radius reduced by [inset] (clamped at 0); other fields kept.
+  /// A negative [inset] grows the radii (used for outside-aligned strokes).
+  LisseCorners deflate(double inset) {
+    LisseCorner d(LisseCorner k) {
+      final double r = k.radius - inset;
+      return k.copyWith(radius: r < 0 ? 0 : r);
+    }
+
+    return LisseCorners(
+      topLeft: d(topLeft),
+      topRight: d(topRight),
+      bottomRight: d(bottomRight),
+      bottomLeft: d(bottomLeft),
+    );
+  }
+
+  /// Each corner radius multiplied by [t].
+  LisseCorners scale(double t) {
+    LisseCorner s(LisseCorner k) => k.copyWith(radius: k.radius * t);
+    return LisseCorners(
+      topLeft: s(topLeft),
+      topRight: s(topRight),
+      bottomRight: s(bottomRight),
+      bottomLeft: s(bottomLeft),
+    );
+  }
 
   static LisseCorners lerp(LisseCorners a, LisseCorners b, double t) {
     return LisseCorners(

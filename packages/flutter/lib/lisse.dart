@@ -11,7 +11,8 @@ export 'src/geometry/lisse_corner.dart' show LisseCorner, LisseCorners;
 export 'src/geometry/lisse_path.dart' show debugPathData;
 export 'src/geometry/corner_cache.dart' show clearCurveCache;
 
-export 'src/border/lisse_border.dart' show LisseBorder, lissePath;
+export 'src/border/lisse_border.dart' show LisseBorder;
+export 'src/ui_path.dart' show lissePath;
 
 export 'src/effects/lisse_effects.dart'
     show

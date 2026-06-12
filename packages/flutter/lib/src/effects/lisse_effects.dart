@@ -3,8 +3,8 @@ import 'dart:ui' show PathOperation, BlurStyle, MaskFilter, PathMetric;
 
 import 'package:flutter/widgets.dart';
 
-import '../border/lisse_border.dart';
 import '../geometry/lisse_corner.dart';
+import '../ui_path.dart';
 
 /// Visual style of a [LisseBorderLayer] stroke.
 enum LisseBorderStyle { solid, dashed, dotted, doubleLine, groove, ridge }
@@ -22,7 +22,7 @@ class LisseInnerShadow {
     this.offset = Offset.zero,
     this.blur = 8,
     this.spread = 0,
-  });
+  }) : assert(blur >= 0, 'blur must be >= 0');
 
   final Color color;
   final Offset offset;
@@ -55,7 +55,9 @@ class LisseBorderLayer {
     this.dash,
     this.gap,
     this.cap = StrokeCap.butt,
-  }) : assert(color != null || gradient != null,
+  })  : assert(width >= 0, 'width must be >= 0'),
+        assert(opacity >= 0 && opacity <= 1, 'opacity must be 0..1'),
+        assert(color != null || gradient != null,
             'a border layer needs a color or a gradient');
 
   final double width;
@@ -96,24 +98,6 @@ class LisseBorderLayer {
 
 double _sigma(double radius) => radius <= 0 ? 0 : radius * 0.57735 + 0.5;
 
-LisseCorners _deflate(LisseCorners c, double inset) {
-  LisseCorner d(LisseCorner k) {
-    final double r = k.radius - inset;
-    return k.copyWith(radius: r < 0 ? 0 : r);
-  }
-
-  return LisseCorners(
-    topLeft: d(c.topLeft),
-    topRight: d(c.topRight),
-    bottomRight: d(c.bottomRight),
-    bottomLeft: d(c.bottomLeft),
-  );
-}
-
-/// Path at [inset] inside [rect] (radii reduced to stay concentric).
-Path _insetPath(Rect rect, LisseCorners corners, double inset) =>
-    lissePath(rect.deflate(inset), _deflate(corners, inset));
-
 /// Paints inner shadows clipped to the silhouette. Called above the fill,
 /// below content.
 void paintInnerShadows(
@@ -132,7 +116,7 @@ void paintInnerShadows(
     // out; the blurred edge that bleeds inside the clip reads as an inner
     // shadow. Clamp spread so the punch-out never collapses the whole box.
     final double spread = s.spread > maxSpread ? maxSpread : s.spread;
-    final Path hole = _insetPath(rect, corners, spread).shift(s.offset);
+    final Path hole = insetLissePath(rect, corners, spread).shift(s.offset);
     final Path cover = Path()
       ..addRect(rect.inflate(rect.longestSide + s.blur + spread.abs()));
     final Path ring = Path.combine(PathOperation.difference, cover, hole);
@@ -201,7 +185,7 @@ void paintBorderLayers(
     final double center = offset + w / 2;
     // Deeper layers would invert the inset rect — stop once we run out of room.
     if (center >= limit) break;
-    final Path centerPath = _insetPath(rect, corners, center);
+    final Path centerPath = insetLissePath(rect, corners, center);
 
     switch (layer.style) {
       case LisseBorderStyle.solid:
@@ -216,9 +200,10 @@ void paintBorderLayers(
             rect);
         break;
       case LisseBorderStyle.dotted:
+        // Near-zero dash: the round cap renders each as a circle of diameter w.
         _stroke(
           canvas,
-          _dashed(centerPath, layer.dash ?? w, layer.gap ?? w * 1.6),
+          _dashed(centerPath, layer.dash ?? 0.01, layer.gap ?? w * 1.6),
           layer,
           w,
           rect,
@@ -227,23 +212,27 @@ void paintBorderLayers(
         break;
       case LisseBorderStyle.doubleLine:
         final double sub = w / 3;
-        _stroke(canvas, _insetPath(rect, corners, offset + sub / 2), layer, sub,
-            rect);
-        _stroke(canvas, _insetPath(rect, corners, offset + w - sub / 2), layer,
+        _stroke(canvas, insetLissePath(rect, corners, offset + sub / 2), layer,
             sub, rect);
+        _stroke(canvas, insetLissePath(rect, corners, offset + w - sub / 2),
+            layer, sub, rect);
         break;
       case LisseBorderStyle.groove:
       case LisseBorderStyle.ridge:
         final Color base = layer.color ?? const Color(0xFF808080);
-        final Color dark = Color.lerp(base, const Color(0xFF000000), 0.35)!;
-        final Color light = Color.lerp(base, const Color(0xFFFFFFFF), 0.45)!;
+        // Shift tone but keep the base alpha (lerping to opaque would
+        // otherwise make translucent borders solid).
+        final Color dark = Color.lerp(base, const Color(0xFF000000), 0.35)!
+            .withValues(alpha: base.a);
+        final Color light = Color.lerp(base, const Color(0xFFFFFFFF), 0.45)!
+            .withValues(alpha: base.a);
         final bool groove = layer.style == LisseBorderStyle.groove;
         final double half = w / 2;
-        _stroke(canvas, _insetPath(rect, corners, offset + half / 2), layer,
+        _stroke(canvas, insetLissePath(rect, corners, offset + half / 2), layer,
             half, rect,
             colorOverride: groove ? dark : light);
-        _stroke(canvas, _insetPath(rect, corners, offset + w - half / 2), layer,
-            half, rect,
+        _stroke(canvas, insetLissePath(rect, corners, offset + w - half / 2),
+            layer, half, rect,
             colorOverride: groove ? light : dark);
         break;
     }

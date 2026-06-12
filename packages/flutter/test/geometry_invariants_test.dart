@@ -291,4 +291,32 @@ void main() {
       }
     });
   });
+
+  group('LisseCorners value-type transforms', () {
+    test('copyWith replaces only the named corners', () {
+      final LisseCorners base = LisseCorners.all(radius: 10);
+      final LisseCorners updated =
+          base.copyWith(topLeft: const LisseCorner(radius: 30));
+      expect(updated.topLeft.radius, 30);
+      expect(updated.topRight, base.topRight);
+      expect(updated.bottomLeft, base.bottomLeft);
+      expect(updated.bottomRight, base.bottomRight);
+    });
+
+    test('deflate reduces and clamps; negative grows; scale multiplies', () {
+      final LisseCorners c = LisseCorners.all(radius: 20);
+      expect(c.deflate(5).topLeft.radius, 15);
+      expect(c.deflate(50).topLeft.radius, 0); // clamped at 0
+      expect(c.deflate(-5).topLeft.radius, 25); // negative inset grows
+      expect(c.scale(2).topLeft.radius, 40);
+      // Other fields are preserved.
+      final LisseCorner d = LisseCorners.all(
+        radius: 20,
+        curve: LisseCurve.clothoid,
+        smoothing: 0.3,
+      ).deflate(5).topLeft;
+      expect(d.curve, LisseCurve.clothoid);
+      expect(d.smoothing, 0.3);
+    });
+  });
 }
