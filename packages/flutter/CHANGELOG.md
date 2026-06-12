@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Shorten the package description to pub.dev's 180-character limit (no code
+  changes).
+
 ## 0.1.0
 
 Initial release.
