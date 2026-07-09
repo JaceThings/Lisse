@@ -2,10 +2,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Divider } from "../components/Divider.tsx";
 import { Stagger } from "../components/Stagger.tsx";
-import {
-  DEFAULT_TUNING,
-  PlaygroundTuningProvider,
-} from "../components/playground/PlaygroundTuning.tsx";
 import { Slider } from "../components/playground/Slider.tsx";
 import { useStateSpring } from "../components/playground/springs.ts";
 import { useMorphedCurve } from "../hooks/useMorphedCurve.ts";
@@ -521,8 +517,7 @@ export function MathPage() {
   );
 
   return (
-    <PlaygroundTuningProvider value={DEFAULT_TUNING}>
-      <section className="flex w-full flex-col gap-6">
+    <section className="flex w-full flex-col gap-6">
         <Stagger index={6}>
           <p className={BODY}>
             {m.math_intro_lead()} <strong>G1</strong> {m.math_intro_g1()}{" "}
@@ -690,6 +685,5 @@ export function MathPage() {
           </p>
         </Stagger>
       </section>
-    </PlaygroundTuningProvider>
   );
 }

@@ -75,8 +75,6 @@ export type SmoothCornersProps<E extends ElementType = "div"> = SmoothCornersOwn
   as?: E;
 } & Omit<ComponentPropsWithoutRef<E>, ReservedKeys>;
 
-type AnyForwardedRef = ForwardedRef<Element>;
-
 /**
  * Build a CSS `box-shadow` chain from one or more shadows. First entry
  * renders topmost (CSS-spec order). Invisible (opacity <= 0) entries are
@@ -132,7 +130,7 @@ function cornerOptionsToBorderRadius(options: SmoothCornerOptions): string {
 
 function SmoothCornersImpl<E extends ElementType = "div">(
   props: SmoothCornersProps<E>,
-  externalRef: AnyForwardedRef,
+  externalRef: ForwardedRef<Element>,
 ) {
   const {
     as,
@@ -166,11 +164,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
   // `innerShadow` is unaffected (inside the clip, no WebKit bug).
   const effectiveShadow = useBoxShadow ? undefined : shadow;
 
-  // Box-shadow strategy: collect any auto-extracted CSS box-shadow from
-  // the consumer element so it can be routed into the sibling div. The
-  // hook fires the callback on extraction and again with `undefined` on
-  // teardown / autoEffects=false. Explicit `shadow` prop wins when both
-  // are present, matching `mergeEffects` semantics.
+  // Explicit `shadow` prop wins over the auto-extracted one, matching mergeEffects.
   const [extractedShadow, setExtractedShadow] = useState<
     ShadowConfig | ShadowConfig[] | undefined
   >(undefined);

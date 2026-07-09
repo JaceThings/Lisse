@@ -37,8 +37,6 @@ describe("createSvgEffects — mount + update cycle", () => {
   bench(
     "createSvgEffects + update",
     () => {
-      // happy-dom is set up by the vitest env; document.createElement
-      // is safe here.
       const anchor = document.createElement("div");
       document.body.appendChild(anchor);
       const handle = createSvgEffects(anchor);

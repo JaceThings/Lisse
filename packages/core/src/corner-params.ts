@@ -34,7 +34,6 @@ export function getPathParamsForCorner({
   const arcSectionLength =
     Math.sin(toRadians(arcMeasure / 2)) * cornerRadius * Math.sqrt(2);
 
-  // Distance between control points P3 and P4
   const angleAlpha = (90 - arcMeasure) / 2;
   const p3ToP4Distance = cornerRadius * Math.tan(toRadians(angleAlpha / 2));
 
@@ -46,7 +45,6 @@ export function getPathParamsForCorner({
   let b = (p - arcSectionLength - c - d) / 3;
   let a = 2 * b;
 
-  // Adjust P1/P2 control points when space is limited
   if (preserveSmoothing && p > roundingAndSmoothingBudget) {
     const p1ToP3MaxDistance =
       roundingAndSmoothingBudget - d - arcSectionLength - c;

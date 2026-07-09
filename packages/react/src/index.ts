@@ -5,5 +5,5 @@ export {
   type SmoothCornersOwnProps,
   type ShadowStrategy,
 } from "./smooth-corners.js";
-export { Slot, type SlotProps, type SlotPropsFor } from "./slot.js";
+export { Slot, type SlotPropsFor } from "./slot.js";
 export type { SmoothCornerOptions, CornerConfig, PerCornerConfig, UniformCornerOptions, CurveType, BorderConfig, ShadowConfig, EffectsConfig, GradientStop, LinearGradientConfig, RadialGradientConfig, GradientConfig } from "@lisse/core";

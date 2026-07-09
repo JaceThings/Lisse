@@ -150,8 +150,7 @@ const capVector = (vx: number, vy: number, max: number) => {
 };
 
 // ----- rAF helpers ---------------------------------------------------------
-// Module-level so they aren't recreated each frame; pure side effects on
-// the matter body so they can be unit-tested in isolation later.
+// Module-level so they aren't recreated each frame.
 
 /** Reflect velocity off whichever wall the body has just contacted, using
  *  our own restitution. matter.js's solver absorbs most of the bounce on

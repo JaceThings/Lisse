@@ -107,47 +107,6 @@ const corners = distributeAndNormalize({
 
 **Returns:** `NormalizedCorners`. Each corner has `{ radius, roundingAndSmoothingBudget }`.
 
-### `getSVGPathFromPathParams(input)`
-
-Assemble a complete SVG path string from pre-computed corner parameters.
-
-```ts
-import { getSVGPathFromPathParams } from "@lisse/core";
-
-const path = getSVGPathFromPathParams({
-  width: 200,
-  height: 100,
-  topLeftCornerParams: cornerParams,
-  topRightCornerParams: cornerParams,
-  bottomLeftCornerParams: cornerParams,
-  bottomRightCornerParams: cornerParams,
-});
-```
-
-**Returns:** `string`. A complete SVG path `d` attribute.
-
-### `toRadians(degrees)`
-
-Convert degrees to radians.
-
-```ts
-import { toRadians } from "@lisse/core";
-
-const rad = toRadians(90); // 1.5707963...
-```
-
-### `rounded(template)`
-
-Tagged template literal that rounds all interpolated numbers to 4 decimal places for cleaner SVG output.
-
-```ts
-import { rounded } from "@lisse/core";
-
-const x = 3.14159265;
-const y = 2.71828182;
-const segment = rounded`L ${x} ${y}`; // "L 3.1416 2.7183"
-```
-
 ### `observeResize(el, callback)`
 
 Observe an element's size changes using a shared `ResizeObserver`. Callbacks are batched with `requestAnimationFrame`.
@@ -285,26 +244,6 @@ shadow.destroy();
 
 **Returns:** `DropShadowHandle` with the shape `{ update(options, shadow | shadows[], width, height): void; destroy(): void }`. Accepts a single `ShadowConfig` or an array.
 
-### `nextUid()`
-
-Generate a monotonically increasing unique ID. Used internally for SVG element IDs.
-
-```ts
-import { nextUid } from "@lisse/core";
-
-const id = nextUid(); // 1, 2, 3, ...
-```
-
-### `hexToRgb(hex)`
-
-Convert a hex color string to an `r, g, b` string for use in SVG filters.
-
-```ts
-import { hexToRgb } from "@lisse/core";
-
-const rgb = hexToRgb("#ff6600"); // "255, 102, 0"
-```
-
 ### `acquirePosition(anchor)`
 
 Ref-counted helper that sets `position: relative` on an anchor element if it currently has `position: static`. Returns `true` if the position was changed, `false` if it was already non-static. Multiple calls on the same element increment a counter; the position is only restored when all callers release.
@@ -331,7 +270,6 @@ import {
   DEFAULT_SMOOTHING,         // 0.6
   DEFAULT_PRESERVE_SMOOTHING, // true
   DEFAULT_SHADOW,             // { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 0 }
-  SVG_NS,                    // "http://www.w3.org/2000/svg"
 } from "@lisse/core";
 ```
 
@@ -542,7 +480,7 @@ import { generatePath, generateClipPath } from "@lisse/core/path";
 
 ### Included
 
-`generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `getSVGPathFromPathParams`, `toRadians`, `rounded`, `nextUid`, `hexToRgb`, `SVG_NS`, `DEFAULT_SHADOW`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`
+`generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `DEFAULT_SHADOW`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`
 
 ### Excluded
 

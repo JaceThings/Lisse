@@ -19,11 +19,11 @@ The suite exercises this grid:
 
 | Dimension       | Values                                        |
 | --------------- | --------------------------------------------- |
-| Instance counts | 1, 10, 50, 100, 500                           |
+| Instance counts | 1, 10, 50, 100                                |
 | `autoEffects`   | `true`, `false`                               |
 | Effects present | `none`, `innerBorder: { width, color, opacity }` |
 
-That's 20 cells times 3 hot paths = **60 bench cases**, each sampled for
+That's 16 cells times 3 hot paths = **48 bench cases**, each sampled for
 ~1 second of wall-clock time (tinybench defaults under vitest-bench).
 
 ## What this does NOT measure
@@ -89,7 +89,7 @@ vitest-bench prints tinybench stats per case. The columns you want are:
 
 ## Grid adjustments
 
-None. The full 5 x 2 x 2 x 3 = 60-case grid completes in a few minutes on
+None. The full 4 x 2 x 2 x 3 = 48-case grid completes in a few minutes on
 a modern laptop; no dimensions were reduced.
 
 ## Results (2026-04-24, Node v25.9.0 on macOS Darwin 25.4.0)

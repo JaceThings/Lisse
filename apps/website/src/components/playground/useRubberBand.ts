@@ -1,12 +1,8 @@
 import { animate, useMotionValue, useTransform } from "framer-motion";
 import { prefersReducedMotion } from "./slider-utils.ts";
-import type { PlaygroundTuning } from "./PlaygroundTuning.tsx";
+import { DEFAULT_TUNING as tuning } from "./PlaygroundTuning.tsx";
 
-interface UseRubberBandOptions {
-  tuning: PlaygroundTuning;
-}
-
-export function useRubberBand({ tuning }: UseRubberBandOptions) {
+export function useRubberBand() {
   // Signed: negative when the pointer pulls past the left edge, positive
   // past the right. Width grows by |stretch|; X shifts left by stretch when
   // negative so the opposite edge stays pinned. Width change (not scaleX)

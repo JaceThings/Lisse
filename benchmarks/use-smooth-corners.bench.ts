@@ -71,17 +71,6 @@ function fireAll(): void {
   }
 }
 
-/**
- * Flush all pending `requestAnimationFrame` callbacks synchronously. The
- * core `observeResize` schedules its sync inside rAF, so benches need to
- * drain it before stopping the timer.
- */
-function flushRaf(): void {
-  // Happy-dom's rAF is async; replace it with a synchronous version for
-  // benches so we can measure the post-resize work without real timers.
-  // No-op here if the polyfill is already installed by `setup`.
-}
-
 let syncRaf: (cb: FrameRequestCallback) => number;
 
 function installSyncRaf(): void {
@@ -279,8 +268,6 @@ for (const count of COUNTS) {
           },
         );
       });
-
-      void flushRaf; // keep reference to avoid unused warning
     }
   }
 }
