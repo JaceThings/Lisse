@@ -4,6 +4,7 @@ import {
   PlaygroundTuningProvider,
 } from "../components/playground/PlaygroundTuning.tsx";
 import { BorderSection } from "../components/playground/sections/BorderSection.tsx";
+import { CapsuleSection } from "../components/playground/sections/CapsuleSection.tsx";
 import { CornerShapeSection } from "../components/playground/sections/CornerShapeSection.tsx";
 import { CurveTypeSection } from "../components/playground/sections/CurveTypeSection.tsx";
 import { PerCornerSection } from "../components/playground/sections/PerCornerSection.tsx";
@@ -55,6 +56,9 @@ export function Playground() {
         </Stagger>
         <Stagger index={14}>
           <CurveTypeSection />
+        </Stagger>
+        <Stagger index={15}>
+          <CapsuleSection />
         </Stagger>
       </div>
     </PlaygroundTuningProvider>
