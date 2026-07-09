@@ -92,37 +92,56 @@ vitest-bench prints tinybench stats per case. The columns you want are:
 None. The full 4 x 2 x 2 x 3 = 48-case grid completes in a few minutes on
 a modern laptop; no dimensions were reduced.
 
-## Results (2026-04-24, Node v25.9.0 on macOS Darwin 25.4.0)
+## Results (2026-07-09, Node v26.4.0 on macOS Darwin 25.5.0)
 
 See the wiki `Performance` page for narrative analysis and rules of
-thumb. The tables below are the raw per-case means in milliseconds.
+thumb. The tables below are the raw per-case means in milliseconds. All
+cases sampled below ±2.6% rme; none needed a re-run.
 
 ### Mount: initial render + first sync
 
 | n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
 |---|---|---|---|---|
-| **1** | 0.158 ms | 0.407 ms | 0.084 ms | 0.313 ms |
-| **10** | 1.30 ms | 3.95 ms | 0.519 ms | 3.11 ms |
-| **50** | 6.74 ms | 30.6 ms | 2.44 ms | 21.9 ms |
-| **100** | 15.0 ms | 85.6 ms | 4.89 ms | 56.2 ms |
-| **500** | 142 ms | 1601 ms | 25.1 ms | 898 ms |
+| **1** | 0.0741 ms | 0.234 ms | 0.0644 ms | 0.218 ms |
+| **10** | 0.593 ms | 2.50 ms | 0.400 ms | 2.33 ms |
+| **50** | 3.37 ms | 23.8 ms | 2.11 ms | 22.9 ms |
+| **100** | 8.51 ms | 72.0 ms | 4.84 ms | 71.7 ms |
 
 ### Resize: single ResizeObserver callback tick
 
 | n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
 |---|---|---|---|---|
-| **1** | 0.016 ms | 0.046 ms | 0.011 ms | 0.040 ms |
-| **10** | 0.161 ms | 0.446 ms | 0.103 ms | 0.393 ms |
-| **50** | 0.806 ms | 2.30 ms | 0.516 ms | 2.01 ms |
-| **100** | 1.64 ms | 4.82 ms | 1.03 ms | 4.02 ms |
-| **500** | 8.39 ms | 31.1 ms | 5.32 ms | 27.0 ms |
+| **1** | 0.0003 ms | 0.0004 ms | 0.0003 ms | 0.0004 ms |
+| **10** | 0.0024 ms | 0.0029 ms | 0.0024 ms | 0.0029 ms |
+| **50** | 0.0136 ms | 0.0154 ms | 0.0129 ms | 0.0159 ms |
+| **100** | 0.0277 ms | 0.0351 ms | 0.0247 ms | 0.0354 ms |
 
 ### Update: one `corners.radius` prop change
 
 | n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
 |---|---|---|---|---|
-| **1** | 0.029 ms | 0.061 ms | 0.021 ms | 0.054 ms |
-| **10** | 0.243 ms | 0.553 ms | 0.168 ms | 0.487 ms |
-| **50** | 1.18 ms | 2.83 ms | 0.801 ms | 2.50 ms |
-| **100** | 2.44 ms | 5.76 ms | 1.63 ms | 5.17 ms |
-| **500** | 12.7 ms | 37.7 ms | 8.36 ms | 32.8 ms |
+| **1** | 0.0127 ms | 0.0128 ms | 0.0104 ms | 0.0127 ms |
+| **10** | 0.0832 ms | 0.0860 ms | 0.0672 ms | 0.0849 ms |
+| **50** | 0.397 ms | 0.411 ms | 0.316 ms | 0.407 ms |
+| **100** | 0.816 ms | 0.814 ms | 0.616 ms | 0.818 ms |
+
+### Core `generatePath` (from `core.bench.ts`)
+
+Single call unless noted; per-corner curve builds are memoised, so batches
+below reflect distinct dimensions defeating that cache. Capsule and blend
+are squircle-only regimes (see `curves/capsule.ts`, `curves/blend.ts`).
+
+| case | mean |
+|---|---|
+| single-corner 200×100 r=24 — arc | 0.0018 ms |
+| single-corner 200×100 r=24 — squircle | 0.0020 ms |
+| single-corner 200×100 r=24 — superellipse | 0.0019 ms |
+| single-corner 200×100 r=24 — clothoid | 0.0019 ms |
+| 100-batch — arc | 0.205 ms |
+| 100-batch — squircle | 0.212 ms |
+| 100-batch — superellipse | 0.211 ms |
+| 100-batch — clothoid | 0.212 ms |
+| capsule 300×100 r=50 s=0.6 (full-pill) | 0.0028 ms |
+| blend band 300×130 r=50 s=0.6 | 0.0041 ms |
+| resize sweep h=100..220 r=h/2 (61 calls, cache-defeating) | 0.176 ms |
+| `createSvgEffects` + update cycle | 0.128 ms |
