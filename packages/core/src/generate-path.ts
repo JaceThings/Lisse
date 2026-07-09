@@ -119,21 +119,7 @@ export function generatePath(
   // unclamped squircle (short side ≥ 2(1+s)R) falls through to the byte-
   // identical template, the full capsule (short side = 2R) to the capsule path.
   const u = corners.topLeft;
-  const uniformSquircle =
-    u.curve === "squircle" &&
-    corners.topRight.curve === "squircle" &&
-    corners.bottomRight.curve === "squircle" &&
-    corners.bottomLeft.curve === "squircle" &&
-    corners.topRight.radius === u.radius &&
-    corners.bottomRight.radius === u.radius &&
-    corners.bottomLeft.radius === u.radius &&
-    corners.topRight.smoothing === u.smoothing &&
-    corners.bottomRight.smoothing === u.smoothing &&
-    corners.bottomLeft.smoothing === u.smoothing &&
-    corners.topRight.preserveSmoothing === u.preserveSmoothing &&
-    corners.bottomRight.preserveSmoothing === u.preserveSmoothing &&
-    corners.bottomLeft.preserveSmoothing === u.preserveSmoothing;
-  if (uniformSquircle) {
+  if (isUniformSquircle(corners)) {
     const blendR = Math.min(u.radius, width / 2, height / 2);
     const shortHalf = Math.min(width, height) / 2;
     // Strict bounds keep the pure regimes' exact byte output at both edges.
@@ -267,6 +253,20 @@ export function generatePath(
     " L 0 " + r(tl().p) +
     seg(tl().pathSegment("TL")) +
     " Z"
+  );
+}
+
+function isUniformSquircle(c: ResolvedCorners): boolean {
+  const u = c.topLeft;
+  return (
+    u.curve === "squircle" &&
+    [c.topRight, c.bottomRight, c.bottomLeft].every(
+      (o) =>
+        o.curve === "squircle" &&
+        o.radius === u.radius &&
+        o.smoothing === u.smoothing &&
+        o.preserveSmoothing === u.preserveSmoothing
+    )
   );
 }
 
