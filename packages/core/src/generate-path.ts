@@ -2,6 +2,14 @@ import type { SmoothCornerOptions, CornerConfig, CurveType } from "./types.js";
 import { distributeAndNormalize } from "./distribute.js";
 import { getCurveBuilder, DEFAULT_EXPONENT } from "./curves/index.js";
 import { getCachedBuilderOutput } from "./curves/cache.js";
+import {
+  capsuleEndParams,
+  drawRightCap,
+  drawLeftCap,
+  drawTopCap,
+  drawBottomCap,
+} from "./curves/capsule.js";
+import { drawBlendPath } from "./curves/blend.js";
 
 export const DEFAULT_SMOOTHING = 0.6;
 export const DEFAULT_PRESERVE_SMOOTHING = true;
@@ -92,6 +100,143 @@ export function generatePath(
   const br = builderOutFor("bottomRight");
   const bl = builderOutFor("bottomLeft");
 
+  const r = (n: number): string => n.toFixed(4);
+  const seg = (s: string): string => (s.length > 0 ? " " + s : "");
+
+  // Blend regime: a uniform squircle (all four corners identical) whose short
+  // side falls strictly between 2R and 2(1+s)R. The classic template below
+  // would compress smoothing symmetrically here — a visible pop while resizing
+  // toward the capsule — so instead give each corner per-edge smoothing (see
+  // curves/blend.ts). Outside this band the pure regimes are untouched: the
+  // unclamped squircle (short side ≥ 2(1+s)R) falls through to the byte-
+  // identical template, the full capsule (short side = 2R) to the capsule path.
+  const u = corners.topLeft;
+  const uniformSquircle =
+    u.curve === "squircle" &&
+    corners.topRight.curve === "squircle" &&
+    corners.bottomRight.curve === "squircle" &&
+    corners.bottomLeft.curve === "squircle" &&
+    corners.topRight.radius === u.radius &&
+    corners.bottomRight.radius === u.radius &&
+    corners.bottomLeft.radius === u.radius &&
+    corners.topRight.smoothing === u.smoothing &&
+    corners.bottomRight.smoothing === u.smoothing &&
+    corners.bottomLeft.smoothing === u.smoothing &&
+    corners.topRight.preserveSmoothing === u.preserveSmoothing &&
+    corners.bottomRight.preserveSmoothing === u.preserveSmoothing &&
+    corners.bottomLeft.preserveSmoothing === u.preserveSmoothing;
+  if (uniformSquircle) {
+    const blendR = Math.min(u.radius, width / 2, height / 2);
+    const shortHalf = Math.min(width, height) / 2;
+    // Strict bounds keep the pure regimes' exact byte output at both edges.
+    const BAND_EPS = 1e-9;
+    if (
+      blendR > 0 &&
+      shortHalf > blendR + BAND_EPS &&
+      shortHalf < (1 + u.smoothing) * blendR - BAND_EPS
+    ) {
+      return drawBlendPath(width, height, blendR, u.smoothing, u.preserveSmoothing);
+    }
+  }
+
+  // Sketch-style capsule smoothing: an end whose two short-axis corners are
+  // both fully rounded (radius = short-axis/2), squircle, and share smoothing
+  // becomes one continuous cap segment. The opposite end is independent, so a
+  // half-pill (one cap, one plain corner pair) works too. Non-capsule ends
+  // fall through to the byte-identical template below.
+  const EPS = 1e-9;
+  const horizontal = width >= height;
+  const capR = horizontal ? height / 2 : width / 2;
+  const isCap = (
+    x: keyof ResolvedCorners,
+    y: keyof ResolvedCorners
+  ): boolean => {
+    const cx = corners[x];
+    const cy = corners[y];
+    return (
+      cx.curve === "squircle" &&
+      cy.curve === "squircle" &&
+      Math.abs(normalized[x].radius - capR) < EPS &&
+      Math.abs(normalized[y].radius - capR) < EPS &&
+      cx.smoothing === cy.smoothing &&
+      cx.preserveSmoothing === cy.preserveSmoothing
+    );
+  };
+
+  if (horizontal) {
+    const rightCap = isCap("topRight", "bottomRight");
+    const leftCap = isCap("topLeft", "bottomLeft");
+    if (rightCap || leftCap) {
+      const longHalf = width / 2;
+      const cR = rightCap
+        ? capsuleEndParams(capR, corners.topRight.smoothing, corners.topRight.preserveSmoothing, longHalf)
+        : null;
+      const cL = leftCap
+        ? capsuleEndParams(capR, corners.topLeft.smoothing, corners.topLeft.preserveSmoothing, longHalf)
+        : null;
+
+      let d = "M " + r(cL ? cL.p : tl.p) + " 0";
+      d += " L " + r(width - (cR ? cR.p : tr.p)) + " 0";
+      if (cR) {
+        d += " " + drawRightCap(cR);
+      } else {
+        d += seg(tr.pathSegment("TR"));
+        d += " L " + r(width) + " " + r(br.p);
+        d += " L " + r(width) + " " + r(height - br.p);
+        d += seg(br.pathSegment("BR"));
+      }
+      if (cL) {
+        d += " L " + r(cL.p) + " " + r(height);
+        d += " " + drawLeftCap(cL);
+      } else {
+        d += " L " + r(width - bl.p) + " " + r(height);
+        d += " L " + r(bl.p) + " " + r(height);
+        d += seg(bl.pathSegment("BL"));
+        d += " L 0 " + r(height - tl.p);
+        d += " L 0 " + r(tl.p);
+        d += seg(tl.pathSegment("TL"));
+      }
+      return d + " Z";
+    }
+  } else {
+    const topCap = isCap("topLeft", "topRight");
+    const bottomCap = isCap("bottomLeft", "bottomRight");
+    if (topCap || bottomCap) {
+      const longHalf = height / 2;
+      const cT = topCap
+        ? capsuleEndParams(capR, corners.topLeft.smoothing, corners.topLeft.preserveSmoothing, longHalf)
+        : null;
+      const cB = bottomCap
+        ? capsuleEndParams(capR, corners.bottomLeft.smoothing, corners.bottomLeft.preserveSmoothing, longHalf)
+        : null;
+
+      let d: string;
+      if (cT) {
+        d = "M 0 " + r(cT.p) + " " + drawTopCap(cT);
+      } else {
+        d = "M " + r(tl.p) + " 0";
+        d += " L " + r(width - tr.p) + " 0";
+        d += seg(tr.pathSegment("TR"));
+      }
+      d += " L " + r(width) + " " + r(height - (cB ? cB.p : br.p));
+      if (cB) {
+        d += " " + drawBottomCap(cB);
+      } else {
+        d += seg(br.pathSegment("BR"));
+        d += " L " + r(bl.p) + " " + r(height);
+        d += seg(bl.pathSegment("BL"));
+      }
+      if (cT) {
+        d += " L 0 " + r(cT.p);
+      } else {
+        d += " L 0 " + r(height - tl.p);
+        d += " L 0 " + r(tl.p);
+        d += seg(tl.pathSegment("TL"));
+      }
+      return d + " Z";
+    }
+  }
+
   // Each side ends with a paired L to the next corner's `p` — geometrically
   // a no-op when adjacent radii match, harmless otherwise. Direct concat
   // avoids a per-call template + whitespace regex pass; `r()` rounds each
@@ -100,8 +245,6 @@ export function generatePath(
   // pathSegments are already rounded to the same precision). `seg()` skips
   // the leading space for empty corner segments (radius=0) so we never
   // emit double-spaces.
-  const r = (n: number): string => n.toFixed(4);
-  const seg = (s: string): string => (s.length > 0 ? " " + s : "");
   return (
     "M " + r(tl.p) + " 0" +
     " L " + r(width - tr.p) + " 0" +
