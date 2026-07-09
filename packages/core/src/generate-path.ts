@@ -95,10 +95,18 @@ export function generatePath(
     });
   };
 
-  const tl = builderOutFor("topLeft");
-  const tr = builderOutFor("topRight");
-  const br = builderOutFor("bottomRight");
-  const bl = builderOutFor("bottomLeft");
+  // Lazy: the blend and cap branches below return without touching some (or
+  // any) corners — ~18% of a blend/capsule call was spent building outputs
+  // that were then discarded. Memoised so the template still computes each
+  // corner once.
+  const lazyOut = (name: keyof ResolvedCorners) => {
+    let v: ReturnType<typeof builderOutFor> | undefined;
+    return () => (v ??= builderOutFor(name));
+  };
+  const tl = lazyOut("topLeft");
+  const tr = lazyOut("topRight");
+  const br = lazyOut("bottomRight");
+  const bl = lazyOut("bottomLeft");
 
   const r = (n: number): string => n.toFixed(4);
   const seg = (s: string): string => (s.length > 0 ? " " + s : "");
@@ -175,26 +183,26 @@ export function generatePath(
         ? capsuleEndParams(capR, corners.topLeft.smoothing, corners.topLeft.preserveSmoothing, longHalf)
         : null;
 
-      let d = "M " + r(cL ? cL.p : tl.p) + " 0";
-      d += " L " + r(width - (cR ? cR.p : tr.p)) + " 0";
+      let d = "M " + r(cL ? cL.p : tl().p) + " 0";
+      d += " L " + r(width - (cR ? cR.p : tr().p)) + " 0";
       if (cR) {
         d += " " + drawRightCap(cR);
       } else {
-        d += seg(tr.pathSegment("TR"));
-        d += " L " + r(width) + " " + r(br.p);
-        d += " L " + r(width) + " " + r(height - br.p);
-        d += seg(br.pathSegment("BR"));
+        d += seg(tr().pathSegment("TR"));
+        d += " L " + r(width) + " " + r(br().p);
+        d += " L " + r(width) + " " + r(height - br().p);
+        d += seg(br().pathSegment("BR"));
       }
       if (cL) {
         d += " L " + r(cL.p) + " " + r(height);
         d += " " + drawLeftCap(cL);
       } else {
-        d += " L " + r(width - bl.p) + " " + r(height);
-        d += " L " + r(bl.p) + " " + r(height);
-        d += seg(bl.pathSegment("BL"));
-        d += " L 0 " + r(height - tl.p);
-        d += " L 0 " + r(tl.p);
-        d += seg(tl.pathSegment("TL"));
+        d += " L " + r(width - bl().p) + " " + r(height);
+        d += " L " + r(bl().p) + " " + r(height);
+        d += seg(bl().pathSegment("BL"));
+        d += " L 0 " + r(height - tl().p);
+        d += " L 0 " + r(tl().p);
+        d += seg(tl().pathSegment("TL"));
       }
       return d + " Z";
     }
@@ -214,24 +222,24 @@ export function generatePath(
       if (cT) {
         d = "M 0 " + r(cT.p) + " " + drawTopCap(cT);
       } else {
-        d = "M " + r(tl.p) + " 0";
-        d += " L " + r(width - tr.p) + " 0";
-        d += seg(tr.pathSegment("TR"));
+        d = "M " + r(tl().p) + " 0";
+        d += " L " + r(width - tr().p) + " 0";
+        d += seg(tr().pathSegment("TR"));
       }
-      d += " L " + r(width) + " " + r(height - (cB ? cB.p : br.p));
+      d += " L " + r(width) + " " + r(height - (cB ? cB.p : br().p));
       if (cB) {
         d += " " + drawBottomCap(cB);
       } else {
-        d += seg(br.pathSegment("BR"));
-        d += " L " + r(bl.p) + " " + r(height);
-        d += seg(bl.pathSegment("BL"));
+        d += seg(br().pathSegment("BR"));
+        d += " L " + r(bl().p) + " " + r(height);
+        d += seg(bl().pathSegment("BL"));
       }
       if (cT) {
         d += " L 0 " + r(cT.p);
       } else {
-        d += " L 0 " + r(height - tl.p);
-        d += " L 0 " + r(tl.p);
-        d += seg(tl.pathSegment("TL"));
+        d += " L 0 " + r(height - tl().p);
+        d += " L 0 " + r(tl().p);
+        d += seg(tl().pathSegment("TL"));
       }
       return d + " Z";
     }
@@ -246,18 +254,18 @@ export function generatePath(
   // the leading space for empty corner segments (radius=0) so we never
   // emit double-spaces.
   return (
-    "M " + r(tl.p) + " 0" +
-    " L " + r(width - tr.p) + " 0" +
-    seg(tr.pathSegment("TR")) +
-    " L " + r(width) + " " + r(br.p) +
-    " L " + r(width) + " " + r(height - br.p) +
-    seg(br.pathSegment("BR")) +
-    " L " + r(width - bl.p) + " " + r(height) +
-    " L " + r(bl.p) + " " + r(height) +
-    seg(bl.pathSegment("BL")) +
-    " L 0 " + r(height - tl.p) +
-    " L 0 " + r(tl.p) +
-    seg(tl.pathSegment("TL")) +
+    "M " + r(tl().p) + " 0" +
+    " L " + r(width - tr().p) + " 0" +
+    seg(tr().pathSegment("TR")) +
+    " L " + r(width) + " " + r(br().p) +
+    " L " + r(width) + " " + r(height - br().p) +
+    seg(br().pathSegment("BR")) +
+    " L " + r(width - bl().p) + " " + r(height) +
+    " L " + r(bl().p) + " " + r(height) +
+    seg(bl().pathSegment("BL")) +
+    " L 0 " + r(height - tl().p) +
+    " L 0 " + r(tl().p) +
+    seg(tl().pathSegment("TL")) +
     " Z"
   );
 }

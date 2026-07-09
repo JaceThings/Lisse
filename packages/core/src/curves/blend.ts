@@ -23,8 +23,10 @@ interface Shoulder {
   c: number;
   d: number;
   p: number;
-  /** Tangent angle where the shoulder meets the arc, `45°·s_edge` in radians. */
-  beta: number;
+  /** sin/cos of the shoulder→arc tangent angle `45°·s_edge`, computed once —
+   *  seg() reads each four times per path. */
+  sin: number;
+  cos: number;
 }
 
 // s_edge is pre-clamped so p = (1+s_edge)R never exceeds `room`; the budget
@@ -42,13 +44,15 @@ function shoulder(
     preserveSmoothing,
     roundingAndSmoothingBudget: room,
   });
+  const beta = toRadians(45 * sEdge);
   return {
     a: params.a,
     b: params.b,
     c: params.c,
     d: params.d,
     p: params.p,
-    beta: toRadians(45 * sEdge),
+    sin: Math.sin(beta),
+    cos: Math.cos(beta),
   };
 }
 
@@ -91,10 +95,10 @@ export function drawBlendPath(
     const s2 = vy === 0 ? H : V;
     const ox = cx + (ux + vx) * R;
     const oy = cy + (uy + vy) * R;
-    const j1x = ox - vx * R * Math.cos(s1.beta) - ux * R * Math.sin(s1.beta);
-    const j1y = oy - vy * R * Math.cos(s1.beta) - uy * R * Math.sin(s1.beta);
-    const j2x = ox - ux * R * Math.cos(s2.beta) - vx * R * Math.sin(s2.beta);
-    const j2y = oy - uy * R * Math.cos(s2.beta) - vy * R * Math.sin(s2.beta);
+    const j1x = ox - vx * R * s1.cos - ux * R * s1.sin;
+    const j1y = oy - vy * R * s1.cos - uy * R * s1.sin;
+    const j2x = ox - ux * R * s2.cos - vx * R * s2.sin;
+    const j2y = oy - uy * R * s2.cos - vy * R * s2.sin;
     const p0x = cx + ux * s1.p;
     const p0y = cy + uy * s1.p;
     // shoulder 1 controls sit back along edge1 from p0; arc turns to j2;
