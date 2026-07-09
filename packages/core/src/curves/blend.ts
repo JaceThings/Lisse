@@ -20,8 +20,6 @@ import { toRadians } from "../utils.js";
 interface Shoulder {
   a: number;
   b: number;
-  c: number;
-  d: number;
   p: number;
   /** sin/cos of the shoulder→arc tangent angle `45°·s_edge`, computed once —
    *  seg() reads each four times per path. */
@@ -48,8 +46,6 @@ function shoulder(
   return {
     a: params.a,
     b: params.b,
-    c: params.c,
-    d: params.d,
     p: params.p,
     sin: Math.sin(beta),
     cos: Math.cos(beta),
