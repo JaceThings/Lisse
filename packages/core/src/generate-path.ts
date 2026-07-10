@@ -111,13 +111,9 @@ export function generatePath(
   const r = (n: number): string => n.toFixed(4);
   const seg = (s: string): string => (s.length > 0 ? " " + s : "");
 
-  // Blend regime: a uniform squircle (all four corners identical) whose short
-  // side falls strictly between 2R and 2(1+s)R. The classic template below
-  // would compress smoothing symmetrically here — a visible pop while resizing
-  // toward the capsule — so instead give each corner per-edge smoothing (see
-  // curves/blend.ts). Outside this band the pure regimes are untouched: the
-  // unclamped squircle (short side ≥ 2(1+s)R) falls through to the byte-
-  // identical template, the full capsule (short side = 2R) to the capsule path.
+  // In the band 2R < short side < 2(1+s)R the classic template would pop while
+  // resizing toward a capsule; curves/blend.ts smooths per-edge instead. Both
+  // band edges fall through to the byte-identical pure regimes.
   const u = corners.topLeft;
   if (isUniformSquircle(corners)) {
     const blendR = Math.min(u.radius, width / 2, height / 2);
@@ -133,10 +129,8 @@ export function generatePath(
     }
   }
 
-  // Sketch-style capsule smoothing: an end whose two short-axis corners are
-  // both fully rounded (radius = short-axis/2), squircle, and share smoothing
-  // becomes one continuous cap segment. The opposite end is independent, so a
-  // half-pill (one cap, one plain corner pair) works too. Non-capsule ends
+  // Sketch-style capsule smoothing: a fully-rounded end becomes one continuous
+  // cap segment. Each end is independent (half-pills work); non-capsule ends
   // fall through to the byte-identical template below.
   const EPS = 1e-9;
   const horizontal = width >= height;

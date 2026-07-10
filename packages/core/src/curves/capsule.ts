@@ -14,7 +14,6 @@ export interface CapsuleEndParams {
   b: number;
   c: number;
   d: number;
-  /** Shoulder run `a + b + c`. */
   e: number;
   /** Arc chord along the long axis, `p − e = R·(1 − sinβ)`. */
   ax: number;
@@ -58,9 +57,8 @@ export function capsuleEndParams(
   };
 }
 
-// Each cap enters at the flat-edge shoulder start and exits at the opposite
-// shoulder start. Interior control zeros are literal so they print `0` (like
-// the squircle drawers), keeping the arc's straight seam noise-free.
+// Interior control zeros are literal so they print `0` (like the squircle
+// drawers), keeping the arc's straight seam noise-free.
 
 /** Right cap: (width−p, 0) → (width−p, height). */
 export function drawRightCap({ a, b, c, d, e, ax, ay, R }: CapsuleEndParams): string {

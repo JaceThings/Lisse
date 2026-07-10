@@ -97,8 +97,6 @@ export function drawBlendPath(
     const j2y = oy - uy * R * s2.cos - vy * R * s2.sin;
     const p0x = cx + ux * s1.p;
     const p0y = cy + uy * s1.p;
-    // shoulder 1 controls sit back along edge1 from p0; arc turns to j2;
-    // shoulder 2 controls sit back along edge2 from p3 (deltas from the arc end)
     const arced = Math.hypot(j2x - j1x, j2y - j1y) > 1e-6;
     const ex = arced ? j2x : j1x;
     const ey = arced ? j2y : j1y;
