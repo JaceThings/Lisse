@@ -101,6 +101,7 @@ export function PerCornerSection() {
 
   return (
     <Section
+      id="per-corner"
       title={m.section_percorner_title()}
       description={m.section_percorner_desc()}
     >

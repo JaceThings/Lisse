@@ -29,6 +29,7 @@ export function Playground() {
         </Stagger>
         <Stagger index={9}>
           <ShadowSection
+            id="drop-shadow"
             title={m.playground_drop_shadow_title()}
             description={m.playground_drop_shadow_description()}
             kind="drop"
@@ -36,19 +37,20 @@ export function Playground() {
         </Stagger>
         <Stagger index={10}>
           <ShadowSection
+            id="inner-shadow"
             title={m.playground_inner_shadow_title()}
             description={m.playground_inner_shadow_description()}
             kind="inner"
           />
         </Stagger>
         <Stagger index={11}>
-          <BorderSection title={m.playground_outer_border_title()} description={borderDesc} position="outer" />
+          <BorderSection id="outer-border" title={m.playground_outer_border_title()} description={borderDesc} position="outer" />
         </Stagger>
         <Stagger index={12}>
-          <BorderSection title={m.playground_inner_border_title()} description={borderDesc} position="inner" />
+          <BorderSection id="inner-border" title={m.playground_inner_border_title()} description={borderDesc} position="inner" />
         </Stagger>
         <Stagger index={13}>
-          <BorderSection title={m.playground_center_border_title()} description={borderDesc} position="middle" />
+          <BorderSection id="center-border" title={m.playground_center_border_title()} description={borderDesc} position="middle" />
         </Stagger>
         <Stagger index={14}>
           <CurveTypeSection />

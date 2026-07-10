@@ -43,6 +43,7 @@ export function RadiusSection() {
 
   return (
     <Section
+      id="radius"
       title={m.section_radius_title()}
       description={m.section_radius_desc()}
     >

@@ -19,12 +19,14 @@ type ShadowFromDrag = Record<ShadowKnob, boolean>;
 const NO_DRAG: ShadowFromDrag = { x: false, y: false, blur: false, spread: false };
 
 interface ShadowSectionProps {
+  /** Anchor slug for this variant's header. */
+  id: string;
   title: string;
   description: string;
   kind: "drop" | "inner";
 }
 
-export function ShadowSection({ title, description, kind }: ShadowSectionProps) {
+export function ShadowSection({ id, title, description, kind }: ShadowSectionProps) {
   const SHADOW_PRESETS = [
     { value: "none", label: m.section_shadow_preset_none() },
     { value: "subtle", label: m.section_shadow_preset_subtle() },
@@ -125,7 +127,7 @@ export function ShadowSection({ title, description, kind }: ShadowSectionProps) 
   }, []);
 
   return (
-    <Section title={title} description={description}>
+    <Section id={id} title={title} description={description}>
       <FigureCard>
         <Preview
           corners={{ radius: 20, smoothing: 0.6 }}

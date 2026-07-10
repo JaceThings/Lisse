@@ -48,6 +48,7 @@ export function CapsuleSection() {
 
   return (
     <Section
+      id="capsule"
       title={m.section_capsule_title()}
       description={m.section_capsule_desc()}
     >
