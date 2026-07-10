@@ -42,6 +42,12 @@ interface State {
   shadowHandle: ReturnType<typeof createDropShadow> | undefined;
   anchor: HTMLElement | null;
   didAcquire: boolean;
+  // Last-synced snapshot. runSync bails when nothing changed, which keeps
+  // the every-commit re-clip at one computed-style read per render. `null`
+  // key = invalidated (effects state mutated outside the render keys).
+  lastWidth: number;
+  lastHeight: number;
+  lastSyncKey: string | null;
 }
 
 interface SyncRefs {
@@ -52,6 +58,7 @@ interface SyncRefs {
   onExtractedShadowRef: React.MutableRefObject<
     ((shadow: ShadowConfig | ShadowConfig[] | undefined) => void) | undefined
   >;
+  syncKeyRef: React.MutableRefObject<string>;
 }
 
 /**
@@ -66,6 +73,12 @@ function runSync(s: State, refs: SyncRefs): void {
 
   const { width, height } = getLayoutSize(s.el);
   if (width <= 0 || height <= 0) return;
+
+  const key = refs.syncKeyRef.current;
+  if (width === s.lastWidth && height === s.lastHeight && key === s.lastSyncKey) return;
+  s.lastWidth = width;
+  s.lastHeight = height;
+  s.lastSyncKey = key;
 
   s.el.style.clipPath = generateClipPath(width, height, refs.optionsRef.current);
   s.el.setAttribute("data-state", "ready");
@@ -172,16 +185,19 @@ export function useSmoothCorners(
   const onExtractedShadowRef = useRef(onExtractedShadow);
   onExtractedShadowRef.current = onExtractedShadow;
 
-  const refsRef = useRef<SyncRefs>({
-    optionsRef, effectsPropRef, wrapperRefRef, skipShadowHandleRef, onExtractedShadowRef,
-  });
-
   // Stable signatures for the effect deps. JSON.stringify is safe on these
   // bounded objects; useMemo would never hit since callers pass fresh literals.
   const optionsKey = JSON.stringify(options);
   const effectsKey = JSON.stringify(effects ?? null);
   const autoEffectsKey = autoEffects ?? true;
   const skipShadowHandleKey = skipShadowHandle ?? false;
+
+  const syncKeyRef = useRef("");
+  syncKeyRef.current = `${optionsKey}|${effectsKey}`;
+
+  const refsRef = useRef<SyncRefs>({
+    optionsRef, effectsPropRef, wrapperRefRef, skipShadowHandleRef, onExtractedShadowRef, syncKeyRef,
+  });
 
   // Per-mount state. SVG handles are created lazily on first sync that
   // sees effects and destroyed only on unmount — toggling props on/off
@@ -208,6 +224,9 @@ export function useSmoothCorners(
       shadowHandle: undefined,
       anchor: null,
       didAcquire: false,
+      lastWidth: 0,
+      lastHeight: 0,
+      lastSyncKey: null,
     };
     stateRef.current = s;
 
@@ -237,13 +256,16 @@ export function useSmoothCorners(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref]);
 
-  // Re-sync on prop change. `runSync` attaches handles eagerly before
-  // measuring, so a later-appearing `shadow` is ready next callback.
+  // Re-sync on EVERY commit, not just option changes: renders that resize
+  // the element through style props would otherwise wait for the resize
+  // observer, which delivers a frame late — painted as a stale clip
+  // mid-animation (flat corners on WebKit under load). The snapshot memo in
+  // runSync keeps the idle-render cost at a single computed-style read.
   useIsoLayoutEffect(() => {
     const s = stateRef.current;
     if (!s) return;
     runSync(s, refsRef.current);
-  }, [optionsKey, effectsKey]);
+  });
 
   // Tear down the SVG drop-shadow handle when the consumer opts out at
   // runtime (e.g. shadowStrategy "svg" → "box-shadow"). Re-creation in the
@@ -254,6 +276,7 @@ export function useSmoothCorners(
     if (!s || !s.shadowHandle) return;
     s.shadowHandle.destroy();
     s.shadowHandle = undefined;
+    s.lastSyncKey = null; // effects state changed outside the render keys
   }, [skipShadowHandleKey]);
 
   // Start/stop CSS extraction when `autoEffects` toggles.
@@ -270,6 +293,7 @@ export function useSmoothCorners(
       return;
     }
     onExtractedShadowRef.current?.(s.extracted?.effects.shadow);
+    s.lastSyncKey = null; // extraction changed the merged effects
     runSync(s, refsRef.current);
   }, [autoEffectsKey]);
 }
