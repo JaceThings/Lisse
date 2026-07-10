@@ -144,8 +144,19 @@ export function createEngine(initial: EngineSettings) {
   const applied = new Map<HTMLElement, Applied>();
   const seen = new WeakSet<HTMLElement>();
   const queue = new Set<HTMLElement>();
+  // MutationObserver on `document` cannot see inside shadow roots, so every
+  // discovered root gets observed individually (Reddit-class apps mutate
+  // almost exclusively inside shadow DOM).
+  const observedRoots = new WeakSet<ShadowRoot>();
   let rafHandle: number | undefined;
   let mo: MutationObserver | undefined;
+
+  const MO_OPTS: MutationObserverInit = {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["style", "class"],
+  };
 
   function planFor(el: HTMLElement): PlanResult | null {
     const cs = getComputedStyle(el);
@@ -330,6 +341,10 @@ export function createEngine(initial: EngineSettings) {
   }
 
   function scanRoot(root: Document | ShadowRoot) {
+    if (root instanceof ShadowRoot && mo && !observedRoots.has(root)) {
+      observedRoots.add(root);
+      mo.observe(root, MO_OPTS);
+    }
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
     let node = walker.nextNode() as Element | null;
     while (node) {
@@ -416,18 +431,28 @@ export function createEngine(initial: EngineSettings) {
     // At document_start documentElement may be absent, so observe the document
     // node — the parser then streams elements in as childList mutations.
     mo = new MutationObserver(onMutations);
-    mo.observe(document, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["style", "class"],
-    });
+    mo.observe(document, MO_OPTS);
     document.addEventListener("transitionend", onTransition, true);
     document.addEventListener("animationend", onTransition, true);
     scanRoot(document);
-    // Safety net once the tree is complete; the seen-set keeps it cheap.
+    // Safety nets once the tree is complete; the seen-set and the plan memo
+    // keep these cheap. The delayed settle pass re-plans everything applied:
+    // SPA hydration can invalidate a verdict (size, escaping children) with
+    // no signal any observer delivers.
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => scanRoot(document), { once: true });
+    }
+    const settle = () => {
+      scanRoot(document);
+      for (const el of applied.keys()) enqueue(el);
+    };
+    if (document.readyState === "complete") {
+      window.setTimeout(settle, 2500);
+    } else {
+      window.addEventListener("load", () => {
+        settle();
+        window.setTimeout(settle, 2500);
+      }, { once: true });
     }
   }
 
