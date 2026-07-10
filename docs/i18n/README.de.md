@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Lisse" width="128" />
+<img src="../../assets/logo.png" alt="Lisse" width="128" />
 
 <h1>Lisse</h1>
 
@@ -9,12 +9,12 @@ Pixelgenaue Figma-Squircles + drei weitere Eckkurven.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![bundle](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore?label=bundle)](https://bundlephobia.com/package/@lisse/core)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
 **[Live-Demo →](https://corne.rs)**
 
-[English](./README.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · **Deutsch**
+[English](../../README.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · **Deutsch**
 
 </div>
 
@@ -53,7 +53,7 @@ Für Vue, Svelte oder den Framework-unabhängigen Kern siehe die [Pakete](#paket
 | `superellipse` | `\|x/R\|^n + \|y/R\|^n = 1`. G2 mit Kanten für `n > 2`. |
 | `clothoid` | Euler-Spiral-Übergang von der geraden Kante zum zentralen Bogen. Überall G2. |
 
-Mathematische Referenz: [`docs/curves.md`](docs/curves.md).
+Mathematische Referenz: [`docs/curves.md`](../curves.md).
 
 ## Pakete
 
@@ -70,30 +70,30 @@ Mathematische Referenz: [`docs/curves.md`](docs/curves.md).
 - Innen-/Außen-/Mittelrahmen mit Stilvarianten (solid, dashed, dotted, double, groove, ridge)
 - Schlagschatten und Innenschatten, mit Verlaufsrahmen über die API
 - Auto-Effekte: CSS-`border` und -`box-shadow` werden beim Mount in SVG-Äquivalente umgewandelt
-- ~1,5 µs pro `generatePath()`-Aufruf; 500 Ecken werden in <1 ms neu berechnet ([Details](docs/performance.md))
+- ~1,5 µs pro `generatePath()`-Aufruf; 500 Ecken werden in <1 ms neu berechnet ([Details](../performance.md))
 - Keine Laufzeitabhängigkeiten; dualer ESM- + CJS-Export; SSR-sicherer `/path`-Subpfad
 
 ## Dokumentation
 
-- [API-Referenz](docs/api.md): vollständige Export-Tabelle
-- [Migration](MIGRATION.md): Upgrade zwischen Versionen
-- [SSR](docs/ssr.md): serverseitiges Rendering und Edge-Runtimes
-- [Kurven](docs/curves.md): mathematische Referenz für jeden Kurventyp
-- [Browser-Unterstützung](docs/browser-support.md): Kompatibilitätsmatrix
-- [Styling-Hooks](docs/styling.md): `data-slot`- / `data-state`-Attribute
-- [Effekte](docs/effects.md): Rahmen, Schatten, Verläufe, Auto-Effekte
-- [Performance](docs/performance.md): Benchmarks und Cache-Architektur
-- [Interna](docs/internals.md): wie Rahmen, Schatten und Resize-Handling funktionieren
-- [Stolperfallen](docs/gotchas.md): `clip-path`-Eigenheiten wie Fokus-Outlines, Overflow, Scrollbars
-- [Konfiguration](docs/configuration.md): Konfiguration pro Ecke, welche API zu verwenden ist, Framework-Nutzung
+- [API-Referenz](../api.md): vollständige Export-Tabelle
+- [Migration](../MIGRATION.md): Upgrade zwischen Versionen
+- [SSR](../ssr.md): serverseitiges Rendering und Edge-Runtimes
+- [Kurven](../curves.md): mathematische Referenz für jeden Kurventyp
+- [Browser-Unterstützung](../browser-support.md): Kompatibilitätsmatrix
+- [Styling-Hooks](../styling.md): `data-slot`- / `data-state`-Attribute
+- [Effekte](../effects.md): Rahmen, Schatten, Verläufe, Auto-Effekte
+- [Performance](../performance.md): Benchmarks und Cache-Architektur
+- [Interna](../internals.md): wie Rahmen, Schatten und Resize-Handling funktionieren
+- [Stolperfallen](../gotchas.md): `clip-path`-Eigenheiten wie Fokus-Outlines, Overflow, Scrollbars
+- [Konfiguration](../configuration.md): Konfiguration pro Ecke, welche API zu verwenden ist, Framework-Nutzung
 
 ## Mitwirken
 
-Issues und PRs willkommen. Mitwirkenden-Doku (Release-Prozess, Teststrategie, Benchmarks) findet sich in [`docs/`](./docs/).
+Issues und PRs willkommen. Mitwirkenden-Doku (Release-Prozess, Teststrategie, Benchmarks) findet sich in [`docs/`](../).
 
 ## Lizenz
 
-[MIT](./LICENSE)
+[MIT](../../LICENSE)
 
 ---
 
