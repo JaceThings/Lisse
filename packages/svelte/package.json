@@ -1,6 +1,6 @@
 {
   "name": "@lisse/svelte",
-  "version": "0.5.0",
+  "version": "0.5.2",
   "description": "Svelte action for smooth-cornered (squircle) elements",
   "license": "MIT",
   "type": "module",
