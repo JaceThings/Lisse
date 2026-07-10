@@ -45,12 +45,10 @@ restart.)
 Click the toolbar icon to toggle smoothing for the current site: a coloured
 icon means it's on, a grey one means it's off. State is remembered per hostname
 (on by default), and the click is a no-op on pages we can't touch (`chrome://`,
-`about:`, and the like). Smoothing stays at its stored default (0.6).
-
-Toggling morphs every element between its native corners (smoothing 0) and the
-smoothed shape via a clip-path transition. Elements in the capsule blend zone
-change path structure with smoothing, so they swap instantly, and redrawn
-borders land at the end of the morph — `background-image` can't transition.
+`about:`, and the like). Smoothing stays at its stored default (0.6). Toggling
+applies and restores instantly — animating clip-path between an arc and a
+squircle interpolates control points, which wobbles mid-flight rather than
+easing cleanly, so we don't.
 
 ## Userscript
 

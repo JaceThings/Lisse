@@ -17,14 +17,6 @@ export interface EngineSettings {
 
 /** Stop scanning once this many elements are styled — keeps big pages sane. */
 const MAX_STYLED = 1500;
-/** Toggle morph duration: smoothing 0 ↔ target via native clip-path transition. */
-const TOGGLE_MS = 300;
-const TOGGLE_EASE = "cubic-bezier(0.2, 0, 0, 1)";
-
-/** clip-path only interpolates when segment structures match; strip numbers. */
-function shapeOf(d: string): string {
-  return d.replace(/[-0-9.]+/g, "");
-}
 /** rAF slice: reads+writes for a frame, then yield if work remains. */
 const FRAME_BUDGET_MS = 6;
 /** Elements read/written per read-then-write chunk within a slice. */
@@ -155,7 +147,7 @@ export function createEngine(initial: EngineSettings) {
   let rafHandle: number | undefined;
   let mo: MutationObserver | undefined;
 
-  function planFor(el: HTMLElement, smoothingOverride?: number): PlanResult | null {
+  function planFor(el: HTMLElement): PlanResult | null {
     const cs = getComputedStyle(el);
     // Border-box floats; clip-path's default reference box is the border box.
     const { width: w, height: h } = getLayoutSize(el);
@@ -193,13 +185,13 @@ export function createEngine(initial: EngineSettings) {
       childOutside: childrenEscapeBox(el, cs),
       boxShadow: cs.boxShadow,
       existingFilter: siteFilter,
-      smoothing: smoothingOverride ?? settings.smoothing,
+      smoothing: settings.smoothing,
     };
     return { plan: computeElementPlan(input), siteFilter, siteBorderColors, siteBg };
   }
 
   /** Write half of a plan (reads already done in the slice's read phase). */
-  function writePlan(el: HTMLElement, result: PlanResult | null, force = false) {
+  function writePlan(el: HTMLElement, result: PlanResult | null) {
     if (!result || result.plan.action !== "apply") {
       if (applied.has(el)) undo(el);
       return;
@@ -224,7 +216,7 @@ export function createEngine(initial: EngineSettings) {
     // can't intercept them) — skipping no-op writes breaks the feedback loop.
     // Compare against what we last wrote, not readback: data URIs and colours
     // re-serialise and won't match.
-    if (!force && record &&
+    if (record &&
         record.lastClip === plan.clipPath &&
         record.lastFilter === targetFilter &&
         record.lastBorderColor === targetBorderColor &&
@@ -442,120 +434,16 @@ export function createEngine(initial: EngineSettings) {
     for (const el of [...applied.keys()]) enqueue(el);
   }
 
-  // --- Toggle morph ---------------------------------------------------------
-  // On/off animates smoothing 0 ↔ target through a native clip-path transition
-  // (both endpoint paths must share segment structure — capsule blend-zone
-  // elements don't, so they swap instantly). Border layers pop at the morph
-  // boundary: background-image can't transition.
-  // ponytail: reads run unsliced so the whole page morphs in sync — one-off,
-  // user-initiated, bounded by MAX_STYLED.
-
-  let toggleGen = 0;
-  /** Inline transition we replaced, keyed while a morph is in flight. */
-  const pendingTransition = new WeakMap<HTMLElement, string>();
-
-  function augmentTransition(el: HTMLElement, computed: string) {
-    if (!pendingTransition.has(el)) pendingTransition.set(el, el.style.transition);
-    const ours = `clip-path ${TOGGLE_MS}ms ${TOGGLE_EASE}`;
-    el.style.transition = computed && computed !== "none" ? `${computed}, ${ours}` : ours;
-  }
-
-  function settleTransition(el: HTMLElement) {
-    const orig = pendingTransition.get(el);
-    if (orig !== undefined) {
-      el.style.transition = orig;
-      pendingTransition.delete(el);
-    }
-  }
-
-  function animateIn() {
-    const gen = ++toggleGen;
-    const ops: Array<{ el: HTMLElement; target: PlanResult; fromClip: string | null; transition: string }> = [];
-    for (const el of [...applied.keys()]) {
-      if (!el.isConnected) { undo(el); continue; }
-      const target = planFor(el);
-      if (!target || target.plan.action !== "apply") { writePlan(el, target); continue; }
-      const from = planFor(el, 0);
-      const fromClip =
-        from && from.plan.action === "apply" && shapeOf(from.plan.clipPath) === shapeOf(target.plan.clipPath)
-          ? from.plan.clipPath
-          : null;
-      ops.push({ el, target, fromClip, transition: getComputedStyle(el).transition });
-    }
-    const morphs = ops.filter((o) => {
-      if (o.fromClip) return true;
-      writePlan(o.el, o.target, true);
-      return false;
-    });
-    // Start values for every element, then ONE forced recalc to commit them —
-    // without it the browser coalesces start+target into a single style change
-    // ('' → target isn't interpolable, so nothing would animate).
-    for (const { el, target, fromClip } of morphs) {
-      const record = applied.get(el)!;
-      const plan = target.plan as Extract<typeof target.plan, { action: "apply" }>;
-      // Quiet mid-morph replans (guard matches the post-morph state) so a
-      // stray mutation doesn't rewrite the clip and kill the transition.
-      record.lastClip = plan.clipPath;
-      record.lastFilter = plan.filter ?? record.filter;
-      record.lastBorderColor = plan.border ? "transparent" : record.borderColor;
-      record.lastBgImage = plan.border ? plan.border.backgroundImage : record.bgImage;
-      el.style.clipPath = fromClip!;
-    }
-    void document.documentElement.offsetWidth;
-    for (const { el, target, transition } of morphs) {
-      const plan = target.plan as Extract<typeof target.plan, { action: "apply" }>;
-      augmentTransition(el, transition);
-      el.style.clipPath = plan.clipPath;
-      window.setTimeout(() => {
-        if (gen !== toggleGen || !settings.enabled) return;
-        settleTransition(el);
-        writePlan(el, target, true); // border layer + filter land post-morph
-      }, TOGGLE_MS + 60);
-    }
-  }
-
   // Disable restores styles but keeps records + observers so re-enable can
   // reapply — undo() would forget them, leaving nothing to re-enable.
   // Resetting lastX defeats writePlan()'s no-op guard on re-enable.
-  function animateOut() {
-    const gen = ++toggleGen;
-    const ops: Array<{ el: HTMLElement; toClip: string | null; transition: string }> = [];
-    for (const el of [...applied.keys()]) {
-      if (!el.isConnected) { undo(el); continue; }
-      const from = planFor(el, 0);
-      const record = applied.get(el)!;
-      const toClip =
-        from && from.plan.action === "apply" && shapeOf(from.plan.clipPath) === shapeOf(record.lastClip)
-          ? from.plan.clipPath
-          : null;
-      ops.push({ el, toClip, transition: getComputedStyle(el).transition });
-    }
-    for (const { el, toClip, transition } of ops) {
-      const record = applied.get(el);
-      if (!record) continue;
-      const finish = () => {
-        restore(el, record);
-        settleTransition(el);
-        record.lastClip = record.clipPath;
-        record.lastFilter = record.filter;
-        record.lastBorderColor = record.borderColor;
-        record.lastBgImage = record.bgImage;
-      };
-      if (!toClip) { finish(); continue; }
-      // Native border/backgrounds pop back first; the clip morphs out after.
-      el.style.filter = record.filter;
-      el.style.borderColor = record.borderColor;
-      el.style.backgroundImage = record.bgImage;
-      el.style.backgroundOrigin = record.bgOrigin;
-      el.style.backgroundClip = record.bgClip;
-      el.style.backgroundRepeat = record.bgRepeat;
-      el.style.backgroundSize = record.bgSize;
-      augmentTransition(el, transition);
-      el.style.clipPath = toClip;
-      window.setTimeout(() => {
-        if (gen !== toggleGen || settings.enabled) return;
-        finish();
-      }, TOGGLE_MS + 60);
+  function disableAll() {
+    for (const [el, record] of applied) {
+      restore(el, record);
+      record.lastClip = record.clipPath;
+      record.lastFilter = record.filter;
+      record.lastBorderColor = record.borderColor;
+      record.lastBgImage = record.bgImage;
     }
   }
 
@@ -568,11 +456,11 @@ export function createEngine(initial: EngineSettings) {
       if (enabled) {
         if (!mo) start();
         else {
-          animateIn();
+          reapplyAll();
           scanRoot(document); // catch elements added while disabled (seen-set keeps this cheap)
         }
       } else {
-        animateOut();
+        disableAll();
       }
     },
     setSmoothing(smoothing: number) {
