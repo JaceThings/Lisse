@@ -147,6 +147,9 @@ export function Demo({ staggerIndex }: DemoProps) {
       className="relative isolate w-full"
       style={{ height: "var(--grid-height)" }}
       aria-labelledby="demo-heading"
+      // Nothing here is body prose — only the aria-hidden squircle and
+      // sr-only text — so keep the selection marker off it.
+      data-highlight-exclude
     >
       <h2 id="demo-heading" className="sr-only">
         {m.demo_heading()}

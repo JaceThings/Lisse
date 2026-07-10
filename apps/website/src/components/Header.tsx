@@ -54,7 +54,9 @@ export function Header({ staggerFrom }: HeaderProps) {
                 <em className="italic">lisse</em>,{" "}
                 <em className="italic">{m.header_etymology_smooth()}</em>]
               </span>
-              <span className="sr-only">{m.header_pronunciation_sr()}</span>
+              <span className="sr-only" data-highlight-exclude>
+                {m.header_pronunciation_sr()}
+              </span>
             </p>
           </div>
         </Stagger>
