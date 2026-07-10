@@ -175,6 +175,10 @@ export function createEngine(initial: EngineSettings) {
     // A fieldset's legend rides a notch cut into the border (Material-style
     // outlined inputs) — no single path + uniform stroke can represent it.
     if (el.tagName === "FIELDSET" && el.querySelector(":scope > legend")) return null;
+    // Native CSS corner-shape (x.com ships `squircle`): the site has already
+    // chosen its smoothing — re-clipping repaints theirs with ours.
+    const cornerShape = cs.getPropertyValue("corner-shape");
+    if (cornerShape && !/^(round ?)+$/.test(cornerShape.trim())) return null;
     // Border-box floats; clip-path's default reference box is the border box.
     const { width: w, height: h } = getLayoutSize(el);
     if (isNaN(w) || isNaN(h)) return null;
