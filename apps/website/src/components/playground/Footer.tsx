@@ -94,7 +94,8 @@ export function Footer() {
     useRouterState({ select: (s) => s.location.pathname }) !== "/";
 
   return (
-    <div className="flex w-full flex-col gap-5">
+    // Nav chrome, not reading content — keep the selection marker off it.
+    <div className="flex w-full flex-col gap-5" data-highlight-exclude>
       <Divider />
       <motion.nav
         layout
