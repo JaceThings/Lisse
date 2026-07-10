@@ -45,12 +45,18 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url || changeInfo.status) refreshIcon(tabId, tab.url);
 });
 
-// A site's flag can flip from any tab or window — resync every tab's icon.
+// A site's flag can flip from any tab or window. The new value is already in
+// `changes`, so only matching tabs get their icon set — no per-tab storage reads.
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "sync") return;
   const prefix = enabledKey("");
   if (!Object.keys(changes).some((k) => k.startsWith(prefix))) return;
   for (const tab of await chrome.tabs.query({})) {
-    if (tab.id != null) refreshIcon(tab.id, tab.url);
+    if (tab.id == null) continue;
+    const host = hostOf(tab.url);
+    const change = host && changes[enabledKey(host)];
+    if (!change) continue;
+    const on = change.newValue !== false; // key removal falls back to default ON
+    await chrome.action.setIcon({ tabId: tab.id, path: iconPaths(on ? "on" : "off") });
   }
 });

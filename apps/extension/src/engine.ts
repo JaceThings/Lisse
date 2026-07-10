@@ -143,7 +143,6 @@ export function createEngine(initial: EngineSettings) {
   const applied = new Map<HTMLElement, Applied>();
   const seen = new WeakSet<HTMLElement>();
   const queue = new Set<HTMLElement>();
-  const roots = new Set<Document | ShadowRoot>();
   let rafHandle: number | undefined;
   let mo: MutationObserver | undefined;
 
@@ -303,8 +302,8 @@ export function createEngine(initial: EngineSettings) {
   }
 
   // rAF runs before paint, so elements styled in the frame they arrive never
-  // flash square. Reads and writes are batched into separate phases per chunk
-  // to avoid interleaved layout thrash.
+  // flash square. ALL reads run before ANY write — write-then-read across
+  // chunks would force a layout recomputation per chunk.
   function flush() {
     rafHandle = undefined;
     if (!settings.enabled) {
@@ -312,23 +311,20 @@ export function createEngine(initial: EngineSettings) {
       return;
     }
     const deadline = performance.now() + FRAME_BUDGET_MS;
-    do {
-      // Phase A — reads only.
-      const ops: Array<{ el: HTMLElement; result: PlanResult | null }> = [];
-      let n = 0;
-      for (const el of queue) {
-        queue.delete(el);
-        ops.push({ el, result: el.isConnected ? planFor(el) : null });
-        if (++n >= CHUNK) break;
-      }
-      // Phase B — writes only.
-      for (const { el, result } of ops) writePlan(el, result);
-    } while (queue.size > 0 && performance.now() < deadline);
+    // Phase A — reads only, deadline checked every CHUNK elements.
+    const ops: Array<{ el: HTMLElement; result: PlanResult | null }> = [];
+    let n = 0;
+    for (const el of queue) {
+      queue.delete(el);
+      ops.push({ el, result: el.isConnected ? planFor(el) : null });
+      if (++n % CHUNK === 0 && performance.now() >= deadline) break;
+    }
+    // Phase B — writes only; no layout reads follow.
+    for (const { el, result } of ops) writePlan(el, result);
     if (queue.size > 0) scheduleFlush();
   }
 
   function scanRoot(root: Document | ShadowRoot) {
-    if (root instanceof ShadowRoot) roots.add(root);
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
     let node = walker.nextNode() as Element | null;
     while (node) {
@@ -383,12 +379,16 @@ export function createEngine(initial: EngineSettings) {
     if (t && t.nodeType === 1 && !skip(t as Element)) enqueue(t as HTMLElement);
   }
 
+  // Same MAX_STYLED cap as scanRoot — a SPA route change can add thousands of
+  // elements in one mutation batch, which would otherwise all hit planFor.
   function scanSubtree(el: HTMLElement) {
     if (skip(el)) return;
+    if (applied.size + queue.size >= MAX_STYLED) return;
     enqueue(el);
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT);
     let node = walker.nextNode() as HTMLElement | null;
     while (node) {
+      if (applied.size + queue.size >= MAX_STYLED) break;
       if (!skip(node)) {
         if (node.shadowRoot) scanRoot(node.shadowRoot);
         enqueue(node);
