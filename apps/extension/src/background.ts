@@ -19,6 +19,12 @@ function hostOf(url: string | undefined): string | null {
   }
 }
 
+// Tabs close between an event firing and our call landing — "No tab with id"
+// rejections are expected noise, not failures.
+function quiet(p: Promise<unknown>): void {
+  p.catch(() => {});
+}
+
 /** Green icon when the tab's site is smoothed, grey otherwise (incl. non-http). */
 async function refreshIcon(tabId: number, url: string | undefined): Promise<void> {
   const host = hostOf(url);
@@ -36,13 +42,12 @@ chrome.action.onClicked.addListener(async (tab) => {
   await setEnabled(host, !enabled);
 });
 
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  const tab = await chrome.tabs.get(tabId);
-  await refreshIcon(tabId, tab.url);
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  quiet(chrome.tabs.get(tabId).then((tab) => refreshIcon(tabId, tab.url)));
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.url || changeInfo.status) refreshIcon(tabId, tab.url);
+  if (changeInfo.url || changeInfo.status) quiet(refreshIcon(tabId, tab.url));
 });
 
 // A site's flag can flip from any tab or window. The new value is already in
@@ -57,6 +62,6 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
     const change = host && changes[enabledKey(host)];
     if (!change) continue;
     const on = change.newValue !== false; // key removal falls back to default ON
-    await chrome.action.setIcon({ tabId: tab.id, path: iconPaths(on ? "on" : "off") });
+    quiet(chrome.action.setIcon({ tabId: tab.id, path: iconPaths(on ? "on" : "off") }));
   }
 });
