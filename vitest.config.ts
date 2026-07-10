@@ -53,6 +53,15 @@ export default defineConfig({
           alias: coreAlias,
         },
       },
+      {
+        extends: true,
+        test: {
+          name: "extension",
+          include: ["apps/extension/__tests__/**/*.test.ts"],
+          environment: "happy-dom",
+          alias: coreAlias,
+        },
+      },
     ],
   },
 });

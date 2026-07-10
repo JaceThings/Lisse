@@ -1,0 +1,18 @@
+{
+  "name": "@lisse/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-browser WebExtension + userscript applying Lisse smooth corners to any site",
+  "scripts": {
+    "build": "tsx build.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lisse/core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
