@@ -36,8 +36,8 @@ interface BorderColors {
   left: string;
 }
 
-interface Applied {
-  // Original inline values, restored verbatim on undo/disable.
+/** Original inline values, restored verbatim on undo/disable. */
+interface OriginalStyles {
   clipPath: string;
   filter: string;
   borderColor: string;
@@ -46,6 +46,9 @@ interface Applied {
   bgClip: string;
   bgRepeat: string;
   bgSize: string;
+}
+
+interface Applied extends OriginalStyles {
   // Site-original computed values, reused on re-plan: our own inline writes
   // corrupt the readback (transparent border, our data-URI background layer).
   siteFilter: string;
@@ -236,19 +239,21 @@ export function createEngine(initial: EngineSettings) {
     }
     const { plan } = result;
     const record = applied.get(el);
-    const origClip = record ? record.clipPath : el.style.clipPath;
-    const origFilter = record ? record.filter : el.style.filter;
-    const origBorderColor = record ? record.borderColor : el.style.borderColor;
-    const origBgImage = record ? record.bgImage : el.style.backgroundImage;
-    const origBgOrigin = record ? record.bgOrigin : el.style.backgroundOrigin;
-    const origBgClip = record ? record.bgClip : el.style.backgroundClip;
-    const origBgRepeat = record ? record.bgRepeat : el.style.backgroundRepeat;
-    const origBgSize = record ? record.bgSize : el.style.backgroundSize;
+    const orig: OriginalStyles = record ?? {
+      clipPath: el.style.clipPath,
+      filter: el.style.filter,
+      borderColor: el.style.borderColor,
+      bgImage: el.style.backgroundImage,
+      bgOrigin: el.style.backgroundOrigin,
+      bgClip: el.style.backgroundClip,
+      bgRepeat: el.style.backgroundRepeat,
+      bgSize: el.style.backgroundSize,
+    };
 
     const b = plan.border;
-    const targetFilter = plan.filter ?? origFilter;
-    const targetBorderColor = b ? "transparent" : origBorderColor;
-    const targetBgImage = b ? b.backgroundImage : origBgImage;
+    const targetFilter = plan.filter ?? orig.filter;
+    const targetBorderColor = b ? "transparent" : orig.borderColor;
+    const targetBgImage = b ? b.backgroundImage : orig.bgImage;
 
     // Our writes re-trigger the MutationObserver (it fires async, so a flag
     // can't intercept them) — skipping no-op writes breaks the feedback loop.
@@ -269,10 +274,10 @@ export function createEngine(initial: EngineSettings) {
     if (b || (record && record.lastBorderColor === "transparent")) {
       el.style.borderColor = targetBorderColor;
       el.style.backgroundImage = targetBgImage;
-      el.style.backgroundOrigin = b ? b.backgroundOrigin : origBgOrigin;
-      el.style.backgroundClip = b ? b.backgroundClip : origBgClip;
-      el.style.backgroundRepeat = b ? b.backgroundRepeat : origBgRepeat;
-      el.style.backgroundSize = b ? b.backgroundSize : origBgSize;
+      el.style.backgroundOrigin = b ? b.backgroundOrigin : orig.bgOrigin;
+      el.style.backgroundClip = b ? b.backgroundClip : orig.bgClip;
+      el.style.backgroundRepeat = b ? b.backgroundRepeat : orig.bgRepeat;
+      el.style.backgroundSize = b ? b.backgroundSize : orig.bgSize;
     }
 
     if (record) {
@@ -281,16 +286,8 @@ export function createEngine(initial: EngineSettings) {
       record.lastBorderColor = targetBorderColor;
       record.lastBgImage = targetBgImage;
     } else {
-      const unobserve = observeResize(el, () => enqueue(el));
       applied.set(el, {
-        clipPath: origClip,
-        filter: origFilter,
-        borderColor: origBorderColor,
-        bgImage: origBgImage,
-        bgOrigin: origBgOrigin,
-        bgClip: origBgClip,
-        bgRepeat: origBgRepeat,
-        bgSize: origBgSize,
+        ...orig,
         siteFilter: result.siteFilter,
         siteBorderColors: result.siteBorderColors,
         siteBg: result.siteBg,
@@ -298,7 +295,7 @@ export function createEngine(initial: EngineSettings) {
         lastFilter: targetFilter,
         lastBorderColor: targetBorderColor,
         lastBgImage: targetBgImage,
-        unobserve,
+        unobserve: observeResize(el, () => enqueue(el)),
       });
     }
   }
@@ -323,8 +320,7 @@ export function createEngine(initial: EngineSettings) {
   }
 
   function skip(el: Element): boolean {
-    const tag = el.tagName;
-    return tag === "SVG" || tag === "svg" || tag === "HTML" || tag === "BODY" ||
+    return el.tagName === "HTML" || el.tagName === "BODY" ||
       el.namespaceURI === "http://www.w3.org/2000/svg";
   }
 
@@ -420,21 +416,21 @@ export function createEngine(initial: EngineSettings) {
     }
   }
 
-  // Animated hover/state changes (radius, size, colours) surface here; the
-  // composedPath target crosses shadow boundaries. Instant (non-animated)
-  // pseudo-class changes fire no DOM signal — that's the tracking ceiling.
-  // ponytail: no coverage for instant :hover restyles; accept it.
   // A child's own change can invalidate an ancestor's verdict (a floating
   // label transitioning out of its field's box, an avatar joining a stack).
   // Applied ancestors are re-planned — cheap, it's map hits up a short chain.
   function enqueueAppliedAncestors(el: Element) {
-    let n: Element | null = el.parentElement ?? ((el.getRootNode() as ShadowRoot).host ?? null);
-    for (let d = 0; n && d < 12; d++) {
+    const up = (x: Element): Element | null =>
+      x.parentElement ?? ((x.getRootNode() as ShadowRoot).host ?? null);
+    for (let n = up(el), d = 0; n && d < 12; n = up(n), d++) {
       if (applied.has(n as HTMLElement)) enqueue(n as HTMLElement);
-      n = n.parentElement ?? ((n.getRootNode() as ShadowRoot).host ?? null);
     }
   }
 
+  // Animated hover/state changes (radius, size, colours) surface here; the
+  // composedPath target crosses shadow boundaries. Instant (non-animated)
+  // pseudo-class changes fire no DOM signal — that's the tracking ceiling.
+  // ponytail: no coverage for instant :hover restyles; accept it.
   function onTransition(e: Event) {
     if (!settings.enabled) return;
     const t = e.composedPath()[0] as Node | undefined;
@@ -492,7 +488,7 @@ export function createEngine(initial: EngineSettings) {
     }
     const settle = () => {
       scanRoot(document);
-      for (const el of applied.keys()) enqueue(el);
+      reapplyAll();
     };
     if (document.readyState === "complete") {
       window.setTimeout(settle, 2500);
@@ -505,7 +501,7 @@ export function createEngine(initial: EngineSettings) {
   }
 
   function reapplyAll() {
-    for (const el of [...applied.keys()]) enqueue(el);
+    for (const el of applied.keys()) enqueue(el);
   }
 
   // Disable restores styles but keeps records + observers so re-enable can
