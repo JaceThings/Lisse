@@ -1,5 +1,13 @@
 # @lisse/vue
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [14aa5fe]
+- Updated dependencies [14aa5fe]
+  - @lisse/core@0.5.0
+
 ## 0.3.1
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 # @lisse/react
 
+## 0.5.0
+
+### Minor Changes
+
+- 14aa5fe: Removed internal helpers from the public API: `getSVGPathFromPathParams`
+  (deprecated), `toRadians`, `rounded`, `nextUid`, `hexToRgb`, and `SVG_NS`
+  from `@lisse/core`, and the `SlotProps` type from `@lisse/react` (use
+  `SlotPropsFor<E>`). None were consumed by the framework packages; path
+  generation flows through `generatePath`.
+
+### Patch Changes
+
+- Updated dependencies [14aa5fe]
+- Updated dependencies [14aa5fe]
+  - @lisse/core@0.5.0
+
 ## 0.3.2
 
 ### Patch Changes
