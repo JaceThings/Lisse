@@ -115,9 +115,11 @@ The Userscripts route above covers Safari users without it.
 
 ## Known limitations
 
-- **Native `corner-shape`.** Elements a site smooths itself via CSS
-  `corner-shape` (x.com ships `squircle`) are left untouched — the site has
-  already chosen its geometry, and ours would repaint it differently.
+- **Native `corner-shape`.** The smooth convex family (`squircle`, and
+  `superellipse(K)` for K in 1–4 — x.com ships `squircle`) is overridden with
+  our curve; their paint contains our path, so the clip is clean. Decorative
+  shapes (`scoop`, `bevel`, `notch`, `square`, concave or near-square
+  superellipses) are deliberate design and are left untouched.
 
 - **Non-uniform borders.** Only a uniform solid border is redrawn. Dashed,
   dotted, double, per-side, or multi-colour borders — and anything outside

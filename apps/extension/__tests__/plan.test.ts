@@ -6,6 +6,7 @@ import {
   boxShadowToFilter,
   computeElementPlan,
   pseudoEscapesBox,
+  isOverridableCornerShape,
   uniformSolidBorder,
   borderStrokeLayer,
   type PlanInput,
@@ -27,6 +28,22 @@ const noBackground: BackgroundInput = {
   repeat: "repeat",
   size: "auto",
 };
+
+describe("isOverridableCornerShape", () => {
+  it("overrides the smooth convex family", () => {
+    for (const v of ["round", "squircle", "superellipse(1)", "superellipse(2)", "superellipse(4)",
+      "squircle round superellipse(1.5) squircle"]) {
+      expect(isOverridableCornerShape(v), v).toBe(true);
+    }
+  });
+
+  it("leaves decorative and concave shapes alone", () => {
+    for (const v of ["scoop", "bevel", "notch", "square", "superellipse(0.5)", "superellipse(-1)",
+      "superellipse(infinity)", "superellipse(5)", "squircle scoop round round"]) {
+      expect(isOverridableCornerShape(v), v).toBe(false);
+    }
+  });
+});
 
 describe("pseudoEscapesBox", () => {
   const box = { width: 75, height: 32 };

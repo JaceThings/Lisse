@@ -85,6 +85,25 @@ export function pseudoEscapesBox(o: PseudoBox, box: { width: number; height: num
   return false;
 }
 
+/**
+ * Whether a computed `corner-shape` is in the smooth convex family we impose
+ * our curve over: round/squircle keywords or superellipse(K) with K in [1, 4].
+ * Their paint contains our path there, so the clip is sliver-free. Everything
+ * else is deliberate design (scoop, bevel, notch, square, concave or
+ * near-square superellipses) and must not be broken.
+ * ponytail: K > 4 counts as square-intent; widen if a real site disagrees.
+ */
+export function isOverridableCornerShape(shorthand: string): boolean {
+  for (const tok of shorthand.trim().split(/\s+/)) {
+    if (tok === "round" || tok === "squircle") continue;
+    const m = tok.match(/^superellipse\((-?[\d.]+)\)$/);
+    if (!m) return false;
+    const k = parseFloat(m[1]);
+    if (!(k >= 1 && k <= 4)) return false;
+  }
+  return true;
+}
+
 /** One side's resolved border longhands (computed values). */
 export interface BorderSide {
   width: number;
