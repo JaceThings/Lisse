@@ -28,11 +28,11 @@ LisseCorner _sanitiseCorner(LisseCorner c) {
 }
 
 LisseCorners _sanitise(LisseCorners c) => LisseCorners(
-  topLeft: _sanitiseCorner(c.topLeft),
-  topRight: _sanitiseCorner(c.topRight),
-  bottomRight: _sanitiseCorner(c.bottomRight),
-  bottomLeft: _sanitiseCorner(c.bottomLeft),
-);
+      topLeft: _sanitiseCorner(c.topLeft),
+      topRight: _sanitiseCorner(c.topRight),
+      bottomRight: _sanitiseCorner(c.bottomRight),
+      bottomLeft: _sanitiseCorner(c.bottomLeft),
+    );
 
 /// Emits a smooth-cornered rectangle outline into [sink]. Pure geometry —
 /// no `dart:ui`. The order mirrors a clockwise traversal starting from the

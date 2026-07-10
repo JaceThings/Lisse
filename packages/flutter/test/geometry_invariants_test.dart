@@ -102,8 +102,7 @@ void main() {
           expect(
             _outside(p, rect),
             lessThanOrEqualTo(_epsilon),
-            reason:
-                'case $i bulges outside $rect at $p '
+            reason: 'case $i bulges outside $rect at $p '
                 'r=$r curve=${corners.topLeft.curve}',
           );
         }
@@ -129,8 +128,7 @@ void main() {
         // A true rectangle: every sample sits on the perimeter (some edge),
         // never interior to it.
         for (final Offset p in _sample(path)) {
-          final bool onEdge =
-              (p.dx - rect.left).abs() < 1e-3 ||
+          final bool onEdge = (p.dx - rect.left).abs() < 1e-3 ||
               (rect.right - p.dx).abs() < 1e-3 ||
               (p.dy - rect.top).abs() < 1e-3 ||
               (rect.bottom - p.dy).abs() < 1e-3;

@@ -28,9 +28,9 @@ class SmoothBox extends StatelessWidget {
     this.clipBehavior = Clip.antiAlias,
     this.child,
   }) : assert(
-         color == null || gradient == null,
-         'provide either color or gradient, not both',
-       );
+          color == null || gradient == null,
+          'provide either color or gradient, not both',
+        );
 
   final LisseCorners corners;
 

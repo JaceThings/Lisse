@@ -54,9 +54,9 @@ double _distToPolyline(Offset p, List<Offset> poly) {
 }
 
 LisseCorner _corner(Map<String, dynamic> j) => LisseCorner(
-  radius: (j['radius'] as num).toDouble(),
-  smoothing: (j['smoothing'] as num).toDouble(),
-);
+      radius: (j['radius'] as num).toDouble(),
+      smoothing: (j['smoothing'] as num).toDouble(),
+    );
 
 void main() {
   final List<dynamic> fixtures =

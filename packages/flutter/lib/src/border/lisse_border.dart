@@ -28,10 +28,10 @@ class LisseBorder extends OutlinedBorder {
     double smoothing = 0.6,
     super.side = BorderSide.none,
   }) : corners = LisseCorners.all(
-         radius: radius,
-         curve: curve,
-         smoothing: smoothing,
-       );
+          radius: radius,
+          curve: curve,
+          smoothing: smoothing,
+        );
 
   final LisseCorners corners;
 

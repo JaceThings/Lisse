@@ -89,10 +89,10 @@ class LisseCorners {
 
   /// One config applied to all four corners.
   const LisseCorners.uniform(LisseCorner corner)
-    : topLeft = corner,
-      topRight = corner,
-      bottomRight = corner,
-      bottomLeft = corner;
+      : topLeft = corner,
+        topRight = corner,
+        bottomRight = corner,
+        bottomLeft = corner;
 
   /// Uniform corners built from scalars.
   LisseCorners.all({
@@ -102,14 +102,14 @@ class LisseCorners {
     double exponent = kDefaultExponent,
     bool preserveSmoothing = kDefaultPreserveSmoothing,
   }) : this.uniform(
-         LisseCorner(
-           radius: radius,
-           curve: curve,
-           smoothing: smoothing,
-           exponent: exponent,
-           preserveSmoothing: preserveSmoothing,
-         ),
-       );
+          LisseCorner(
+            radius: radius,
+            curve: curve,
+            smoothing: smoothing,
+            exponent: exponent,
+            preserveSmoothing: preserveSmoothing,
+          ),
+        );
 
   /// Per-corner; any corner left null is a sharp (radius 0) corner.
   LisseCorners.only({
@@ -117,10 +117,10 @@ class LisseCorners {
     LisseCorner? topRight,
     LisseCorner? bottomRight,
     LisseCorner? bottomLeft,
-  }) : topLeft = topLeft ?? LisseCorner.zero,
-       topRight = topRight ?? LisseCorner.zero,
-       bottomRight = bottomRight ?? LisseCorner.zero,
-       bottomLeft = bottomLeft ?? LisseCorner.zero;
+  })  : topLeft = topLeft ?? LisseCorner.zero,
+        topRight = topRight ?? LisseCorner.zero,
+        bottomRight = bottomRight ?? LisseCorner.zero,
+        bottomLeft = bottomLeft ?? LisseCorner.zero;
 
   bool get isAllZero =>
       topLeft.radius <= 0 &&

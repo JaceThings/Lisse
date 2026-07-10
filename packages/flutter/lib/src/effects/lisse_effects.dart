@@ -50,12 +50,12 @@ class LisseBorderLayer {
     this.dash,
     this.gap,
     this.cap = StrokeCap.butt,
-  }) : assert(width >= 0, 'width must be >= 0'),
-       assert(opacity >= 0 && opacity <= 1, 'opacity must be 0..1'),
-       assert(
-         color != null || gradient != null,
-         'a border layer needs a color or a gradient',
-       );
+  })  : assert(width >= 0, 'width must be >= 0'),
+        assert(opacity >= 0 && opacity <= 1, 'opacity must be 0..1'),
+        assert(
+          color != null || gradient != null,
+          'a border layer needs a color or a gradient',
+        );
 
   final double width;
   final Color? color;
@@ -117,9 +117,8 @@ void paintInnerShadows(
     final Path ring = Path.combine(PathOperation.difference, cover, hole);
     final Paint paint = Paint()
       ..color = s.color
-      ..maskFilter = s.blur > 0
-          ? MaskFilter.blur(BlurStyle.normal, _sigma(s.blur))
-          : null;
+      ..maskFilter =
+          s.blur > 0 ? MaskFilter.blur(BlurStyle.normal, _sigma(s.blur)) : null;
     canvas.drawPath(ring, paint);
   }
   canvas.restore();
@@ -233,12 +232,14 @@ void paintBorderLayers(
           base,
           const Color(0xFF000000),
           0.35,
-        )!.withValues(alpha: base.a);
+        )!
+            .withValues(alpha: base.a);
         final Color light = Color.lerp(
           base,
           const Color(0xFFFFFFFF),
           0.45,
-        )!.withValues(alpha: base.a);
+        )!
+            .withValues(alpha: base.a);
         final bool groove = layer.style == LisseBorderStyle.groove;
         final double half = w / 2;
         _stroke(
