@@ -1,9 +1,6 @@
 import { Stagger } from "../components/Stagger.tsx";
-import {
-  DEFAULT_TUNING,
-  PlaygroundTuningProvider,
-} from "../components/playground/PlaygroundTuning.tsx";
 import { BorderSection } from "../components/playground/sections/BorderSection.tsx";
+import { CapsuleSection } from "../components/playground/sections/CapsuleSection.tsx";
 import { CornerShapeSection } from "../components/playground/sections/CornerShapeSection.tsx";
 import { CurveTypeSection } from "../components/playground/sections/CurveTypeSection.tsx";
 import { PerCornerSection } from "../components/playground/sections/PerCornerSection.tsx";
@@ -17,7 +14,7 @@ export function Playground() {
   // localized page). Shared by the three BorderSection variants below.
   const borderDesc = m.playground_border_description();
   return (
-    <PlaygroundTuningProvider value={DEFAULT_TUNING}>
+    <>
       {/* Indices 0–5 are reserved for the Header; body starts at 6.
           48px between sections matches Figma `--p-12`. */}
       <div className="flex w-full flex-col" style={{ gap: 48 }}>
@@ -56,7 +53,10 @@ export function Playground() {
         <Stagger index={14}>
           <CurveTypeSection />
         </Stagger>
+        <Stagger index={15}>
+          <CapsuleSection />
+        </Stagger>
       </div>
-    </PlaygroundTuningProvider>
+    </>
   );
 }

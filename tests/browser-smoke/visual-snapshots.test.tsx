@@ -3,12 +3,7 @@
 // Catches Safari-specific SVG-rendering quirks (the repo has known
 // documented issues) and any cross-browser path-parsing divergence.
 //
-// Screenshots are written to `tests/browser-smoke/screenshots/`. The
-// browser-smoke workflow then uploads that directory to Argos for
-// review-surface diffing. Read-only in Argos for the first 4 weeks
-// (visual changes appear as non-blocking PR comments), then promoted
-// to blocking. The local test just asserts capture succeeded; Argos
-// handles the actual diff.
+// The local test just asserts capture succeeded; Argos handles the actual diff.
 import { describe, it, beforeEach, afterEach } from "vitest";
 import { page, server } from "@vitest/browser/context";
 import { createRoot, type Root } from "react-dom/client";

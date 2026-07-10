@@ -5,7 +5,6 @@
       "entry": [
         "scripts/*.{ts,sh}",
         "vitest.config.ts",
-        "vitest.setup.ts",
         "benchmarks/**/*.{ts,js}",
         "tests/consumer-smoke/*.{mjs,cjs,js}"
       ],

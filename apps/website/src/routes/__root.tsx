@@ -155,7 +155,8 @@ const PAGES: Record<string, ComponentType> = {
   "/what": What,
   "/playground": Playground,
   "/math": MathPage,
-  "/curves-test": CurvesTest,
+  // Dev-only harness; the route redirects to home in production.
+  ...(import.meta.env.DEV ? { "/curves-test": CurvesTest } : {}),
 };
 
 // Route-keyed body cross-fade. First mount has no preceding footer to slide,

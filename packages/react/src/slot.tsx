@@ -7,7 +7,6 @@ import {
   type ComponentPropsWithoutRef,
   type ElementType,
   type ForwardedRef,
-  type HTMLAttributes,
   type ReactElement,
   type ReactNode,
   type Ref,
@@ -46,15 +45,6 @@ function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
   }
   return merged;
 }
-
-/**
- * Default props shape for `Slot`. Uses `HTMLAttributes<HTMLElement>` for
- * backwards compatibility -- consumers who need element-specific attributes
- * (`href`, `type`, `name`, ...) should use `SlotPropsFor<E>` instead.
- */
-export type SlotProps = HTMLAttributes<HTMLElement> & {
-  children?: ReactNode;
-};
 
 /**
  * Element-specific props shape for `Slot`. Use to opt into attributes of a

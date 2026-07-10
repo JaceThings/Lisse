@@ -89,10 +89,7 @@ export function useSmoothCorners(
     return !!effectsHandle;
   }
 
-  // Single resize-synchronised callback. Mirrors the React hook's sync()
-  // pattern: one observeResize registration per element routes both the
-  // clip-path update and the effects update through one layout-size read
-  // per frame.
+  // One observeResize registration routes clip-path + effects through a single layout-size read per frame.
   function syncAll() {
     const el = unref(target);
     if (!el) return;

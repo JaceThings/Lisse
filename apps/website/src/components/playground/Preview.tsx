@@ -14,6 +14,10 @@ interface PreviewProps {
   fill?: string;
   /** Square edge length in px. Figma uses 100. */
   size?: number;
+  /** Explicit width/height in px for non-square previews (capsules). Each
+   *  falls back to `size`, so square sections keep passing `size` alone. */
+  width?: number;
+  height?: number;
 }
 
 // Figma "Figure Content" frames across every section.
@@ -83,6 +87,8 @@ export function Preview({
   middleBorder,
   fill = DEFAULT_FILL,
   size = DEFAULT_SIZE,
+  width = size,
+  height = size,
 }: PreviewProps) {
   // Server + first client render use "svg"; Safari flips to "box-shadow"
   // after mount (invisible at rest), keeping hydration markup matched.
@@ -92,7 +98,7 @@ export function Preview({
       className="flex w-full items-center justify-center overflow-hidden p-3"
       style={{ height: CANVAS_HEIGHT }}
     >
-      <div className="relative" style={{ width: size, height: size }}>
+      <div className="relative" style={{ width, height }}>
         {/* Base: fill + shadow + inner shadow on a stable SmoothCorners.
             Borders live in separate stacked layers (BorderLayer) so cap
             toggles can crossfade via AnimatePresence without disturbing
@@ -114,8 +120,8 @@ export function Preview({
           innerShadow={innerShadow}
           shadowStrategy={isSafari ? "box-shadow" : "svg"}
           style={{
-            width: size,
-            height: size,
+            width,
+            height,
             backgroundColor: fill,
           }}
         />

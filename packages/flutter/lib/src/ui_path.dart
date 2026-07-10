@@ -32,17 +32,11 @@ class _UiPathSink implements PathSink {
       _path.relativeCubicTo(dx1, dy1, dx2, dy2, dx3, dy3);
 
   @override
-  void relativeArcTo(
-    double rx,
-    double ry,
-    double dx,
-    double dy, {
-    bool clockwise = true,
-  }) =>
+  void relativeArcTo(double rx, double ry, double dx, double dy) =>
       _path.relativeArcToPoint(
         Offset(dx, dy),
         radius: Radius.elliptical(rx, ry),
-        clockwise: clockwise,
+        clockwise: true,
       );
 
   @override

@@ -21,14 +21,8 @@ abstract class PathSink {
   );
 
   /// Relative SVG arc. Every Lisse corner arc is a non-large clockwise
-  /// quarter (`a rx ry 0 0 1 dx dy`); [clockwise] is exposed for clarity.
-  void relativeArcTo(
-    double rx,
-    double ry,
-    double dx,
-    double dy, {
-    bool clockwise = true,
-  });
+  /// quarter (`a rx ry 0 0 1 dx dy`).
+  void relativeArcTo(double rx, double ry, double dx, double dy);
 
   void close();
 }
@@ -75,17 +69,9 @@ class StringPathSink implements PathSink {
   }
 
   @override
-  void relativeArcTo(
-    double rx,
-    double ry,
-    double dx,
-    double dy, {
-    bool clockwise = true,
-  }) {
+  void relativeArcTo(double rx, double ry, double dx, double dy) {
     _gap();
-    _b.write(
-      'a ${_f(rx)} ${_f(ry)} 0 0 ${clockwise ? 1 : 0} ${_f(dx)} ${_f(dy)}',
-    );
+    _b.write('a ${_f(rx)} ${_f(ry)} 0 0 1 ${_f(dx)} ${_f(dy)}');
   }
 
   @override

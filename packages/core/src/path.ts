@@ -4,9 +4,7 @@ export { DEFAULT_SMOOTHING, DEFAULT_PRESERVE_SMOOTHING, DEFAULT_CURVE } from "./
 export { DEFAULT_EXPONENT, CURVE_TYPES, getCurveBuilder, buildArc, buildSquircle, buildSuperellipse, buildClothoid } from "./curves/index.js";
 export { getPathParamsForCorner } from "./corner-params.js";
 export { distributeAndNormalize } from "./distribute.js";
-export { getSVGPathFromPathParams } from "./draw.js";
-export { toRadians, rounded } from "./utils.js";
-export { SVG_NS, nextUid, hexToRgb, DEFAULT_SHADOW } from "./svg-shared.js";
+export { DEFAULT_SHADOW } from "./svg-shared.js";
 
 export type {
   CornerConfig,

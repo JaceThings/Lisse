@@ -93,8 +93,7 @@ function nearestPoint(target: OverlayPoint[], pt: Pt): Pt {
  *  shape used by labels (matched by name), control polygons (by
  *  index), and arc spokes (by index): each side may have an element
  *  the other lacks, so we need a "lerp shared" / "fade in new" /
- *  "fade out old" trio. Factoring it out makes the three call sites
- *  read as one paragraph each instead of three near-identical loops. */
+ *  "fade out old" trio. */
 function lerpElements<F, T, R>(
   fromList: readonly F[],
   toList: readonly T[],

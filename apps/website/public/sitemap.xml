@@ -1,6 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://corne.rs/</loc></url>
-  <url><loc>https://corne.rs/what</loc></url>
-  <url><loc>https://corne.rs/playground</loc></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://corne.rs/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/ja/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/de/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/ko/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/what</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/what"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/what"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/what"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/what"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/what"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/ja/what</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/what"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/what"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/what"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/what"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/what"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/de/what</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/what"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/what"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/what"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/what"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/what"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/ko/what</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/what"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/what"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/what"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/what"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/what"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/playground</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/playground"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/playground"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/playground"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/playground"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/playground"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/ja/playground</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/playground"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/playground"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/playground"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/playground"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/playground"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/de/playground</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/playground"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/playground"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/playground"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/playground"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/playground"/>
+  </url>
+  <url>
+    <loc>https://corne.rs/ko/playground</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://corne.rs/playground"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://corne.rs/ja/playground"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://corne.rs/de/playground"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://corne.rs/ko/playground"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://corne.rs/playground"/>
+  </url>
 </urlset>

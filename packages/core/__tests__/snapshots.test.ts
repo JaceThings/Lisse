@@ -21,9 +21,9 @@ import type { SmoothCornerOptions } from "../src/types.js";
 
 /**
  * Canonicalise SVG path strings before snapshot storage. Round to 4
- * decimals (the same precision the generator uses inside
- * `getSVGPathFromPathParams`) so cosmetic float drift never churns the
- * snapshot. Always absolute commands; whitespace normalised.
+ * decimals (the same precision `generatePath` uses) so cosmetic float
+ * drift never churns the snapshot. Always absolute commands; whitespace
+ * normalised.
  */
 function canonical(d: string): string {
   return svgpath(d).abs().round(4).toString();

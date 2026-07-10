@@ -183,7 +183,7 @@ import { Slot } from "@lisse/react";
 </Slot>;
 ```
 
-Without a type parameter, `Slot` accepts the common `HTMLAttributes<HTMLElement>` surface via the `SlotProps` type. Use `SlotPropsFor<E>` (re-exported alongside `SlotProps`) to compose element-specific shapes yourself.
+Without a type parameter, `Slot` accepts the common `HTMLAttributes<HTMLElement>` surface. Use the exported `SlotPropsFor<E>` to compose element-specific shapes yourself.
 
 At runtime every prop is forwarded to the cloned child regardless of type. The generic parameter is a type-level hint only.
 

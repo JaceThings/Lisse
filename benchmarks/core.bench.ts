@@ -1,8 +1,9 @@
 // Core-level JS hot-path benches.
 //
-// 9 benches covering the surfaces consumers spend time in:
+// 12 benches covering the surfaces consumers spend time in:
 //   - generatePath, single corner, four curve types (×4)
 //   - generatePath, 100-element batch, four curve types (×4)
+//   - generatePath, capsule + blend regimes + resize sweep (×3)
 //   - createSvgEffects + one update cycle (×1)
 //
 // The framework-adapter bench in `use-smooth-corners.bench.ts` covers the
@@ -33,12 +34,31 @@ for (const curve of CURVES) {
   });
 }
 
+// Capsule and blend regimes are squircle-only: a uniform squircle whose short
+// side reaches 2R routes to the continuous cap path, and the band just above it
+// (2R < short side < 2(1+s)R) routes to the per-edge blend path. The resize
+// sweep drives distinct dimensions every call, defeating the corner-output
+// cache — this models the pill morph animation frame by frame.
+describe("generatePath capsule/blend — squircle", () => {
+  bench("capsule 300x100 r=50 s=0.6", () => {
+    generatePath(300, 100, { radius: 50, smoothing: 0.6, curve: "squircle" });
+  });
+
+  bench("blend band 300x130 r=50 s=0.6", () => {
+    generatePath(300, 130, { radius: 50, smoothing: 0.6, curve: "squircle" });
+  });
+
+  bench("resize sweep h=100..220 r=h/2", () => {
+    for (let h = 100; h <= 220; h += 2) {
+      generatePath(300, h, { radius: h / 2, smoothing: 0.6, curve: "squircle" });
+    }
+  });
+});
+
 describe("createSvgEffects — mount + update cycle", () => {
   bench(
     "createSvgEffects + update",
     () => {
-      // happy-dom is set up by the vitest env; document.createElement
-      // is safe here.
       const anchor = document.createElement("div");
       document.body.appendChild(anchor);
       const handle = createSvgEffects(anchor);

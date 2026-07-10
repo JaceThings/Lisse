@@ -8,7 +8,7 @@ import {
 } from "framer-motion";
 import NumericText from "@numeric-text/react";
 import { SmoothCorners } from "@lisse/react";
-import { usePlaygroundTuning } from "./PlaygroundTuning.tsx";
+import { DEFAULT_TUNING } from "./PlaygroundTuning.tsx";
 import {
   PROP_CHANGE_DURATION,
   PROP_CHANGE_EASE,
@@ -56,7 +56,7 @@ export function Slider({
   formatSamples,
 }: SliderProps) {
   const id = useId();
-  const tuning = usePlaygroundTuning();
+  const tuning = DEFAULT_TUNING;
   const trackHeight = tuning.trackHeight;
   const trackRef = useRef<HTMLDivElement | null>(null);
   const propAnimRef = useRef<ReturnType<typeof animate> | null>(null);
@@ -73,7 +73,7 @@ export function Slider({
     [min, max, step, format, formatSamples],
   );
 
-  const rubberBand = useRubberBand({ tuning });
+  const rubberBand = useRubberBand();
 
   // Stays in [min, max]: the value shown in the readout and reflected to
   // the hidden range input. Decoupled from the visible stretch so the

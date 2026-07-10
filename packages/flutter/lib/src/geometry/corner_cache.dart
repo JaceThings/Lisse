@@ -40,7 +40,6 @@ CornerOutput getCachedBuilderOutput(
   final String k = _key(curve, input);
   final CornerOutput? cached = _cache[k];
   if (cached != null) {
-    // Touch by remove + re-insert so the entry moves to the LRU tail.
     _cache.remove(k);
     _cache[k] = cached;
     return cached;

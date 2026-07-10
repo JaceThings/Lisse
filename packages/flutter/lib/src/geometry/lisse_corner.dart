@@ -27,13 +27,6 @@ class LisseCorner {
     this.preserveSmoothing = kDefaultPreserveSmoothing,
   });
 
-  /// Radius-only shorthand using all defaults.
-  const LisseCorner.radius(this.radius)
-      : curve = LisseCurve.squircle,
-        smoothing = kDefaultSmoothing,
-        exponent = kDefaultExponent,
-        preserveSmoothing = kDefaultPreserveSmoothing;
-
   static const LisseCorner zero = LisseCorner(radius: 0);
 
   LisseCorner copyWith({
