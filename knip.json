@@ -85,6 +85,7 @@
         "src/content.ts",
         "src/background.ts",
         "src/userscript.ts",
+        "src/options.ts",
         "build.ts",
         "__tests__/**/*.test.ts"
       ],
