@@ -52,6 +52,7 @@ export function CornerShapeSection() {
 
   return (
     <Section
+      id="corner-shape"
       title={m.section_cornershape_title()}
       description={m.section_cornershape_desc()}
     >

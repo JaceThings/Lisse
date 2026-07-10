@@ -16,6 +16,8 @@ type DashCap = "butt" | "square" | "round";
 const BORDER_COLOUR = "#eec494";
 
 interface BorderSectionProps {
+  /** Anchor slug for this variant's header. */
+  id: string;
   title: string;
   description: string;
   position: "outer" | "inner" | "middle";
@@ -33,7 +35,7 @@ const POSITION_DEFAULTS: Record<
   middle: { preset: "dashed", thickness: 8, dashCap: "round", dash: 10, gap: 10 },
 };
 
-export function BorderSection({ title, description, position }: BorderSectionProps) {
+export function BorderSection({ id, title, description, position }: BorderSectionProps) {
   const BORDER_PRESETS = [
     { value: "none", label: m.section_border_preset_none() },
     { value: "solid", label: m.section_border_preset_solid() },
@@ -108,7 +110,7 @@ export function BorderSection({ title, description, position }: BorderSectionPro
   const showDashRow = preset === "dashed" || preset === "dotted";
 
   return (
-    <Section title={title} description={description}>
+    <Section id={id} title={title} description={description}>
       <FigureCard>
         <Preview
           corners={{ radius: 20, smoothing: 0.6 }}

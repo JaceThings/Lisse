@@ -196,6 +196,7 @@ export function CurveTypeSection() {
 
   return (
     <Section
+      id="curve-type"
       title={m.section_curvetype_title()}
       description={m.section_curvetype_desc()}
     >

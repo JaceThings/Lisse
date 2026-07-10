@@ -1,17 +1,34 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 interface SectionProps {
+  /** Anchor slug — always English so deep links survive locale switches. */
+  id: string;
   title: string;
   description: string;
   children: ReactNode;
 }
 
-export function Section({ title, description, children }: SectionProps) {
+export function Section({ id, title, description, children }: SectionProps) {
+  // Late hydration can miss the browser's native scroll-to-fragment.
+  useEffect(() => {
+    if (window.location.hash === `#${id}`) {
+      document.getElementById(id)?.scrollIntoView();
+    }
+  }, [id]);
+
   return (
-    <section className="flex w-full flex-col gap-4">
+    <section id={id} className="flex w-full scroll-mt-24 flex-col gap-4">
       <div className="flex w-full flex-col gap-3 px-[4px] text-text-primary">
         <h2 className="text-[16px] leading-none font-[550] tracking-[-0.25px]">
-          {title}
+          <a href={`#${id}`} className="group inline-flex items-baseline gap-1.5">
+            <span>{title}</span>
+            <span
+              aria-hidden="true"
+              className="opacity-0 transition-opacity group-hover:opacity-40 group-focus-visible:opacity-40"
+            >
+              #
+            </span>
+          </a>
         </h2>
         <p className="text-[14px] leading-[1.4] font-medium tracking-[-0.25px] text-wrap-pretty">
           {description}
