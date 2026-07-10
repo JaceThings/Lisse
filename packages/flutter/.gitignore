@@ -11,3 +11,6 @@ pubspec.lock
 
 # Local dev scratch — reference fixtures + parity harness, never published
 .dev/
+
+# Golden-test diff output (regenerated on every mismatch)
+test/failures/
