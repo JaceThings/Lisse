@@ -172,6 +172,9 @@ export function createEngine(initial: EngineSettings) {
     // A non-replaced inline element fragments across line boxes — no single
     // path describes it, and its computed width/height are unresolved.
     if (cs.display === "inline" && !REPLACED_TAGS.has(el.tagName)) return null;
+    // A fieldset's legend rides a notch cut into the border (Material-style
+    // outlined inputs) — no single path + uniform stroke can represent it.
+    if (el.tagName === "FIELDSET" && el.querySelector(":scope > legend")) return null;
     // Border-box floats; clip-path's default reference box is the border box.
     const { width: w, height: h } = getLayoutSize(el);
     if (isNaN(w) || isNaN(h)) return null;
@@ -382,7 +385,10 @@ export function createEngine(initial: EngineSettings) {
     for (const rec of records) {
       if (rec.type === "attributes") {
         const el = rec.target as HTMLElement;
-        if (el.nodeType === 1 && !skip(el)) enqueue(el);
+        if (el.nodeType === 1 && !skip(el)) {
+          enqueue(el);
+          enqueueAppliedAncestors(el);
+        }
       } else {
         // Re-plan the parent too: a new child may now escape its box (or an
         // escaping one may be gone), flipping the child-outside verdict.
@@ -406,10 +412,24 @@ export function createEngine(initial: EngineSettings) {
   // composedPath target crosses shadow boundaries. Instant (non-animated)
   // pseudo-class changes fire no DOM signal — that's the tracking ceiling.
   // ponytail: no coverage for instant :hover restyles; accept it.
+  // A child's own change can invalidate an ancestor's verdict (a floating
+  // label transitioning out of its field's box, an avatar joining a stack).
+  // Applied ancestors are re-planned — cheap, it's map hits up a short chain.
+  function enqueueAppliedAncestors(el: Element) {
+    let n: Element | null = el.parentElement ?? ((el.getRootNode() as ShadowRoot).host ?? null);
+    for (let d = 0; n && d < 12; d++) {
+      if (applied.has(n as HTMLElement)) enqueue(n as HTMLElement);
+      n = n.parentElement ?? ((n.getRootNode() as ShadowRoot).host ?? null);
+    }
+  }
+
   function onTransition(e: Event) {
     if (!settings.enabled) return;
     const t = e.composedPath()[0] as Node | undefined;
-    if (t && t.nodeType === 1 && !skip(t as Element)) enqueue(t as HTMLElement);
+    if (t && t.nodeType === 1 && !skip(t as Element)) {
+      enqueue(t as HTMLElement);
+      enqueueAppliedAncestors(t as Element);
+    }
   }
 
   // Focus rings are :focus/:focus-within outlines — no DOM mutation fires, so
