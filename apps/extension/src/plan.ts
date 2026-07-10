@@ -123,6 +123,8 @@ export interface PlanInput {
   hasBorderImage: boolean;
   /** Site-original background longhands the border layer prepends onto. */
   background: BackgroundInput;
+  /** A visible outline (focus ring) paints outside the box → clip kills it. */
+  hasOutline: boolean;
   /** A ::before/::after escapes the box → clipping would amputate it. */
   pseudoOutside: boolean;
   /** A visible child escapes the box (avatar stacks, badges) → same. */
@@ -247,6 +249,8 @@ export function computeElementPlan(input: PlanInput): Plan {
     return { action: "skip", reason: "too-small" };
   }
   if (input.hasBorderImage) return { action: "skip", reason: "border-image" };
+  // Focus rings are outlines; clipping them away is an accessibility bug.
+  if (input.hasOutline) return { action: "skip", reason: "outline" };
   if (input.pseudoOutside) return { action: "skip", reason: "pseudo-outside" };
   if (input.childOutside) return { action: "skip", reason: "child-outside" };
 

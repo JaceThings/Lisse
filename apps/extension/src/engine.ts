@@ -1,4 +1,4 @@
-import { observeResize, getLayoutSize } from "@lisse/core";
+import { observeResize, getLayoutSize, parseColor } from "@lisse/core";
 import {
   computeElementPlan,
   parseCornerRadius,
@@ -75,6 +75,13 @@ function readBorder(cs: CSSStyleDeclaration, colors: BorderColors): BorderInput 
     bottom: side("bottom", colors.bottom),
     left: side("left", colors.left),
   };
+}
+
+/** Visible outline: rendered style, non-zero width, non-transparent colour. */
+function visibleOutline(cs: CSSStyleDeclaration): boolean {
+  if (cs.outlineStyle === "none" || parseFloat(cs.outlineWidth) <= 0.01) return false;
+  const colour = parseColor(cs.outlineColor);
+  return !colour || colour.opacity > 0;
 }
 
 function pseudoOutside(el: HTMLElement, w: number, h: number): boolean {
@@ -201,6 +208,7 @@ export function createEngine(initial: EngineSettings) {
       border: readBorder(cs, siteBorderColors),
       hasBorderImage: cs.borderImageSource !== "none" && cs.borderImageSource !== "",
       background: siteBg,
+      hasOutline: visibleOutline(cs),
       pseudoOutside: pseudoOutside(el, w, h),
       childOutside: childrenEscapeBox(el, cs),
       boxShadow: cs.boxShadow,
@@ -404,6 +412,17 @@ export function createEngine(initial: EngineSettings) {
     if (t && t.nodeType === 1 && !skip(t as Element)) enqueue(t as HTMLElement);
   }
 
+  // Focus rings are :focus/:focus-within outlines — no DOM mutation fires, so
+  // re-plan the focus chain (composedPath crosses shadow boundaries) to let
+  // the outline skip engage on focus and release on blur.
+  function onFocusChange(e: Event) {
+    if (!settings.enabled) return;
+    for (const n of e.composedPath().slice(0, 10)) {
+      const el = n as Element;
+      if (el.nodeType === 1 && !skip(el)) enqueue(el as HTMLElement);
+    }
+  }
+
   // Same MAX_STYLED cap as scanRoot — a SPA route change can add thousands of
   // elements in one mutation batch, which would otherwise all hit planFor.
   function scanSubtree(el: HTMLElement) {
@@ -439,6 +458,8 @@ export function createEngine(initial: EngineSettings) {
     mo.observe(document, MO_OPTS);
     document.addEventListener("transitionend", onTransition, true);
     document.addEventListener("animationend", onTransition, true);
+    document.addEventListener("focusin", onFocusChange, true);
+    document.addEventListener("focusout", onFocusChange, true);
     scanRoot(document);
     // Safety nets once the tree is complete; the seen-set and the plan memo
     // keep these cheap. The delayed settle pass re-plans everything applied:
@@ -507,6 +528,8 @@ export function createEngine(initial: EngineSettings) {
       mo = undefined;
       document.removeEventListener("transitionend", onTransition, true);
       document.removeEventListener("animationend", onTransition, true);
+      document.removeEventListener("focusin", onFocusChange, true);
+      document.removeEventListener("focusout", onFocusChange, true);
       if (rafHandle !== undefined) {
         (window.cancelAnimationFrame ?? window.clearTimeout)(rafHandle);
         rafHandle = undefined;

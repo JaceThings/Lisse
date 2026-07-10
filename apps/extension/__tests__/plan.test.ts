@@ -163,6 +163,7 @@ const base: PlanInput = {
   border: noBorder,
   hasBorderImage: false,
   background: noBackground,
+  hasOutline: false,
   pseudoOutside: false,
   childOutside: false,
   boxShadow: "none",
@@ -175,6 +176,13 @@ describe("computeElementPlan", () => {
     expect(computeElementPlan({ ...base, pseudoOutside: true })).toEqual({
       action: "skip",
       reason: "pseudo-outside",
+    });
+  });
+
+  it("skips while a visible outline is present (focus rings paint outside the clip)", () => {
+    expect(computeElementPlan({ ...base, hasOutline: true })).toEqual({
+      action: "skip",
+      reason: "outline",
     });
   });
 
