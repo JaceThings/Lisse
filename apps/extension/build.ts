@@ -22,7 +22,6 @@ await build({
   entry: {
     content: resolve(here, "src/content.ts"),
     background: resolve(here, "src/background.ts"),
-    options: resolve(here, "src/options.ts"),
   },
   outDir: resolve(dist, "chrome"),
   format: ["iife"],
@@ -72,7 +71,6 @@ const manifest: Record<string, unknown> = {
   },
   icons: { "16": "icons/on16.png", "32": "icons/on32.png", "48": "icons/on48.png", "128": "icons/on128.png" },
   background: { service_worker: "background.js" },
-  options_ui: { page: "options.html", open_in_tab: false },
   content_scripts: [
     {
       matches: ["<all_urls>"],
@@ -110,9 +108,6 @@ await build({
   splitting: false,
   silent: true,
 });
-cpSync(resolve(here, "src/options.html"), resolve(dist, "chrome/options.html"));
-cpSync(resolve(here, "src/options.html"), resolve(dist, "firefox/options.html"));
-
 // --- Store-ready zips (zip is a macOS built-in) ---
 for (const target of ["chrome", "firefox"] as const) {
   rmSync(resolve(dist, `lisse-${target}.zip`), { force: true });

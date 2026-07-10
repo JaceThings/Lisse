@@ -45,7 +45,7 @@ restart.)
 Click the toolbar icon to toggle smoothing for the current site: a coloured
 icon means it's on, a grey one means it's off. State is remembered per hostname
 (on by default), and the click is a no-op on pages we can't touch (`chrome://`,
-`about:`, and the like). Smoothing stays at its stored default (0.6). Toggling
+`about:`, and the like). Smoothing is fixed at 0.6, the iOS match. Toggling
 applies and restores instantly — animating clip-path between an arc and a
 squircle interpolates control points, which wobbles mid-flight rather than
 easing cleanly, so we don't.

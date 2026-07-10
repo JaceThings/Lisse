@@ -333,9 +333,7 @@ export function createEngine(initial: EngineSettings) {
 
   function scheduleFlush() {
     if (rafHandle !== undefined) return;
-    const raf = window.requestAnimationFrame ??
-      ((cb: FrameRequestCallback) => window.setTimeout(() => cb(performance.now()), 16));
-    rafHandle = raf(flush);
+    rafHandle = requestAnimationFrame(flush);
   }
 
   // rAF runs before paint, so elements styled in the frame they arrive never
@@ -407,7 +405,14 @@ export function createEngine(initial: EngineSettings) {
         }
         for (const removed of rec.removedNodes) {
           if (removed.nodeType !== 1) continue;
-          walkApplied(removed as HTMLElement, undo);
+          const root = removed as HTMLElement;
+          if (applied.has(root)) undo(root);
+          const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+          let node = walker.nextNode() as HTMLElement | null;
+          while (node) {
+            if (applied.has(node)) undo(node);
+            node = walker.nextNode() as HTMLElement | null;
+          }
         }
       }
     }
@@ -462,16 +467,6 @@ export function createEngine(initial: EngineSettings) {
         if (node.shadowRoot) scanRoot(node.shadowRoot);
         enqueue(node);
       }
-      node = walker.nextNode() as HTMLElement | null;
-    }
-  }
-
-  function walkApplied(el: HTMLElement, fn: (el: HTMLElement) => void) {
-    if (applied.has(el)) fn(el);
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT);
-    let node = walker.nextNode() as HTMLElement | null;
-    while (node) {
-      if (applied.has(node)) fn(node);
       node = walker.nextNode() as HTMLElement | null;
     }
   }
@@ -544,10 +539,6 @@ export function createEngine(initial: EngineSettings) {
         disableAll();
       }
     },
-    setSmoothing(smoothing: number) {
-      settings.smoothing = smoothing;
-      reapplyAll();
-    },
     destroy() {
       mo?.disconnect();
       mo = undefined;
@@ -556,7 +547,7 @@ export function createEngine(initial: EngineSettings) {
       document.removeEventListener("focusin", onFocusChange, true);
       document.removeEventListener("focusout", onFocusChange, true);
       if (rafHandle !== undefined) {
-        (window.cancelAnimationFrame ?? window.clearTimeout)(rafHandle);
+        cancelAnimationFrame(rafHandle);
         rafHandle = undefined;
       }
       undoAll();
