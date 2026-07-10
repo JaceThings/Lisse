@@ -4,6 +4,7 @@ import {
   parseCornerRadius,
   isElliptical,
   pseudoEscapesBox,
+  MIN_RADIUS,
   type Radii,
   type PlanInput,
   type BorderInput,
@@ -153,6 +154,10 @@ export function createEngine(initial: EngineSettings) {
     if (isNaN(w) || isNaN(h)) return null;
     const read = readRadii(cs, w, h);
     if (!read) return null;
+    // Bail before the expensive reads (pseudo styles, descendant rects) —
+    // most mutation-enqueued elements have negligible radius.
+    const { tl, tr, br, bl } = read.radii;
+    if (Math.max(tl, tr, br, bl) < MIN_RADIUS) return null;
 
     const record = applied.get(el);
     // Filter, border colour, and background readback are all polluted once we
