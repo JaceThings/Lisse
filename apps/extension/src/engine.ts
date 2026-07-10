@@ -6,6 +6,7 @@ import {
   pseudoEscapesBox,
   isDefaultCornerShape,
   MIN_RADIUS,
+  DEFAULT_SMOOTHING,
   type Radii,
   type PlanInput,
   type BorderInput,
@@ -14,7 +15,8 @@ import {
 
 export interface EngineSettings {
   enabled: boolean;
-  smoothing: number;
+  /** Fixed per build; the userscript exposes it as an editable constant. */
+  smoothing?: number;
 }
 
 /** Stop scanning once this many elements are styled — keeps big pages sane. */
@@ -150,7 +152,7 @@ function readRadii(cs: CSSStyleDeclaration, w: number, h: number): { radii: Radi
 }
 
 export function createEngine(initial: EngineSettings) {
-  let settings = { ...initial };
+  const settings = { enabled: initial.enabled, smoothing: initial.smoothing ?? DEFAULT_SMOOTHING };
   const applied = new Map<HTMLElement, Applied>();
   const seen = new WeakSet<HTMLElement>();
   const queue = new Set<HTMLElement>();
@@ -502,10 +504,6 @@ export function createEngine(initial: EngineSettings) {
     }
   }
 
-  function undoAll() {
-    for (const el of [...applied.keys()]) undo(el);
-  }
-
   function reapplyAll() {
     for (const el of [...applied.keys()]) enqueue(el);
   }
@@ -538,19 +536,6 @@ export function createEngine(initial: EngineSettings) {
       } else {
         disableAll();
       }
-    },
-    destroy() {
-      mo?.disconnect();
-      mo = undefined;
-      document.removeEventListener("transitionend", onTransition, true);
-      document.removeEventListener("animationend", onTransition, true);
-      document.removeEventListener("focusin", onFocusChange, true);
-      document.removeEventListener("focusout", onFocusChange, true);
-      if (rafHandle !== undefined) {
-        cancelAnimationFrame(rafHandle);
-        rafHandle = undefined;
-      }
-      undoAll();
     },
   };
 }

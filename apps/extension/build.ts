@@ -36,25 +36,9 @@ await build({
   silent: true,
 });
 
-// --- Icons: rasterise the on (green) / off (grey) SVGs into square,
-// transparent, centred PNGs. Playwright is a root devDep. ---
-const iconsDir = resolve(dist, "chrome/icons");
-mkdirSync(iconsDir, { recursive: true });
-const { chromium } = await import("playwright");
-const browser = await chromium.launch();
-const page = await browser.newPage();
-for (const variant of ["on", "off"] as const) {
-  // Inline the markup — pages from setContent can't load file:// subresources.
-  const svg = readFileSync(resolve(here, `assets/${variant}.svg`), "utf8");
-  for (const size of [16, 32, 48, 128]) {
-    await page.setViewportSize({ width: size, height: size });
-    await page.setContent(
-      `<style>*{margin:0}svg{width:${size}px;height:${size}px;display:block}</style>${svg}`
-    );
-    await page.screenshot({ path: resolve(iconsDir, `${variant}${size}.png`), omitBackground: true });
-  }
-}
-await browser.close();
+// --- Icons: pre-rasterised from assets/*.svg (see assets/icons/). They only
+// change when the SVGs do — re-rasterise then, not per build. ---
+cpSync(resolve(here, "assets/icons"), resolve(dist, "chrome/icons"), { recursive: true });
 
 // --- Manifest (Chrome MV3) ---
 // host_permissions lets the background read tab.url to derive the hostname;

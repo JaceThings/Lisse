@@ -4,7 +4,7 @@ import { loadSettings, enabledKey } from "./settings.js";
 const host = location.hostname;
 
 loadSettings(host).then((settings) => {
-  const engine = createEngine(settings);
+  const engine = createEngine({ enabled: settings.enabled });
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
