@@ -20,15 +20,7 @@ export function Section({ id, title, description, children }: SectionProps) {
     <section id={id} className="flex w-full scroll-mt-24 flex-col gap-4">
       <div className="flex w-full flex-col gap-3 px-[4px] text-text-primary">
         <h2 className="text-[16px] leading-none font-[550] tracking-[-0.25px]">
-          <a href={`#${id}`} className="group inline-flex items-baseline gap-1.5">
-            <span>{title}</span>
-            <span
-              aria-hidden="true"
-              className="opacity-0 transition-opacity group-hover:opacity-40 group-focus-visible:opacity-40"
-            >
-              #
-            </span>
-          </a>
+          {title}
         </h2>
         <p className="text-[14px] leading-[1.4] font-medium tracking-[-0.25px] text-wrap-pretty">
           {description}
