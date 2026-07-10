@@ -17,8 +17,12 @@
  */
 export function getLayoutSize(el: HTMLElement): { width: number; height: number } {
   const style = window.getComputedStyle(el);
-  const w = parseFloat(style.width);
-  const h = parseFloat(style.height);
+  // Only a px value is a resolved used size. Width/height don't apply to
+  // non-replaced inline elements, so their computed value survives as-is —
+  // parseFloat("100%") would fabricate a 100px box that doesn't exist.
+  const px = (v: string) => (v.endsWith("px") ? parseFloat(v) : NaN);
+  const w = px(style.width);
+  const h = px(style.height);
 
   if (Number.isNaN(w) || Number.isNaN(h)) {
     return { width: el.offsetWidth, height: el.offsetHeight };

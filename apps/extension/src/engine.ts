@@ -18,6 +18,8 @@ export interface EngineSettings {
 
 /** Stop scanning once this many elements are styled — keeps big pages sane. */
 const MAX_STYLED = 1500;
+/** Replaced elements are a single box even at display:inline. */
+const REPLACED_TAGS = new Set(["IMG", "VIDEO", "CANVAS", "IFRAME", "EMBED", "OBJECT"]);
 /** rAF slice: reads+writes for a frame, then yield if work remains. */
 const FRAME_BUDGET_MS = 6;
 /** Elements read/written per read-then-write chunk within a slice. */
@@ -160,6 +162,9 @@ export function createEngine(initial: EngineSettings) {
 
   function planFor(el: HTMLElement): PlanResult | null {
     const cs = getComputedStyle(el);
+    // A non-replaced inline element fragments across line boxes — no single
+    // path describes it, and its computed width/height are unresolved.
+    if (cs.display === "inline" && !REPLACED_TAGS.has(el.tagName)) return null;
     // Border-box floats; clip-path's default reference box is the border box.
     const { width: w, height: h } = getLayoutSize(el);
     if (isNaN(w) || isNaN(h)) return null;
