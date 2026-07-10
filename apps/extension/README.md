@@ -115,6 +115,10 @@ The Userscripts route above covers Safari users without it.
 
 ## Known limitations
 
+- **Native `corner-shape`.** Elements a site smooths itself via CSS
+  `corner-shape` (x.com ships `squircle`) are left untouched — the site has
+  already chosen its geometry, and ours would repaint it differently.
+
 - **Non-uniform borders.** Only a uniform solid border is redrawn. Dashed,
   dotted, double, per-side, or multi-colour borders — and anything outside
   0.5–6px — are skipped entirely (correctness over coverage), so the element
