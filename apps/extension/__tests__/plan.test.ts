@@ -6,7 +6,7 @@ import {
   boxShadowToFilter,
   computeElementPlan,
   pseudoEscapesBox,
-  isOverridableCornerShape,
+  isDefaultCornerShape,
   uniformSolidBorder,
   borderStrokeLayer,
   type PlanInput,
@@ -29,18 +29,17 @@ const noBackground: BackgroundInput = {
   size: "auto",
 };
 
-describe("isOverridableCornerShape", () => {
-  it("overrides the smooth convex family", () => {
-    for (const v of ["round", "squircle", "superellipse(1)", "superellipse(2)", "superellipse(4)",
-      "squircle round superellipse(1.5) squircle"]) {
-      expect(isOverridableCornerShape(v), v).toBe(true);
+describe("isDefaultCornerShape", () => {
+  it("treats round (keyword or superellipse(1)) as default", () => {
+    for (const v of ["round", "superellipse(1)", "round round round round"]) {
+      expect(isDefaultCornerShape(v), v).toBe(true);
     }
   });
 
-  it("leaves decorative and concave shapes alone", () => {
-    for (const v of ["scoop", "bevel", "notch", "square", "superellipse(0.5)", "superellipse(-1)",
-      "superellipse(infinity)", "superellipse(5)", "squircle scoop round round"]) {
-      expect(isOverridableCornerShape(v), v).toBe(false);
+  it("treats every explicit shape as the site's own choice", () => {
+    for (const v of ["squircle", "superellipse(2)", "scoop", "bevel", "notch", "square",
+      "superellipse(0.5)", "superellipse(-1)", "squircle round round round"]) {
+      expect(isDefaultCornerShape(v), v).toBe(false);
     }
   });
 });

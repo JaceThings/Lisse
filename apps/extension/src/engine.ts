@@ -4,7 +4,7 @@ import {
   parseCornerRadius,
   isElliptical,
   pseudoEscapesBox,
-  isOverridableCornerShape,
+  isDefaultCornerShape,
   MIN_RADIUS,
   type Radii,
   type PlanInput,
@@ -176,11 +176,10 @@ export function createEngine(initial: EngineSettings) {
     // A fieldset's legend rides a notch cut into the border (Material-style
     // outlined inputs) — no single path + uniform stroke can represent it.
     if (el.tagName === "FIELDSET" && el.querySelector(":scope > legend")) return null;
-    // Native CSS corner-shape (x.com ships `squircle`): impose ours over the
-    // smooth convex family, but never break decorative intent (scoop, bevel,
-    // notch, square, concave superellipses).
+    // Native CSS corner-shape (x.com ships `squircle`): the site has already
+    // chosen its geometry — smooth or decorative, ours has no business there.
     const cornerShape = cs.getPropertyValue("corner-shape");
-    if (cornerShape && !isOverridableCornerShape(cornerShape)) return null;
+    if (cornerShape && !isDefaultCornerShape(cornerShape)) return null;
     // Border-box floats; clip-path's default reference box is the border box.
     const { width: w, height: h } = getLayoutSize(el);
     if (isNaN(w) || isNaN(h)) return null;

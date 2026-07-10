@@ -86,22 +86,18 @@ export function pseudoEscapesBox(o: PseudoBox, box: { width: number; height: num
 }
 
 /**
- * Whether a computed `corner-shape` is in the smooth convex family we impose
- * our curve over: round/squircle keywords or superellipse(K) with K in [1, 4].
- * Their paint contains our path there, so the clip is sliver-free. Everything
- * else is deliberate design (scoop, bevel, notch, square, concave or
- * near-square superellipses) and must not be broken.
- * ponytail: K > 4 counts as square-intent; widen if a real site disagrees.
+ * Whether a computed `corner-shape` is the default round (keyword or its
+ * superellipse(1) serialisation). Anything else — squircle included — means
+ * the site chose its own corner geometry: overriding a native squircle with
+ * our smoothing visibly fattens the corners (Figma smoothing at 0.6 extends
+ * the curve further than superellipse(2)), and replicating it exactly would
+ * be a no-op. Either way, ours has no business there.
  */
-export function isOverridableCornerShape(shorthand: string): boolean {
-  for (const tok of shorthand.trim().split(/\s+/)) {
-    if (tok === "round" || tok === "squircle") continue;
-    const m = tok.match(/^superellipse\((-?[\d.]+)\)$/);
-    if (!m) return false;
-    const k = parseFloat(m[1]);
-    if (!(k >= 1 && k <= 4)) return false;
-  }
-  return true;
+export function isDefaultCornerShape(shorthand: string): boolean {
+  return shorthand
+    .trim()
+    .split(/\s+/)
+    .every((tok) => tok === "round" || tok === "superellipse(1)");
 }
 
 /** One side's resolved border longhands (computed values). */
