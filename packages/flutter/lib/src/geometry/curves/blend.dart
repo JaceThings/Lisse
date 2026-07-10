@@ -32,7 +32,12 @@ class _Shoulder {
 // s_edge is pre-clamped so p = (1+s_edge)R never exceeds `room`; the budget
 // branches inside getPathParamsForCorner are therefore inert and the result
 // matches the raw figure-11.1 cubic regardless of preserveSmoothing.
-_Shoulder _shoulder(double r, double sEdge, bool preserveSmoothing, double room) {
+_Shoulder _shoulder(
+  double r,
+  double sEdge,
+  bool preserveSmoothing,
+  double room,
+) {
   final CornerPathParams params = getPathParamsForCorner(
     cornerRadius: r,
     cornerSmoothing: sEdge,
@@ -40,7 +45,13 @@ _Shoulder _shoulder(double r, double sEdge, bool preserveSmoothing, double room)
     roundingAndSmoothingBudget: room,
   );
   final double beta = _toRadians(45 * sEdge);
-  return _Shoulder(params.a, params.b, params.p, math.sin(beta), math.cos(beta));
+  return _Shoulder(
+    params.a,
+    params.b,
+    params.p,
+    math.sin(beta),
+    math.cos(beta),
+  );
 }
 
 double _clampEdge(double room, double r, double s) =>
@@ -57,10 +68,18 @@ void drawBlendPath(
   double smoothing,
   bool preserveSmoothing,
 ) {
-  final _Shoulder h =
-      _shoulder(r, _clampEdge(width / 2, r, smoothing), preserveSmoothing, width / 2);
-  final _Shoulder v =
-      _shoulder(r, _clampEdge(height / 2, r, smoothing), preserveSmoothing, height / 2);
+  final _Shoulder h = _shoulder(
+    r,
+    _clampEdge(width / 2, r, smoothing),
+    preserveSmoothing,
+    width / 2,
+  );
+  final _Shoulder v = _shoulder(
+    r,
+    _clampEdge(height / 2, r, smoothing),
+    preserveSmoothing,
+    height / 2,
+  );
 
   // One corner, oriented by unit axes: u points from the corner back along the
   // edge we arrive on, v along the edge we leave on. Horizontal edges use the
@@ -78,7 +97,8 @@ void drawBlendPath(
     final double j2y = oy - uy * r * s2.cos - vy * r * s2.sin;
     final double p0x = cx + ux * s1.p;
     final double p0y = cy + uy * s1.p;
-    final bool arced = math.sqrt((j2x - j1x) * (j2x - j1x) + (j2y - j1y) * (j2y - j1y)) > 1e-6;
+    final bool arced =
+        math.sqrt((j2x - j1x) * (j2x - j1x) + (j2y - j1y) * (j2y - j1y)) > 1e-6;
     final double ex = arced ? j2x : j1x;
     final double ey = arced ? j2y : j1y;
     final double p3x = cx + vx * s2.p;

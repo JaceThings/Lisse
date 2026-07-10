@@ -90,8 +90,8 @@ Map<Corner, NormalizedCorner> distributeAndNormalize({
         final double adjacentCornerBudget = budget[adjacent.corner]!;
         final double sideLength =
             (adjacent.side == 'top' || adjacent.side == 'bottom')
-                ? width
-                : height;
+            ? width
+            : height;
         if (adjacentCornerBudget >= 0) {
           candidate = sideLength - adjacentCornerBudget;
         } else {

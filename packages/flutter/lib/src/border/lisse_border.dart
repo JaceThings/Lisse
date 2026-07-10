@@ -19,10 +19,7 @@ import '../ui_path.dart';
 /// )
 /// ```
 class LisseBorder extends OutlinedBorder {
-  const LisseBorder({
-    required this.corners,
-    super.side = BorderSide.none,
-  });
+  const LisseBorder({required this.corners, super.side = BorderSide.none});
 
   /// Uniform-radius convenience.
   LisseBorder.all({
@@ -31,10 +28,10 @@ class LisseBorder extends OutlinedBorder {
     double smoothing = 0.6,
     super.side = BorderSide.none,
   }) : corners = LisseCorners.all(
-          radius: radius,
-          curve: curve,
-          smoothing: smoothing,
-        );
+         radius: radius,
+         curve: curve,
+         smoothing: smoothing,
+       );
 
   final LisseCorners corners;
 
@@ -67,10 +64,7 @@ class LisseBorder extends OutlinedBorder {
 
   @override
   LisseBorder copyWith({BorderSide? side, LisseCorners? corners}) =>
-      LisseBorder(
-        corners: corners ?? this.corners,
-        side: side ?? this.side,
-      );
+      LisseBorder(corners: corners ?? this.corners, side: side ?? this.side);
 
   @override
   ShapeBorder? lerpFrom(ShapeBorder? a, double t) {

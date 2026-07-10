@@ -21,10 +21,14 @@ bool _rectFinite(Rect r) =>
 
 /// How far [p] sits outside [rect] on either axis (0 when inside).
 double _outside(Offset p, Rect rect) {
-  final double ox =
-      math.max(0.0, math.max(rect.left - p.dx, p.dx - rect.right));
-  final double oy =
-      math.max(0.0, math.max(rect.top - p.dy, p.dy - rect.bottom));
+  final double ox = math.max(
+    0.0,
+    math.max(rect.left - p.dx, p.dx - rect.right),
+  );
+  final double oy = math.max(
+    0.0,
+    math.max(rect.top - p.dy, p.dy - rect.bottom),
+  );
   return math.max(ox, oy);
 }
 
@@ -60,8 +64,11 @@ void main() {
         final List<PathMetric> metrics = path.computeMetrics().toList();
         expect(metrics, isNotEmpty);
         for (final PathMetric m in metrics) {
-          expect(m.isClosed, isTrue,
-              reason: 'case $i w=$w h=$h r=$r curve=${corners.topLeft.curve}');
+          expect(
+            m.isClosed,
+            isTrue,
+            reason: 'case $i w=$w h=$h r=$r curve=${corners.topLeft.curve}',
+          );
         }
       }
     });
@@ -87,11 +94,18 @@ void main() {
         );
         final Path path = lissePath(rect, corners);
         for (final Offset p in _sample(path)) {
-          expect(_finite(p.dx) && _finite(p.dy), isTrue,
-              reason: 'NaN/Inf sample in case $i at $p');
-          expect(_outside(p, rect), lessThanOrEqualTo(_epsilon),
-              reason: 'case $i bulges outside $rect at $p '
-                  'r=$r curve=${corners.topLeft.curve}');
+          expect(
+            _finite(p.dx) && _finite(p.dy),
+            isTrue,
+            reason: 'NaN/Inf sample in case $i at $p',
+          );
+          expect(
+            _outside(p, rect),
+            lessThanOrEqualTo(_epsilon),
+            reason:
+                'case $i bulges outside $rect at $p '
+                'r=$r curve=${corners.topLeft.curve}',
+          );
         }
       }
     });
@@ -115,7 +129,8 @@ void main() {
         // A true rectangle: every sample sits on the perimeter (some edge),
         // never interior to it.
         for (final Offset p in _sample(path)) {
-          final bool onEdge = (p.dx - rect.left).abs() < 1e-3 ||
+          final bool onEdge =
+              (p.dx - rect.left).abs() < 1e-3 ||
               (rect.right - p.dx).abs() < 1e-3 ||
               (p.dy - rect.top).abs() < 1e-3 ||
               (rect.bottom - p.dy).abs() < 1e-3;
@@ -139,8 +154,11 @@ void main() {
       expect(b.right, lessThanOrEqualTo(rect.right + _epsilon));
       expect(b.bottom, lessThanOrEqualTo(rect.bottom + _epsilon));
       for (final Offset p in _sample(path)) {
-        expect(_outside(p, rect), lessThanOrEqualTo(_epsilon),
-            reason: 'oversized curve=$curve sample $p outside $rect');
+        expect(
+          _outside(p, rect),
+          lessThanOrEqualTo(_epsilon),
+          reason: 'oversized curve=$curve sample $p outside $rect',
+        );
       }
     }
   });
@@ -246,33 +264,38 @@ void main() {
         );
         expect(_rectFinite(path.getBounds()), isTrue, reason: 'curve=$curve');
         for (final Offset p in _sample(path)) {
-          expect(_finite(p.dx) && _finite(p.dy), isTrue,
-              reason: 'curve=$curve');
+          expect(
+            _finite(p.dx) && _finite(p.dy),
+            isTrue,
+            reason: 'curve=$curve',
+          );
         }
       }
     });
 
-    test('lissePath yields a finite in-bounds path for non-finite smoothing',
-        () {
-      for (final double sm in <double>[double.infinity, double.nan]) {
-        for (final LisseCurve curve in LisseCurve.values) {
-          late Path path;
-          expect(
-            () => path = lissePath(
-              rect,
-              LisseCorners.all(radius: 30, curve: curve, smoothing: sm),
-            ),
-            returnsNormally,
-            reason: 'curve=$curve smoothing=$sm',
-          );
-          expect(_rectFinite(path.getBounds()), isTrue);
-          for (final Offset p in _sample(path)) {
-            expect(_finite(p.dx) && _finite(p.dy), isTrue);
-            expect(_outside(p, rect), lessThanOrEqualTo(_epsilon));
+    test(
+      'lissePath yields a finite in-bounds path for non-finite smoothing',
+      () {
+        for (final double sm in <double>[double.infinity, double.nan]) {
+          for (final LisseCurve curve in LisseCurve.values) {
+            late Path path;
+            expect(
+              () => path = lissePath(
+                rect,
+                LisseCorners.all(radius: 30, curve: curve, smoothing: sm),
+              ),
+              returnsNormally,
+              reason: 'curve=$curve smoothing=$sm',
+            );
+            expect(_rectFinite(path.getBounds()), isTrue);
+            for (final Offset p in _sample(path)) {
+              expect(_finite(p.dx) && _finite(p.dy), isTrue);
+              expect(_outside(p, rect), lessThanOrEqualTo(_epsilon));
+            }
           }
         }
-      }
-    });
+      },
+    );
 
     test('non-finite exponent yields a finite superellipse path', () {
       for (final double ex in <double>[double.nan, double.infinity]) {
@@ -295,8 +318,9 @@ void main() {
   group('LisseCorners value-type transforms', () {
     test('copyWith replaces only the named corners', () {
       final LisseCorners base = LisseCorners.all(radius: 10);
-      final LisseCorners updated =
-          base.copyWith(topLeft: const LisseCorner(radius: 30));
+      final LisseCorners updated = base.copyWith(
+        topLeft: const LisseCorner(radius: 30),
+      );
       expect(updated.topLeft.radius, 30);
       expect(updated.topRight, base.topRight);
       expect(updated.bottomLeft, base.bottomLeft);

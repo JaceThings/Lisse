@@ -28,8 +28,7 @@ class _UiPathSink implements PathSink {
     double dy2,
     double dx3,
     double dy3,
-  ) =>
-      _path.relativeCubicTo(dx1, dy1, dx2, dy2, dx3, dy3);
+  ) => _path.relativeCubicTo(dx1, dy1, dx2, dy2, dx3, dy3);
 
   @override
   void relativeArcTo(double rx, double ry, double dx, double dy) =>

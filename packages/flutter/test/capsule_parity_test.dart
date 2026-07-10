@@ -54,14 +54,14 @@ double _distToPolyline(Offset p, List<Offset> poly) {
 }
 
 LisseCorner _corner(Map<String, dynamic> j) => LisseCorner(
-      radius: (j['radius'] as num).toDouble(),
-      smoothing: (j['smoothing'] as num).toDouble(),
-    );
+  radius: (j['radius'] as num).toDouble(),
+  smoothing: (j['smoothing'] as num).toDouble(),
+);
 
 void main() {
-  final List<dynamic> fixtures = jsonDecode(
-    File('test/fixtures/capsule_parity.json').readAsStringSync(),
-  ) as List<dynamic>;
+  final List<dynamic> fixtures =
+      jsonDecode(File('test/fixtures/capsule_parity.json').readAsStringSync())
+          as List<dynamic>;
 
   double globalMax = 0;
   String globalWorst = '';
@@ -89,7 +89,10 @@ void main() {
       double worst = 0;
       for (final dynamic pt in f['points'] as List<dynamic>) {
         final List<dynamic> xy = pt as List<dynamic>;
-        final Offset p = Offset((xy[0] as num).toDouble(), (xy[1] as num).toDouble());
+        final Offset p = Offset(
+          (xy[0] as num).toDouble(),
+          (xy[1] as num).toDouble(),
+        );
         worst = math.max(worst, _distToPolyline(p, poly));
       }
       if (worst > globalMax) {
@@ -99,13 +102,18 @@ void main() {
       // Print per-case deviation so the parity margin is visible in the log.
       // ignore: avoid_print
       print('parity $name: max ${worst.toStringAsFixed(5)} px');
-      expect(worst, lessThan(_tol),
-          reason: '$name exceeded $_tol px (max ${worst.toStringAsFixed(5)})');
+      expect(
+        worst,
+        lessThan(_tol),
+        reason: '$name exceeded $_tol px (max ${worst.toStringAsFixed(5)})',
+      );
     });
   }
 
   tearDownAll(() {
     // ignore: avoid_print
-    print('capsule parity worst case: $globalWorst = ${globalMax.toStringAsFixed(5)} px');
+    print(
+      'capsule parity worst case: $globalWorst = ${globalMax.toStringAsFixed(5)} px',
+    );
   });
 }

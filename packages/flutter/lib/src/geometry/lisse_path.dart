@@ -28,11 +28,11 @@ LisseCorner _sanitiseCorner(LisseCorner c) {
 }
 
 LisseCorners _sanitise(LisseCorners c) => LisseCorners(
-      topLeft: _sanitiseCorner(c.topLeft),
-      topRight: _sanitiseCorner(c.topRight),
-      bottomRight: _sanitiseCorner(c.bottomRight),
-      bottomLeft: _sanitiseCorner(c.bottomLeft),
-    );
+  topLeft: _sanitiseCorner(c.topLeft),
+  topRight: _sanitiseCorner(c.topRight),
+  bottomRight: _sanitiseCorner(c.bottomRight),
+  bottomLeft: _sanitiseCorner(c.bottomLeft),
+);
 
 /// Emits a smooth-cornered rectangle outline into [sink]. Pure geometry —
 /// no `dart:ui`. The order mirrors a clockwise traversal starting from the
@@ -82,7 +82,8 @@ void buildLissePath(
         smoothing: config.smoothing,
         exponent: config.exponent,
         preserveSmoothing: config.preserveSmoothing,
-        roundingAndSmoothingBudget: normalized[corner]!.roundingAndSmoothingBudget,
+        roundingAndSmoothingBudget:
+            normalized[corner]!.roundingAndSmoothingBudget,
       ),
     );
   }
@@ -103,7 +104,14 @@ void buildLissePath(
     if (blendR > 0 &&
         shortHalf > blendR + bandEps &&
         shortHalf < (1 + u.smoothing) * blendR - bandEps) {
-      drawBlendPath(sink, width, height, blendR, u.smoothing, u.preserveSmoothing);
+      drawBlendPath(
+        sink,
+        width,
+        height,
+        blendR,
+        u.smoothing,
+        u.preserveSmoothing,
+      );
       return;
     }
   }
@@ -125,18 +133,34 @@ void buildLissePath(
 
   if (horizontal) {
     final bool rightCap = isCap(
-        Corner.topRight, corners.topRight, Corner.bottomRight, corners.bottomRight);
+      Corner.topRight,
+      corners.topRight,
+      Corner.bottomRight,
+      corners.bottomRight,
+    );
     final bool leftCap = isCap(
-        Corner.topLeft, corners.topLeft, Corner.bottomLeft, corners.bottomLeft);
+      Corner.topLeft,
+      corners.topLeft,
+      Corner.bottomLeft,
+      corners.bottomLeft,
+    );
     if (rightCap || leftCap) {
       final double longHalf = width / 2;
       final CapsuleEndParams? cR = rightCap
-          ? capsuleEndParams(capR, corners.topRight.smoothing,
-              corners.topRight.preserveSmoothing, longHalf)
+          ? capsuleEndParams(
+              capR,
+              corners.topRight.smoothing,
+              corners.topRight.preserveSmoothing,
+              longHalf,
+            )
           : null;
       final CapsuleEndParams? cL = leftCap
-          ? capsuleEndParams(capR, corners.topLeft.smoothing,
-              corners.topLeft.preserveSmoothing, longHalf)
+          ? capsuleEndParams(
+              capR,
+              corners.topLeft.smoothing,
+              corners.topLeft.preserveSmoothing,
+              longHalf,
+            )
           : null;
 
       sink.moveTo(cL != null ? cL.p : tl().p, 0);
@@ -165,18 +189,34 @@ void buildLissePath(
     }
   } else {
     final bool topCap = isCap(
-        Corner.topLeft, corners.topLeft, Corner.topRight, corners.topRight);
-    final bool bottomCap = isCap(Corner.bottomLeft, corners.bottomLeft,
-        Corner.bottomRight, corners.bottomRight);
+      Corner.topLeft,
+      corners.topLeft,
+      Corner.topRight,
+      corners.topRight,
+    );
+    final bool bottomCap = isCap(
+      Corner.bottomLeft,
+      corners.bottomLeft,
+      Corner.bottomRight,
+      corners.bottomRight,
+    );
     if (topCap || bottomCap) {
       final double longHalf = height / 2;
       final CapsuleEndParams? cT = topCap
-          ? capsuleEndParams(capR, corners.topLeft.smoothing,
-              corners.topLeft.preserveSmoothing, longHalf)
+          ? capsuleEndParams(
+              capR,
+              corners.topLeft.smoothing,
+              corners.topLeft.preserveSmoothing,
+              longHalf,
+            )
           : null;
       final CapsuleEndParams? cB = bottomCap
-          ? capsuleEndParams(capR, corners.bottomLeft.smoothing,
-              corners.bottomLeft.preserveSmoothing, longHalf)
+          ? capsuleEndParams(
+              capR,
+              corners.bottomLeft.smoothing,
+              corners.bottomLeft.preserveSmoothing,
+              longHalf,
+            )
           : null;
 
       if (cT != null) {
@@ -229,7 +269,11 @@ void buildLissePath(
 bool _isUniformSquircle(LisseCorners c) {
   final LisseCorner u = c.topLeft;
   if (u.curve != LisseCurve.squircle) return false;
-  for (final LisseCorner o in <LisseCorner>[c.topRight, c.bottomRight, c.bottomLeft]) {
+  for (final LisseCorner o in <LisseCorner>[
+    c.topRight,
+    c.bottomRight,
+    c.bottomLeft,
+  ]) {
     if (o.curve != LisseCurve.squircle ||
         o.radius != u.radius ||
         o.smoothing != u.smoothing ||

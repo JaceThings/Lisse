@@ -22,10 +22,12 @@ CornerOutput buildClothoid(CurveBuilderInput input) {
   // κ(s) = A·s with A = 1/(R·L), so κ(L) = 1/R.
   final double a = l > 0 ? 1 / (r * l) : 0;
 
-  final ClothoidPoint end =
-      l > 0 ? integrateClothoid(0, 0, a, l) : const ClothoidPoint(0, 0, 0);
-  final ClothoidPoint mid =
-      l > 0 ? integrateClothoid(0, 0, a, l / 2) : const ClothoidPoint(0, 0, 0);
+  final ClothoidPoint end = l > 0
+      ? integrateClothoid(0, 0, a, l)
+      : const ClothoidPoint(0, 0, 0);
+  final ClothoidPoint mid = l > 0
+      ? integrateClothoid(0, 0, a, l / 2)
+      : const ClothoidPoint(0, 0, 0);
   final double xC = end.x, yC = end.y;
   final double xMid = mid.x, yMid = mid.y;
 
