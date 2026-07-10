@@ -101,13 +101,15 @@ class LisseCorners {
     double smoothing = kDefaultSmoothing,
     double exponent = kDefaultExponent,
     bool preserveSmoothing = kDefaultPreserveSmoothing,
-  }) : this.uniform(LisseCorner(
-          radius: radius,
-          curve: curve,
-          smoothing: smoothing,
-          exponent: exponent,
-          preserveSmoothing: preserveSmoothing,
-        ));
+  }) : this.uniform(
+          LisseCorner(
+            radius: radius,
+            curve: curve,
+            smoothing: smoothing,
+            exponent: exponent,
+            preserveSmoothing: preserveSmoothing,
+          ),
+        );
 
   /// Per-corner; any corner left null is a sharp (radius 0) corner.
   LisseCorners.only({

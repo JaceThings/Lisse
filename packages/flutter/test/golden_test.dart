@@ -82,11 +82,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _surface(
-        Center(child: box),
-        width: 200,
-        height: 200,
-      ),
+      _surface(Center(child: box), width: 200, height: 200),
     );
     await expectLater(
       find.byType(SmoothBox),

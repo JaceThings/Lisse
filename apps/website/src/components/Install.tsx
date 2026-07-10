@@ -74,7 +74,12 @@ export function Install({ staggerFrom }: InstallProps) {
     : "";
 
   return (
-    <section className="flex w-full flex-col gap-5" aria-labelledby="install-heading">
+    <section
+      className="flex w-full flex-col gap-5"
+      aria-labelledby="install-heading"
+      // Copy-to-clipboard command rows, not prose — no selection marker.
+      data-highlight-exclude
+    >
       <h2 id="install-heading" className="sr-only">
         {m.install_heading()}
       </h2>

@@ -12,8 +12,10 @@ import '../orient.dart';
 /// each using the midpoint-match scheme (endpoint position + tangent, plus
 /// the parameter midpoint).
 CornerOutput buildSuperellipse(CurveBuilderInput input) {
-  final double p =
-      math.min(input.cornerRadius, input.roundingAndSmoothingBudget);
+  final double p = math.min(
+    input.cornerRadius,
+    input.roundingAndSmoothingBudget,
+  );
   if (p <= 0) return emptyCornerOutput;
 
   // n = 2 is a quarter-circle; n < 2 bulges concave; non-finite ⇒ NaN

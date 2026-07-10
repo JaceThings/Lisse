@@ -54,12 +54,16 @@ void main() {
         // and the exact tangency endpoints, keeping interior corner samples.
         final List<Offset> corner = pts
             .where(
-                (Offset p) => p.dx > s - r && p.dx < s && p.dy > 0 && p.dy < r)
+              (Offset p) => p.dx > s - r && p.dx < s && p.dy > 0 && p.dy < r,
+            )
             .toList();
 
         // Guard: the filter must actually capture the corner before asserting.
-        expect(corner.length, greaterThan(20),
-            reason: 'TR corner region produced too few samples');
+        expect(
+          corner.length,
+          greaterThan(20),
+          reason: 'TR corner region produced too few samples',
+        );
 
         // Standard Lamé form for this corner. Inward depth from the right
         // edge is (S - x); from the top edge it is y. With the sharp vertex
@@ -74,8 +78,11 @@ void main() {
           maxErr = math.max(maxErr, (f - 1).abs());
         }
 
-        expect(maxErr, lessThan(tolFor(n)),
-            reason: 'n=$n max|f-1|=$maxErr exceeded tolerance ${tolFor(n)}');
+        expect(
+          maxErr,
+          lessThan(tolFor(n)),
+          reason: 'n=$n max|f-1|=$maxErr exceeded tolerance ${tolFor(n)}',
+        );
       });
     }
   });
@@ -171,11 +178,17 @@ void main() {
 
         final List<double> a = coords(clothoidD);
         final List<double> b = coords(arcD);
-        expect(a.length, b.length,
-            reason: 'point counts differ:\n$clothoidD\n$arcD');
+        expect(
+          a.length,
+          b.length,
+          reason: 'point counts differ:\n$clothoidD\n$arcD',
+        );
         for (int k = 0; k < a.length; k++) {
-          expect((a[k] - b[k]).abs(), lessThan(0.5),
-              reason: 'coord $k differs: ${a[k]} vs ${b[k]}');
+          expect(
+            (a[k] - b[k]).abs(),
+            lessThan(0.5),
+            reason: 'coord $k differs: ${a[k]} vs ${b[k]}',
+          );
         }
       });
     }

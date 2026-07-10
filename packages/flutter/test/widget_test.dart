@@ -22,8 +22,9 @@ void main() {
       expect(find.text('hello lisse'), findsOneWidget);
     });
 
-    testWidgets('paints the full effect set without throwing',
-        (WidgetTester tester) async {
+    testWidgets('paints the full effect set without throwing', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Center(
@@ -36,17 +37,19 @@ void main() {
               ),
               shadows: const <BoxShadow>[
                 BoxShadow(
-                    color: Color(0x55000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 6)),
+                  color: Color(0x55000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
+                ),
                 BoxShadow(color: Color(0x33FF0000), blurRadius: 4),
               ],
               innerShadows: const <LisseInnerShadow>[
                 LisseInnerShadow(
-                    color: Color(0x66000000),
-                    blur: 8,
-                    spread: 2,
-                    offset: Offset(0, 2)),
+                  color: Color(0x66000000),
+                  blur: 8,
+                  spread: 2,
+                  offset: Offset(0, 2),
+                ),
               ],
               side: const BorderSide(color: Color(0xFF000000), width: 1),
               padding: const EdgeInsets.all(8),
@@ -55,25 +58,30 @@ void main() {
                 LisseBorderLayer(
                   width: 3,
                   gradient: LinearGradient(
-                      colors: <Color>[Color(0xFF00E5FF), Color(0xFF1DE9B6)]),
+                    colors: <Color>[Color(0xFF00E5FF), Color(0xFF1DE9B6)],
+                  ),
                   style: LisseBorderStyle.dashed,
                 ),
                 LisseBorderLayer(
-                    width: 4,
-                    color: Color(0xFF9E9E9E),
-                    style: LisseBorderStyle.doubleLine),
+                  width: 4,
+                  color: Color(0xFF9E9E9E),
+                  style: LisseBorderStyle.doubleLine,
+                ),
                 LisseBorderLayer(
-                    width: 4,
-                    color: Color(0xFF607D8B),
-                    style: LisseBorderStyle.groove),
+                  width: 4,
+                  color: Color(0xFF607D8B),
+                  style: LisseBorderStyle.groove,
+                ),
                 LisseBorderLayer(
-                    width: 4,
-                    color: Color(0xFF607D8B),
-                    style: LisseBorderStyle.ridge),
+                  width: 4,
+                  color: Color(0xFF607D8B),
+                  style: LisseBorderStyle.ridge,
+                ),
                 LisseBorderLayer(
-                    width: 2,
-                    color: Color(0xFF212121),
-                    style: LisseBorderStyle.dotted),
+                  width: 2,
+                  color: Color(0xFF212121),
+                  style: LisseBorderStyle.dotted,
+                ),
               ],
               child: const Text('full set'),
             ),
@@ -86,8 +94,9 @@ void main() {
       expect(find.text('full set'), findsOneWidget);
     });
 
-    testWidgets('renders with Clip.none (unclipped) without throwing',
-        (WidgetTester tester) async {
+    testWidgets('renders with Clip.none (unclipped) without throwing', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: SmoothBox(
@@ -110,7 +119,8 @@ void main() {
           corners: corners,
           color: const Color(0xFF000000),
           gradient: const LinearGradient(
-              colors: <Color>[Color(0xFF000000), Color(0xFFFFFFFF)]),
+            colors: <Color>[Color(0xFF000000), Color(0xFFFFFFFF)],
+          ),
         ),
         throwsAssertionError,
       );
@@ -118,8 +128,9 @@ void main() {
   });
 
   group('SmoothClip', () {
-    testWidgets('clips a child and mounts without exception',
-        (WidgetTester tester) async {
+    testWidgets('clips a child and mounts without exception', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Center(
@@ -144,8 +155,9 @@ void main() {
 
   group('LisseBorderStyle', () {
     for (final LisseBorderStyle style in LisseBorderStyle.values) {
-      testWidgets('renders $style border without throwing',
-          (WidgetTester tester) async {
+      testWidgets('renders $style border without throwing', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Center(
@@ -156,7 +168,10 @@ void main() {
                 color: const Color(0xFFFFFFFF),
                 borders: <LisseBorderLayer>[
                   LisseBorderLayer(
-                      width: 4, color: const Color(0xFF3F51B5), style: style),
+                    width: 4,
+                    color: const Color(0xFF3F51B5),
+                    style: style,
+                  ),
                 ],
               ),
             ),

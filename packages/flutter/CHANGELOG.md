@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+- Smooth capsules: full-radius pills and circles now render as true smoothed
+  capsules — the Figma shoulder on the flat-edge side only, so the cap midline
+  stays circular — with a continuous rectangle→capsule blend near the
+  threshold (no pop while resizing across it). Matches `@lisse/core` 0.5.0.
+
 ## 0.1.1
 
 - Shorten the package description to pub.dev's 180-character limit (no code

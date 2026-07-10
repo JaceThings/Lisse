@@ -10,8 +10,10 @@ import '../orient.dart';
 /// Ignores `smoothing` and `exponent`. `p` is clamped to the budget so the
 /// adjacent straight `L` segments can't overlap.
 CornerOutput buildArc(CurveBuilderInput input) {
-  final double p =
-      math.min(input.cornerRadius, input.roundingAndSmoothingBudget);
+  final double p = math.min(
+    input.cornerRadius,
+    input.roundingAndSmoothingBudget,
+  );
   if (p <= 0) return emptyCornerOutput;
   return CornerOutput(p, (sink, orient) {
     final double dx = transformX(p, p, orient);
