@@ -63,7 +63,7 @@ const manifest: Record<string, unknown> = {
   manifest_version: 3,
   name: "Lisse",
   version: "0.1.0",
-  description: "Smooth (squircle) corners on every rounded element, on any site.",
+  description: "Gives every website the smooth corners you see on iOS. Same radius the site chose, just a nicer curve. Capsules included.",
   permissions: ["storage"],
   host_permissions: ["<all_urls>"],
   action: {
