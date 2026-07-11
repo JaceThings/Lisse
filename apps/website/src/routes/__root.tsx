@@ -145,19 +145,6 @@ function DevAgentation() {
   return Toolbar ? <Toolbar /> : null;
 }
 
-// Dev-only live tuner for the selection-highlighter marker. Dynamic-imported so
-// its UI never lands in the production bundle.
-function DevHighlightTuner() {
-  const [Tuner, setTuner] = useState<ComponentType | null>(null);
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    import("../components/SelectionHighlightTuner.tsx")
-      .then((m) => setTuner(() => m.SelectionHighlightTuner))
-      .catch(() => {});
-  }, []);
-  return Tuner ? <Tuner /> : null;
-}
-
 // Body renders via an explicit pathname -> component map, NOT <Outlet/>.
 // <Outlet/> subscribes to a LIVE router store, so AnimatePresence's exiting
 // element would re-render to the DESTINATION route and the old page would
@@ -245,7 +232,6 @@ function RootComponent() {
           <SelectionHighlight />
           <LanguageToast />
           <DevAgentation />
-          <DevHighlightTuner />
         </MotionConfig>
         <Scripts />
       </body>
