@@ -213,6 +213,13 @@ export function createEngine(initial: EngineSettings) {
       size: cs.backgroundSize,
     };
 
+    const bgColor = parseColor(cs.backgroundColor);
+    const paintsNothing =
+      (!bgColor || bgColor.opacity === 0) &&
+      (siteBg.image === "none" || siteBg.image === "") &&
+      cs.boxShadow === "none" &&
+      cs.overflowX === "visible" && cs.overflowY === "visible";
+
     const input: PlanInput = {
       width: w,
       height: h,
@@ -221,6 +228,7 @@ export function createEngine(initial: EngineSettings) {
       border: readBorder(cs, siteBorderColors),
       hasBorderImage: cs.borderImageSource !== "none" && cs.borderImageSource !== "",
       background: siteBg,
+      paintsNothing,
       hasOutline: visibleOutline(cs),
       pseudoOutside: pseudoOutside(el, w, h),
       childOutside: childrenEscapeBox(el, cs),

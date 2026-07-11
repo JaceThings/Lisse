@@ -179,6 +179,7 @@ const base: PlanInput = {
   border: noBorder,
   hasBorderImage: false,
   background: noBackground,
+  paintsNothing: false,
   hasOutline: false,
   pseudoOutside: false,
   childOutside: false,
@@ -193,6 +194,18 @@ describe("computeElementPlan", () => {
       action: "skip",
       reason: "pseudo-outside",
     });
+  });
+
+  it("skips paint-less containers whose radius is visually inert (X poll wrappers)", () => {
+    expect(computeElementPlan({ ...base, paintsNothing: true })).toEqual({
+      action: "skip",
+      reason: "paints-nothing",
+    });
+  });
+
+  it("still clips a paint-less box when a border makes the radius visible", () => {
+    const plan = computeElementPlan({ ...base, paintsNothing: true, border: uniform(1) });
+    expect(plan.action).toBe("apply");
   });
 
   it("skips while a visible outline is present (focus rings paint outside the clip)", () => {

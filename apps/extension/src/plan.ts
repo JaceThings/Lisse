@@ -138,6 +138,8 @@ export interface PlanInput {
   hasBorderImage: boolean;
   /** Site-original background longhands the border layer prepends onto. */
   background: BackgroundInput;
+  /** No fill, image, or shadow, and children unclipped (overflow visible). */
+  paintsNothing: boolean;
   /** A visible outline (focus ring) paints outside the box → clip kills it. */
   hasOutline: boolean;
   /** A ::before/::after escapes the box → clipping would amputate it. */
@@ -264,6 +266,13 @@ export function computeElementPlan(input: PlanInput): Plan {
     return { action: "skip", reason: "too-small" };
   }
   if (input.hasBorderImage) return { action: "skip", reason: "border-image" };
+  // On an element that paints nothing and doesn't clip its children,
+  // border-radius is visually inert — clipping would manufacture rounding the
+  // site never showed (X poll cards: a radius-16 wrapper with no fill or
+  // border, whose clip shaved the corners off the poll rows inside).
+  if (input.paintsNothing && !hasVisibleBorder(input.border)) {
+    return { action: "skip", reason: "paints-nothing" };
+  }
   // Focus rings are outlines; clipping them away is an accessibility bug.
   if (input.hasOutline) return { action: "skip", reason: "outline" };
   if (input.pseudoOutside) return { action: "skip", reason: "pseudo-outside" };
