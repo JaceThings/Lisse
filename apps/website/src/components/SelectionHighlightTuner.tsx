@@ -36,6 +36,7 @@ function getPath(obj: any, path: string): unknown {
 }
 function setPath(obj: SelectionHighlightOptions, path: string, value: number): SelectionHighlightOptions {
   const keys = path.split(".");
+  if (keys.some((k) => k === "__proto__" || k === "constructor" || k === "prototype")) return obj;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const next: any = { ...obj };
   let cur = next;
