@@ -25,6 +25,7 @@ export const Route = createFileRoute("/chrome")({
       { property: "og:image:height", content: "800" },
       { property: "og:image:type", content: "image/png" },
       { property: "og:image:alt", content: TITLE },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
       { name: "twitter:image", content: OG_IMAGE },
