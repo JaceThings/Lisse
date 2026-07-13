@@ -63,6 +63,12 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@25.2.2)(@vitest/browser@3.2.4)(happy-dom@20.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
+  apps/extension:
+    dependencies:
+      '@lisse/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   apps/website:
     dependencies:
       '@fontsource-variable/inter':

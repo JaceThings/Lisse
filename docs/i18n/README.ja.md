@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Lisse" width="128" />
+<img src="../../assets/logo.png" alt="Lisse" width="128" />
 
 <h1>Lisse</h1>
 
@@ -9,12 +9,12 @@ React、Vue、Svelte 向けのなめらかな角の SVG プリミティブ。
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![bundle](https://img.shields.io/bundlephobia/minzip/%40lisse%2Fcore?label=bundle)](https://bundlephobia.com/package/@lisse/core)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
 **[Live demo →](https://corne.rs)**
 
-[English](./README.md) · **日本語** · [한국어](./README.ko.md) · [Deutsch](./README.de.md)
+[English](../../README.md) · **日本語** · [한국어](./README.ko.md) · [Deutsch](./README.de.md)
 
 </div>
 
@@ -53,7 +53,7 @@ Vue、Svelte、またはフレームワーク非依存のコアについては�
 | `superellipse` | `\|x/R\|^n + \|y/R\|^n = 1`。`n > 2` でエッジを伴う G2。 |
 | `clothoid` | 直線エッジから中央の円弧への Euler 螺旋ブレンド。どこでも G2。 |
 
-数学リファレンス: [`docs/curves.md`](docs/curves.md)。
+数学リファレンス: [`docs/curves.md`](../curves.md)。
 
 ## パッケージ
 
@@ -70,30 +70,30 @@ Vue、Svelte、またはフレームワーク非依存のコアについては�
 - スタイルのバリエーション（solid、dashed、dotted、double、groove、ridge）を備えた内側 / 外側 / 中央のボーダー
 - ドロップシャドウと内側シャドウ、API 経由のグラデーションボーダー
 - 自動エフェクト: マウント時に CSS の `border` と `box-shadow` を SVG 相当に変換
-- `generatePath()` 呼び出しあたり約 1.5 µs。500 個の角を 1 ms 未満で再計算（[詳細](docs/performance.md)）
+- `generatePath()` 呼び出しあたり約 1.5 µs。500 個の角を 1 ms 未満で再計算（[詳細](../performance.md)）
 - ランタイム依存ゼロ。ESM + CJS のデュアルエクスポート。SSR セーフな `/path` サブパス
 
 ## ドキュメント
 
-- [API リファレンス](docs/api.md): 完全なエクスポート表
-- [移行](MIGRATION.md): バージョン間のアップグレード
-- [SSR](docs/ssr.md): サーバーサイドレンダリングとエッジランタイム
-- [曲線](docs/curves.md): 各曲線の種類の数学リファレンス
-- [ブラウザサポート](docs/browser-support.md): 互換性マトリクス
-- [スタイリングフック](docs/styling.md): `data-slot` / `data-state` 属性
-- [エフェクト](docs/effects.md): ボーダー、シャドウ、グラデーション、自動エフェクト
-- [パフォーマンス](docs/performance.md): ベンチマークとキャッシュアーキテクチャ
-- [内部構造](docs/internals.md): ボーダー、シャドウ、リサイズ処理の仕組み
-- [注意点](docs/gotchas.md): フォーカスのアウトライン、オーバーフロー、スクロールバーなど `clip-path` の癖
-- [設定](docs/configuration.md): 角ごとの設定、使用すべき API、フレームワークでの利用
+- [API リファレンス](../api.md): 完全なエクスポート表
+- [移行](../MIGRATION.md): バージョン間のアップグレード
+- [SSR](../ssr.md): サーバーサイドレンダリングとエッジランタイム
+- [曲線](../curves.md): 各曲線の種類の数学リファレンス
+- [ブラウザサポート](../browser-support.md): 互換性マトリクス
+- [スタイリングフック](../styling.md): `data-slot` / `data-state` 属性
+- [エフェクト](../effects.md): ボーダー、シャドウ、グラデーション、自動エフェクト
+- [パフォーマンス](../performance.md): ベンチマークとキャッシュアーキテクチャ
+- [内部構造](../internals.md): ボーダー、シャドウ、リサイズ処理の仕組み
+- [注意点](../gotchas.md): フォーカスのアウトライン、オーバーフロー、スクロールバーなど `clip-path` の癖
+- [設定](../configuration.md): 角ごとの設定、使用すべき API、フレームワークでの利用
 
 ## コントリビュート
 
-Issue と PR を歓迎します。コントリビューター向けドキュメント（リリースプロセス、テスト戦略、ベンチマーク）は [`docs/`](./docs/) にあります。
+Issue と PR を歓迎します。コントリビューター向けドキュメント（リリースプロセス、テスト戦略、ベンチマーク）は [`docs/`](../) にあります。
 
 ## ライセンス
 
-[MIT](./LICENSE)
+[MIT](../../LICENSE)
 
 ---
 

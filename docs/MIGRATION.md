@@ -55,4 +55,4 @@ Per-corner mixing works:
 
 Drop shadows, inner shadows, and borders track the requested curve — no per-effect changes required.
 
-See [`docs/curves.md`](./docs/curves.md) for the math reference.
+See [`docs/curves.md`](./curves.md) for the math reference.

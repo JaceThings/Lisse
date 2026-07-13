@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": [],
+    "paths": {
+      "@lisse/core": ["../../packages/core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
