@@ -170,6 +170,8 @@ export type Plan =
   | { action: "apply"; clipPath: string; filter?: string; border?: BorderLayer };
 
 function hexToRgba(hex: string, opacity: number): string {
+  // Wide-gamut colors come through raw (alpha embedded) — valid CSS as-is.
+  if (!hex.startsWith("#")) return hex;
   const n = parseInt(hex.slice(1), 16);
   const r = (n >> 16) & 255;
   const g = (n >> 8) & 255;

@@ -123,6 +123,19 @@ describe("boxShadowToFilter", () => {
   it("skips spread-only rings (avatar borders) — no drop-shadow equivalent", () => {
     expect(boxShadowToFilter("rgba(255, 255, 255, 0.15) 0px 0px 0px 1px")).toBe("skip");
   });
+
+  it("skips oklch spread-only rings (Cloudflare input borders)", () => {
+    expect(
+      boxShadowToFilter(
+        "rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.32 0 0) 0px 0px 0px 1px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+      ),
+    ).toBe("skip");
+  });
+
+  it("passes wide-gamut colors through to drop-shadow raw", () => {
+    const out = boxShadowToFilter("oklch(0.32 0 0 / 0.5) 0px 2px 4px 0px");
+    expect(out).toBe("drop-shadow(0px 2px 4px oklch(0.32 0 0 / 0.5))");
+  });
 });
 
 describe("uniformSolidBorder", () => {

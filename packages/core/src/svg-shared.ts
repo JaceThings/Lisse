@@ -15,8 +15,13 @@ function expandHex(hex: string): string {
   return "#" + h;
 }
 
-/** Convert a hex color (3 or 6 digit) to an `rgb(...)` CSS string. */
+/**
+ * Convert a hex color (3 or 6 digit) to an `rgb(...)` CSS string.
+ * Non-hex input (oklch, lab, color()…) is already a valid CSS color —
+ * passed through untouched.
+ */
 export function hexToRgb(hex: string): string {
+  if (!/^#?[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(hex)) return hex;
   const h = expandHex(hex).replace("#", "");
   return `rgb(${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)})`;
 }

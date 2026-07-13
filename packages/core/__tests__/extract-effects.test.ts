@@ -191,6 +191,22 @@ describe("parseBoxShadow", () => {
     expect(result.innerShadow![0].opacity).toBe(0.8);
   });
 
+  it("keeps wide-gamut colors raw instead of dropping the layer", () => {
+    const result = parseBoxShadow("oklch(0.32 0 0) 0px 0px 0px 1px");
+    expect(result.shadow).toEqual([{
+      offsetX: 0,
+      offsetY: 0,
+      blur: 0,
+      spread: 1,
+      color: "oklch(0.32 0 0)",
+      opacity: 1,
+    }]);
+  });
+
+  it("drops wide-gamut layers with zero alpha", () => {
+    expect(parseBoxShadow("oklch(0.32 0 0 / 0) 0px 0px 4px 0px")).toEqual({});
+  });
+
   it("returns all outer and all inset shadows from multiple shadows", () => {
     const result = parseBoxShadow(
       "rgb(255, 0, 0) 1px 2px 3px 0px, rgb(0, 255, 0) 4px 5px 6px 0px, rgba(0, 0, 255, 0.5) 7px 8px 9px 0px inset, rgba(128, 128, 128, 0.3) 10px 11px 12px 0px inset",
