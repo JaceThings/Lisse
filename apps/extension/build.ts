@@ -7,6 +7,9 @@ import { dirname, resolve } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../..");
 const dist = resolve(here, "dist");
+
+// Single source of truth for the version: package.json. Bump it there.
+const { version } = JSON.parse(readFileSync(resolve(here, "package.json"), "utf8")) as { version: string };
 const coreDist = resolve(repoRoot, "packages/core/dist/index.js");
 
 // tsup bundles @lisse/core from its built output; build it if missing.
@@ -46,7 +49,7 @@ cpSync(resolve(here, "assets/icons"), resolve(dist, "chrome/icons"), { recursive
 const manifest: Record<string, unknown> = {
   manifest_version: 3,
   name: "Lisse",
-  version: "0.1.0",
+  version,
   description: "Gives every website the smooth corners you see on iOS. Same radius the site chose, just a nicer curve. Capsules included.",
   permissions: ["storage"],
   host_permissions: ["<all_urls>"],
@@ -103,7 +106,7 @@ for (const target of ["chrome", "firefox"] as const) {
 const banner = `// ==UserScript==
 // @name         Lisse
 // @namespace    https://corne.rs
-// @version      0.1.0
+// @version      ${version}
 // @description  Smooth (squircle) corners on every rounded element, on any site.
 // @match        *://*/*
 // @run-at       document-start
