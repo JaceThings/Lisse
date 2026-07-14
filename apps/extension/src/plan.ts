@@ -151,6 +151,17 @@ export interface PlanInput {
   /** Existing computed `filter` to preserve (drop-shadows prepend to it). */
   existingFilter: string;
   smoothing: number;
+  /**
+   * Border-box position in page coordinates and the devicePixelRatio — used
+   * to pixel-snap the redrawn border. Browsers snap native box decorations
+   * to device pixels at paint time; an SVG background gets no such snapping,
+   * so at fractional positions/sizes a 1px stroke straddles two device
+   * pixels at half coverage (visibly dim at dpr 1). Optional: without them
+   * the stroke is drawn unsnapped.
+   */
+  pageLeft?: number;
+  pageTop?: number;
+  dpr?: number;
 }
 
 /**
@@ -223,17 +234,73 @@ function hasVisibleBorder(b: BorderInput): boolean {
   return [b.top, b.right, b.bottom, b.left].some((s) => s.width > EPS);
 }
 
+/** Where the border stroke lands inside the box, in CSS px. */
+export interface StrokeGeometry {
+  /** Inset of each edge's stroke band from the box edge. */
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  /** Snapped stroke width. */
+  strokeWidth: number;
+}
+
+/**
+ * Pixel-snap the border stroke. Browsers snap native box decorations to the
+ * device-pixel grid at paint time; an SVG background image is sampled
+ * smoothly instead, so at fractional page positions/sizes a 1px stroke
+ * straddles two device pixels at ~half coverage — visibly dim at dpr 1
+ * (fainter bottom border on 40.5px-tall inputs). Each edge's band shifts
+ * inward by < 1 device px onto the grid, exactly like a native border.
+ */
+export function snapStroke(
+  width: number,
+  height: number,
+  borderWidth: number,
+  pageLeft?: number,
+  pageTop?: number,
+  dpr?: number,
+): StrokeGeometry {
+  if (pageLeft === undefined || pageTop === undefined || !dpr) {
+    return { left: 0, top: 0, right: 0, bottom: 0, strokeWidth: borderWidth };
+  }
+  // Native behaviour: used border widths round to whole device px, min 1.
+  const strokeWidth = Math.max(1, Math.round(borderWidth * dpr)) / dpr;
+  const EPS_SNAP = 1e-4;
+  // Near edges snap inward-up, far edges inward-down: bands stay inside the
+  // background paint area (anything outside it would be cropped, not dim).
+  const near = (p: number) => Math.ceil(p * dpr - EPS_SNAP) / dpr - p;
+  const far = (p: number) => p - Math.floor(p * dpr + EPS_SNAP) / dpr;
+  const geom = {
+    left: near(pageLeft),
+    top: near(pageTop),
+    right: far(pageLeft + width),
+    bottom: far(pageTop + height),
+    strokeWidth,
+  };
+  // Degenerate box — draw unsnapped rather than inverted.
+  if (width - geom.left - geom.right <= strokeWidth ||
+      height - geom.top - geom.bottom <= strokeWidth) {
+    return { left: 0, top: 0, right: 0, bottom: 0, strokeWidth: borderWidth };
+  }
+  return geom;
+}
+
 /**
  * Redraw a uniform border as a background layer: a stroked SVG of the smooth
- * path at `stroke-width = 2 × width`. The clip-path removes the outer half,
- * leaving a correct-width inner stroke. Our layer is prepended (painted on top)
- * to the element's existing background layers, keeping each longhand a matching
- * comma-list so the pre-existing layers retain their own values.
+ * path, drawn fully inside the box (centerline inset by half the stroke) so
+ * no part of it depends on raster-boundary clipping. `d` is the centerline
+ * path for the inner box; `x`/`y` translate it into place. Our layer is
+ * prepended (painted on top) to the element's existing background layers,
+ * keeping each longhand a matching comma-list so the pre-existing layers
+ * retain their own values.
  */
 export function borderStrokeLayer(
   d: string,
   width: number,
   height: number,
+  x: number,
+  y: number,
   strokeWidth: number,
   color: string,
   bg: BackgroundInput,
@@ -241,7 +308,8 @@ export function borderStrokeLayer(
   const svg =
     `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' ` +
     `viewBox='0 0 ${width} ${height}' preserveAspectRatio='none'>` +
-    `<path d='${d}' fill='none' stroke='${color}' stroke-width='${strokeWidth * 2}'/></svg>`;
+    `<g transform='translate(${x} ${y})'>` +
+    `<path d='${d}' fill='none' stroke='${color}' stroke-width='${strokeWidth}'/></g></svg>`;
   const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   const empty = bg.image === "none" || bg.image === "";
   const layer = (ours: string, existing: string) => (empty ? ours : `${ours}, ${existing}`);
@@ -309,7 +377,22 @@ export function computeElementPlan(input: PlanInput): Plan {
   const plan: Plan = { action: "apply", clipPath };
   if (filter) plan.filter = filter;
   if (border) {
-    plan.border = borderStrokeLayer(d, input.width, input.height, border.width, border.color, input.background);
+    const g = snapStroke(
+      input.width, input.height, border.width,
+      input.pageLeft, input.pageTop, input.dpr,
+    );
+    const half = g.strokeWidth / 2;
+    const rc = (r: number) => ({ radius: Math.max(0, r - half), smoothing });
+    const dInner = generatePath(
+      input.width - g.left - g.right - g.strokeWidth,
+      input.height - g.top - g.bottom - g.strokeWidth,
+      { topLeft: rc(tl), topRight: rc(tr), bottomRight: rc(br), bottomLeft: rc(bl) },
+    );
+    plan.border = borderStrokeLayer(
+      dInner, input.width, input.height,
+      g.left + half, g.top + half, g.strokeWidth,
+      border.color, input.background,
+    );
   }
   return plan;
 }
