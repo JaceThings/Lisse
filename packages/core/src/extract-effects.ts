@@ -91,10 +91,27 @@ export function parseBoxShadow(raw: string): {
     const isInset = part.includes("inset");
     const cleaned = part.replace("inset", "").trim();
 
-    const colorMatch = cleaned.match(/rgba?\([^)]+\)/);
+    const colorMatch = cleaned.match(
+      /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]+\)/,
+    );
     if (!colorMatch) continue;
-    const color = parseColor(colorMatch[0]);
-    if (!color || color.opacity <= 0) continue;
+    const parsed = parseColor(colorMatch[0]);
+    let color: string;
+    let opacity: number;
+    if (parsed) {
+      if (parsed.opacity <= 0) continue;
+      color = parsed.hex;
+      opacity = parsed.opacity;
+    } else {
+      // Wide-gamut color (oklch, lab, color()…): keep the raw CSS string —
+      // alpha stays embedded in it. Dropping the layer instead would make
+      // callers clip away paint they never accounted for (Cloudflare draws
+      // its input borders as oklch spread-only shadow rings).
+      const alpha = colorMatch[0].match(/\/\s*([\d.]+%?)\s*\)$/);
+      if (alpha && parseFloat(alpha[1]) === 0) continue;
+      color = colorMatch[0];
+      opacity = 1;
+    }
 
     const rest = cleaned.replace(colorMatch[0], "").trim();
     const values = rest.split(/\s+/).map(parseFloat).filter((v) => !isNaN(v));
@@ -105,8 +122,8 @@ export function parseBoxShadow(raw: string): {
       offsetY: values[1],
       blur: values[2] ?? 0,
       spread: values[3] ?? 0,
-      color: color.hex,
-      opacity: color.opacity,
+      color,
+      opacity,
     };
     (isInset ? innerShadows : shadows).push(config);
   }

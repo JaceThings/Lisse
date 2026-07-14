@@ -188,6 +188,8 @@ export function createEngine(initial: EngineSettings) {
     // Border-box floats; clip-path's default reference box is the border box.
     const { width: w, height: h } = getLayoutSize(el);
     if (isNaN(w) || isNaN(h)) return null;
+    // Page position feeds border pixel-snapping (untransformed page coords).
+    const rect = el.getBoundingClientRect();
     const read = readRadii(cs, w, h);
     if (!read) return null;
     // Bail before the expensive reads (pseudo styles, descendant rects) —
@@ -235,6 +237,9 @@ export function createEngine(initial: EngineSettings) {
       boxShadow: cs.boxShadow,
       existingFilter: siteFilter,
       smoothing: settings.smoothing,
+      pageLeft: rect.left + window.scrollX,
+      pageTop: rect.top + window.scrollY,
+      dpr: window.devicePixelRatio || 1,
     };
     return { plan: computeElementPlan(input), siteFilter, siteBorderColors, siteBg };
   }

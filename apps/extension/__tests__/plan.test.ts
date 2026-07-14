@@ -9,6 +9,7 @@ import {
   isDefaultCornerShape,
   uniformSolidBorder,
   borderStrokeLayer,
+  snapStroke,
   type PlanInput,
   type BorderInput,
   type BackgroundInput,
@@ -123,6 +124,19 @@ describe("boxShadowToFilter", () => {
   it("skips spread-only rings (avatar borders) — no drop-shadow equivalent", () => {
     expect(boxShadowToFilter("rgba(255, 255, 255, 0.15) 0px 0px 0px 1px")).toBe("skip");
   });
+
+  it("skips oklch spread-only rings (Cloudflare input borders)", () => {
+    expect(
+      boxShadowToFilter(
+        "rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.32 0 0) 0px 0px 0px 1px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+      ),
+    ).toBe("skip");
+  });
+
+  it("passes wide-gamut colors through to drop-shadow raw", () => {
+    const out = boxShadowToFilter("oklch(0.32 0 0 / 0.5) 0px 2px 4px 0px");
+    expect(out).toBe("drop-shadow(0px 2px 4px oklch(0.32 0 0 / 0.5))");
+  });
 });
 
 describe("uniformSolidBorder", () => {
@@ -148,7 +162,7 @@ describe("uniformSolidBorder", () => {
 
 describe("borderStrokeLayer", () => {
   it("prepends its layer to existing background longhands", () => {
-    const layer = borderStrokeLayer("M 0 0 Z", 100, 40, 1, "rgb(0, 0, 0)", {
+    const layer = borderStrokeLayer("M 0 0 Z", 100, 40, 0.5, 0.5, 1, "rgb(0, 0, 0)", {
       image: "url(x.png)",
       origin: "padding-box",
       clip: "border-box",
@@ -156,7 +170,7 @@ describe("borderStrokeLayer", () => {
       size: "cover",
     });
     expect(layer.backgroundImage).toBe(`url("data:image/svg+xml,${
-      encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40' viewBox='0 0 100 40' preserveAspectRatio='none'><path d='M 0 0 Z' fill='none' stroke='rgb(0, 0, 0)' stroke-width='2'/></svg>")
+      encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40' viewBox='0 0 100 40' preserveAspectRatio='none'><g transform='translate(0.5 0.5)'><path d='M 0 0 Z' fill='none' stroke='rgb(0, 0, 0)' stroke-width='1'/></g></svg>")
     }"), url(x.png)`);
     expect(layer.backgroundOrigin).toBe("border-box, padding-box");
     expect(layer.backgroundClip).toBe("border-box, border-box");
@@ -165,9 +179,49 @@ describe("borderStrokeLayer", () => {
   });
 
   it("is the sole layer when there is no existing background", () => {
-    const layer = borderStrokeLayer("M 0 0 Z", 10, 10, 1, "rgb(0, 0, 0)", noBackground);
+    const layer = borderStrokeLayer("M 0 0 Z", 10, 10, 0.5, 0.5, 1, "rgb(0, 0, 0)", noBackground);
     expect(layer.backgroundOrigin).toBe("border-box");
     expect(layer.backgroundSize).toBe("100% 100%");
+  });
+});
+
+describe("snapStroke", () => {
+  it("is a no-op without page coordinates", () => {
+    expect(snapStroke(100, 40, 1)).toEqual({
+      left: 0, top: 0, right: 0, bottom: 0, strokeWidth: 1,
+    });
+  });
+
+  it("leaves device-aligned boxes untouched", () => {
+    expect(snapStroke(100, 40, 1, 20, 84, 1)).toEqual({
+      left: 0, top: 0, right: 0, bottom: 0, strokeWidth: 1,
+    });
+  });
+
+  it("shifts a fractional bottom edge onto the device grid (dpr 1)", () => {
+    // top at 84 (aligned), height 40.5 → bottom at 124.5 → band moves up 0.5.
+    expect(snapStroke(100, 40.5, 1, 20, 84, 1)).toEqual({
+      left: 0, top: 0, right: 0, bottom: 0.5, strokeWidth: 1,
+    });
+  });
+
+  it("shifts a fractional position onto the grid from the near edge", () => {
+    // top at 84.5 → near edge snaps down (inward) by 0.5; bottom at 125 aligned.
+    expect(snapStroke(100, 40.5, 1, 20, 84.5, 1)).toEqual({
+      left: 0, top: 0.5, right: 0, bottom: 0, strokeWidth: 1,
+    });
+  });
+
+  it("snaps at the device grid, not the CSS grid, for dpr 2", () => {
+    // bottom at 124.25 → nearest half-pixel below is 124 → inset 0.25.
+    expect(snapStroke(100, 40.25, 1, 20, 84, 2)).toEqual({
+      left: 0, top: 0, right: 0, bottom: 0.25, strokeWidth: 1,
+    });
+  });
+
+  it("rounds sub-pixel border widths up to one device pixel", () => {
+    expect(snapStroke(100, 40, 0.5, 20, 84, 1).strokeWidth).toBe(1);
+    expect(snapStroke(100, 40, 0.5, 20, 84, 2).strokeWidth).toBe(0.5);
   });
 });
 
@@ -255,8 +309,11 @@ describe("computeElementPlan", () => {
     expect(plan.action).toBe("apply");
     if (plan.action === "apply") {
       expect(plan.border).toBeDefined();
-      // stroke-width is 2× the border width; the clip removes the outer half.
-      expect(plan.border!.backgroundImage).toContain("stroke-width%3D'2'");
+      // Stroke sits fully inside the box, centerline inset by half its width.
+      expect(plan.border!.backgroundImage).toContain("stroke-width%3D'1'");
+      expect(plan.border!.backgroundImage).toContain(
+        encodeURIComponent("<g transform='translate(0.5 0.5)'>"),
+      );
       expect(plan.border!.backgroundImage).toContain("rgb(220%2C%2038%2C%2038)");
       expect(plan.border!.backgroundImage).toMatch(/^url\("data:image\/svg\+xml,/);
       // No existing background → our layer is the only one.
@@ -268,7 +325,25 @@ describe("computeElementPlan", () => {
   it("scales stroke width to a 4px border", () => {
     const plan = computeElementPlan({ ...base, border: uniform(4) });
     if (plan.action === "apply") {
-      expect(plan.border!.backgroundImage).toContain("stroke-width%3D'8'");
+      expect(plan.border!.backgroundImage).toContain("stroke-width%3D'4'");
+      expect(plan.border!.backgroundImage).toContain(
+        encodeURIComponent("<g transform='translate(2 2)'>"),
+      );
+    }
+  });
+
+  it("insets the border band onto the device grid at fractional bottom edges", () => {
+    const plan = computeElementPlan({
+      ...base, height: 40.5, border: uniform(1), pageLeft: 20, pageTop: 84, dpr: 1,
+    });
+    if (plan.action === "apply") {
+      // bottom band shifts up 0.5px: translate y stays 0.5, inner height 39.
+      expect(plan.border!.backgroundImage).toContain(
+        encodeURIComponent("<g transform='translate(0.5 0.5)'>"),
+      );
+      expect(decodeURIComponent(plan.border!.backgroundImage)).toContain("L 0 ");
+      // inner path height = 40.5 - 0 - 0.5 - 1 = 39 → path bottom edge at 39.
+      expect(decodeURIComponent(plan.border!.backgroundImage)).toContain(" 39.0000");
     }
   });
 
