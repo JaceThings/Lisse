@@ -267,15 +267,10 @@ export function snapStroke(
   }
   // Native behaviour: used border widths round to whole device px, min 1.
   const strokeWidth = Math.max(1, Math.round(borderWidth * dpr)) / dpr;
-  // Snap each edge to the NEAREST device-pixel line — the same rounding the
-  // browser applies to a native border's outer edge — so our stroke lands on
-  // the native border's row instead of up to a whole device px inside it (the
-  // old inward-only snap did that, so the border visibly jumped when toggled).
-  // Ties break inward (near rounds half up, far half down) so an edge sitting
-  // exactly between two device lines (e.g. a 40.5px-tall input) still snaps
-  // onto one — crisp, not straddling both at half coverage. Clamp to ≥ 0: when
-  // the native edge rounds *outside* the border box we can't paint there (the
-  // background is clipped to the box), so we sit on the box edge instead.
+  // Ties break inward (near half up, far half down) so an edge exactly between
+  // two device lines (e.g. a 40.5px-tall input) snaps onto one and stays crisp
+  // instead of straddling both. Clamp to ≥ 0: when the native edge rounds
+  // outside the border box we can't paint there, so we sit on the box edge.
   const near = (p: number) => Math.max(0, Math.floor(p * dpr + 0.5) / dpr - p);
   const far = (p: number) => Math.max(0, p - Math.ceil(p * dpr - 0.5) / dpr);
   const geom = {
