@@ -21,6 +21,7 @@ import "../styles/global.css";
 import { FocusRingOverlay } from "../components/FocusRingOverlay.tsx";
 import { Header } from "../components/Header.tsx";
 import { Layout } from "../components/Layout.tsx";
+import { SelectionHighlight } from "../components/SelectionHighlight.tsx";
 import { LanguageToast } from "../components/LanguageToast.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 import { Footer } from "../components/playground/Footer.tsx";
@@ -248,6 +249,7 @@ function RootComponent() {
           <PersistentFooter />
         </Layout>
         <FocusRingOverlay />
+        <SelectionHighlight />
         <LanguageToast />
         <Scripts />
       </body>

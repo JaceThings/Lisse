@@ -23,7 +23,7 @@
   --color-surface: #f7f6f2;
   --color-text-primary: #73574a;
   /* RGB triplet of `--color-text-primary` for `rgba(var(--primary-rgb), α)`
-     compositing — read by native ::selection styling in global.css. */
+     compositing — read by `SelectionHighlight`. */
   --primary-rgb: 115, 87, 74;
   --color-text-secondary: rgba(154, 145, 138, 0.75);
   --color-text-input: #7e756c;

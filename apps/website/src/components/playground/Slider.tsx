@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef } from "react";
+import NumericText from "@numeric-text/react";
 import { SmoothCorners } from "@lisse/react";
 import { DEFAULT_TUNING } from "./PlaygroundTuning.tsx";
 import {
@@ -10,6 +11,7 @@ import {
 import {
   PROP_CHANGE_DURATION,
   PROP_CHANGE_EASE,
+  READOUT_TRANSITION,
   clamp,
   prefersReducedMotion,
   reservedChars,
@@ -177,7 +179,7 @@ export function Slider({
           onDoubleClick={handleLabelDoubleClick}
           className="flex-1 min-w-0 select-none text-text-input"
         >
-          {label}
+          <NumericText value={label} transition={READOUT_TRANSITION} />
         </label>
         {editable.editing ? (
           <input
@@ -200,7 +202,7 @@ export function Slider({
             className="playground-slider-value inline-flex shrink-0 select-none justify-end whitespace-nowrap text-[rgba(126,117,108,0.5)]"
             style={{ minWidth: readoutMinWidth }}
           >
-            {displayedText}
+            <NumericText value={displayedText} transition={READOUT_TRANSITION} />
           </span>
         )}
       </div>

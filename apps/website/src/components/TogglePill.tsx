@@ -1,4 +1,5 @@
 import { useCallback, useState, type ReactNode } from "react";
+import NumericText from "@numeric-text/react";
 import { Card } from "./Card.tsx";
 import { IconSwap } from "./IconSwap.tsx";
 
@@ -7,6 +8,10 @@ import { IconSwap } from "./IconSwap.tsx";
 // 2px less than the text side optically centres the icon-and-label pair,
 // matching the rule of thumb for icon-leading buttons.
 const PILL_PADDING_X = 10 + 4 + 12;
+
+// Match the NumericText label morph to the CSS width transition on the
+// pill so the label and container settle on the same beat.
+const LABEL_TRANSITION = { duration: 300 };
 
 // Hit-area extender. Visible button is ~28.8px tall (under the 40×40
 // minimum); `p-1.5 -m-1.5` adds 6px each side (~40.8px hit area)
@@ -99,7 +104,7 @@ export function TogglePill({
               ]}
             />
             <span ref={labelRef} className="inline-flex">
-              {label}
+              <NumericText value={label} transition={LABEL_TRANSITION} />
             </span>
           </span>
         </span>

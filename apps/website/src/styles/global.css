@@ -62,10 +62,12 @@ h3 {
   text-wrap: balance;
 }
 
-::selection {
-  background-color: rgb(115 87 74 / 0.45);
-  color: inherit;
-}
+/* Native `::selection` styling is owned by <SelectionHighlight>, which
+ * drives @highlighters/core's live-selection marks: it injects a
+ * `html.selection-highlight-ready ::selection { background: transparent }`
+ * rule so the marker paints in place of the browser default. If JS fails
+ * to hydrate, the browser default still paints because the class is
+ * never added. */
 
 /* macOS-only flourish: hovering "lisse" swaps the cursor for the SF
  * speaker glyph, hinting that the pronunciation gloss is meant to be
