@@ -47,7 +47,7 @@ function useWidthObserver(onWidth: (width: number) => void) {
     (el: HTMLSpanElement | null) => {
       if (!el) return;
       const observer = new ResizeObserver(([entry]) => {
-        onWidth(entry.borderBoxSize[0].inlineSize);
+        onWidth(entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width);
       });
       observer.observe(el);
       return () => observer.disconnect();

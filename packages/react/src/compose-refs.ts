@@ -1,18 +1,34 @@
-import type { Ref, MutableRefObject } from "react";
+import type { Ref, MutableRefObject, RefCallback } from "react";
+
+function setRef<T>(ref: Ref<T> | undefined | null, value: T | null): void | (() => void) {
+  if (typeof ref === "function") return ref(value);
+  if (ref) (ref as MutableRefObject<T | null>).current = value;
+}
 
 /**
  * Compose multiple refs into a single callback ref. Forwards the node to
  * each provided ref, supporting both callback refs and ref objects.
+ * Preserves React 19 callback-ref cleanups.
  */
-export function composeRefs<T>(...refs: Array<Ref<T> | undefined | null>): (node: T | null) => void {
-  return (node: T | null) => {
-    for (const ref of refs) {
-      if (!ref) continue;
-      if (typeof ref === "function") {
-        ref(node);
-      } else {
-        (ref as MutableRefObject<T | null>).current = node;
+export function composeRefs<T>(
+  ...refs: Array<Ref<T> | undefined | null>
+): RefCallback<T> {
+  return (node) => {
+    let hasCleanup = false;
+    const cleanups = refs.map((ref) => {
+      const cleanup = setRef(ref, node);
+      if (typeof cleanup === "function") hasCleanup = true;
+      return cleanup;
+    });
+
+    if (!hasCleanup) return;
+
+    return () => {
+      for (let i = 0; i < cleanups.length; i++) {
+        const cleanup = cleanups[i];
+        if (typeof cleanup === "function") cleanup();
+        else setRef(refs[i], null);
       }
-    }
+    };
   };
 }
