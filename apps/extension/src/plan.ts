@@ -246,12 +246,13 @@ export interface StrokeGeometry {
 }
 
 /**
- * Pixel-snap the border stroke. Browsers snap native box decorations to the
- * device-pixel grid at paint time; an SVG background image is sampled
- * smoothly instead, so at fractional page positions/sizes a 1px stroke
- * straddles two device pixels at ~half coverage — visibly dim at dpr 1
- * (fainter bottom border on 40.5px-tall inputs). Each edge's band shifts
- * inward by < 1 device px onto the grid, exactly like a native border.
+ * Pixel-snap the border stroke. Browsers snap a native border's edges to the
+ * nearest device-pixel line at paint time; our SVG background image is sampled
+ * smoothly instead, so at fractional page positions a 1px stroke straddles two
+ * device pixels (dim at dpr 1) and, if snapped the wrong way, lands a whole
+ * device px off the native border it replaces (visibly "moved" when toggled).
+ * So we snap each edge with the same rounding the browser uses, putting our
+ * stroke on the native border's row rather than inside it.
  */
 export function snapStroke(
   width: number,
@@ -266,11 +267,12 @@ export function snapStroke(
   }
   // Native behaviour: used border widths round to whole device px, min 1.
   const strokeWidth = Math.max(1, Math.round(borderWidth * dpr)) / dpr;
-  const EPS_SNAP = 1e-4;
-  // Near edges snap inward-up, far edges inward-down: bands stay inside the
-  // background paint area (anything outside it would be cropped, not dim).
-  const near = (p: number) => Math.ceil(p * dpr - EPS_SNAP) / dpr - p;
-  const far = (p: number) => p - Math.floor(p * dpr + EPS_SNAP) / dpr;
+  // Ties break inward (near half up, far half down) so an edge exactly between
+  // two device lines (e.g. a 40.5px-tall input) snaps onto one and stays crisp
+  // instead of straddling both. Clamp to ≥ 0: when the native edge rounds
+  // outside the border box we can't paint there, so we sit on the box edge.
+  const near = (p: number) => Math.max(0, Math.floor(p * dpr + 0.5) / dpr - p);
+  const far = (p: number) => Math.max(0, p - Math.ceil(p * dpr - 0.5) / dpr);
   const geom = {
     left: near(pageLeft),
     top: near(pageTop),

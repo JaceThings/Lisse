@@ -223,6 +223,19 @@ describe("snapStroke", () => {
     expect(snapStroke(100, 40, 0.5, 20, 84, 1).strokeWidth).toBe(1);
     expect(snapStroke(100, 40, 0.5, 20, 84, 2).strokeWidth).toBe(0.5);
   });
+
+  it("snaps to the nearest device line, not always inward (matches native)", () => {
+    // left at 20.7 → native rounds the edge inward to 21 → inset 0.3 (nearest).
+    // The old inward-only rule would have snapped to 21 too here, but for an
+    // edge that rounds the other way it over-inset by nearly a whole px.
+    expect(snapStroke(100, 40, 1, 20.7, 84, 1).left).toBeCloseTo(0.3, 5);
+  });
+
+  it("sits on the box edge when the native edge rounds outside the box", () => {
+    // left at 20.1 → native rounds to 20 (outside the box); we can't paint
+    // there, so we stay on the edge (0) rather than jumping a px inward (0.9).
+    expect(snapStroke(100, 40, 1, 20.1, 84, 1).left).toBe(0);
+  });
 });
 
 const base: PlanInput = {
