@@ -36,7 +36,7 @@ interface SliderProps {
   format?: (value: number) => string;
   /** Optional seed formatter for the editable input. Used when `format`
    *  produces a decorated string the input shouldn't seed with (e.g. an
-   *  "iOS – 0.60" annotation). Falls back to `format`. */
+   *  "Apple – 0.65" annotation). Falls back to `format`. */
   formatSeed?: (value: number) => string;
   /** Extra values fed through `format` when computing the readout's
    *  reserved column width, so special-case formatted strings (wider than

@@ -40,7 +40,7 @@ export function CurveTypeSection() {
 
   const [curve, setCurve] = useState<CurveType>("squircle");
   const [radius, setRadius] = useState(20);
-  const [smoothing, setSmoothing] = useState(0.6);
+  const [smoothing, setSmoothing] = useState(0.65);
   const [exponent, setExponent] = useState(EXPONENT_DEFAULT);
   const [fromDrag, setFromDrag] = useState(false);
 
@@ -141,7 +141,7 @@ export function CurveTypeSection() {
   const d = mounted ? sampledPath : rawPath;
 
   // One DOM-stable Slider whose value, label, and format swap with
-  // curve so the thumb glides between squircle smoothing 0.6 (60 %)
+  // curve so the thumb glides between squircle smoothing 0.65 (65 %)
   // and superellipse n = 5 (45 %). Latch the rendered curve — when
   // curve becomes "arc", Collapse keeps the slider's children alive
   // during the exit; without the latch, "Exponent (n)" would flip to

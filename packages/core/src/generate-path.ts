@@ -11,7 +11,14 @@ import {
 } from "./curves/capsule.js";
 import { drawBlendPath } from "./curves/blend.js";
 
-export const DEFAULT_SMOOTHING = 0.6;
+/** Closest Figma-curve match to Apple continuous corners (≈0.5 px residual at R=100). */
+export const APPLE_SMOOTHING = 0.65;
+
+/** Figma's labeled "iOS" preset — use for design-handoff parity. */
+export const FIGMA_SMOOTHING = 0.6;
+
+/** Default smoothing — same value as `APPLE_SMOOTHING`. Use `FIGMA_SMOOTHING` for Figma's 60% preset. */
+export const DEFAULT_SMOOTHING = 0.65;
 export const DEFAULT_PRESERVE_SMOOTHING = true;
 export const DEFAULT_CURVE: CurveType = "squircle";
 

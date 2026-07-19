@@ -19,7 +19,7 @@ import {
 } from "../lib/sounds.ts";
 import { m } from "../paraglide/messages.js";
 
-const SQUIRCLE_SMOOTHING = 0.6;
+const SQUIRCLE_SMOOTHING = 0.65;
 // Path generated once at the desktop max (510 px); the wrapper sizes
 // itself to the current mode and the SVG fills it via `width/height=100%`.
 // Safari rasterises an SVG at its CSS box size, so resizing the wrapper

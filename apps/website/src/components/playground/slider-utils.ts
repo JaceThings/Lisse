@@ -40,7 +40,7 @@ export const reservedChars = (
     const decimals = stepStr.includes(".") ? stepStr.split(".")[1].length : 0;
     return decimals > 0 ? n.toFixed(decimals) : String(n);
   };
-  // Extra samples cover formatted strings (e.g. "iOS – 0.60") whose width
+  // Extra samples cover formatted strings (e.g. "Apple – 0.65") whose width
   // can exceed both endpoints.
   const lengths = [sample(min).length, sample(max).length];
   if (sampleValues) for (const v of sampleValues) lengths.push(sample(v).length);

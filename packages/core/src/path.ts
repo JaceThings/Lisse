@@ -1,6 +1,12 @@
 // Pure, DOM-free exports for SSR and path-generation-only use cases.
 export { generatePath, generateClipPath } from "./generate-path.js";
-export { DEFAULT_SMOOTHING, DEFAULT_PRESERVE_SMOOTHING, DEFAULT_CURVE } from "./generate-path.js";
+export {
+  APPLE_SMOOTHING,
+  FIGMA_SMOOTHING,
+  DEFAULT_SMOOTHING,
+  DEFAULT_PRESERVE_SMOOTHING,
+  DEFAULT_CURVE,
+} from "./generate-path.js";
 export { DEFAULT_EXPONENT, CURVE_TYPES, getCurveBuilder, buildArc, buildSquircle, buildSuperellipse, buildClothoid } from "./curves/index.js";
 export { getPathParamsForCorner } from "./corner-params.js";
 export { distributeAndNormalize } from "./distribute.js";

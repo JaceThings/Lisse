@@ -5,8 +5,15 @@ enum LisseCurve { arc, squircle, superellipse, clothoid }
 /// (Lamé n = 4).
 const double kDefaultExponent = 4;
 
-/// Default Figma squircle smoothing.
-const double kDefaultSmoothing = 0.6;
+/// Closest Figma-curve match to Apple's continuous corner.
+const double kAppleSmoothing = 0.65;
+
+/// Figma's labeled "iOS" preset (60%). Use for design-handoff parity.
+const double kFigmaSmoothing = 0.6;
+
+/// Default corner smoothing — same value as [kAppleSmoothing].
+/// Use [kFigmaSmoothing] for Figma's 60% preset.
+const double kDefaultSmoothing = 0.65;
 
 /// Preserve smoothing when space is limited.
 const bool kDefaultPreserveSmoothing = true;

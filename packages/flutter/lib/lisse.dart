@@ -6,7 +6,8 @@
 /// [SmoothBox] and [SmoothClip] are convenience widgets on top of it.
 library;
 
-export 'src/geometry/lisse_curve.dart' show LisseCurve;
+export 'src/geometry/lisse_curve.dart'
+    show LisseCurve, kAppleSmoothing, kFigmaSmoothing, kDefaultSmoothing;
 export 'src/geometry/lisse_corner.dart' show LisseCorner, LisseCorners;
 export 'src/geometry/lisse_path.dart' show debugPathData;
 export 'src/geometry/corner_cache.dart' show clearCurveCache;

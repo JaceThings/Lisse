@@ -161,7 +161,7 @@ through a different WebKit code path that does not exhibit the
 bias. The trade-off: the shadow silhouette is a rounded
 rectangle (following `border-radius`), not a squircle.
 
-At the default smoothing of `0.6` and moderate radii (8–24 px) the
+At the default smoothing of `0.65` and moderate radii (8–24 px) the
 silhouette delta lives entirely inside the blur halo and is invisible
 to anyone but a designer with a screenshot tool. At larger smoothing
 values (`> 0.9`) or very wide corner radii (`> 32 px`) the silhouette

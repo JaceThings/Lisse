@@ -27,6 +27,17 @@ const options = {
 
 When adjacent corners compete for space, larger radii are given priority and smaller corners are reduced proportionally.
 
+## Smoothing presets
+
+Default smoothing is `0.65` (`APPLE_SMOOTHING`) — the closest match to Apple's continuous corners on the Figma curve. Figma's labeled "iOS" preset is `0.6` (`FIGMA_SMOOTHING`):
+
+```ts
+import { APPLE_SMOOTHING, FIGMA_SMOOTHING } from "@lisse/core";
+
+generatePath(200, 200, { radius: 24 }); // default = Apple
+generatePath(200, 200, { radius: 24, smoothing: FIGMA_SMOOTHING }); // Figma handoff
+```
+
 ## Vue
 
 ```vue

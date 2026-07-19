@@ -50,6 +50,12 @@ const SQUIRCLE_CASES: SnapshotCase[] = [
     name: "apple_canonical_default",
     width: 200,
     height: 200,
+    opts: { radius: 24, smoothing: 0.65, curve: "squircle" },
+  },
+  {
+    name: "figma_ios_preset",
+    width: 200,
+    height: 200,
     opts: { radius: 24, smoothing: 0.6, curve: "squircle" },
   },
   {
