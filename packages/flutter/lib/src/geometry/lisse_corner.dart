@@ -9,7 +9,8 @@ class LisseCorner {
   final LisseCurve curve;
 
   /// 0 (sharp) to 1 (max). Used by `squircle` and `clothoid`; ignored by
-  /// `arc` and `superellipse`. Default: 0.6.
+  /// `arc` and `superellipse`. Default: [kAppleSmoothing] (`0.65`);
+  /// Figma's "iOS" preset is [kFigmaSmoothing] (`0.6`).
   final double smoothing;
 
   /// Superellipse exponent, only when [curve] is [LisseCurve.superellipse].

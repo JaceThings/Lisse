@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Default smoothing is now `0.65` (`kAppleSmoothing`). Figma's labeled
+  "iOS" preset is `kFigmaSmoothing` (`0.6`). Matches `@lisse/core`.
+
 ## 0.2.0
 
 - Smooth capsules: full-radius pills and circles now render as true smoothed

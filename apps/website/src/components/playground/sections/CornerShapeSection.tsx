@@ -1,3 +1,4 @@
+import { APPLE_SMOOTHING, FIGMA_SMOOTHING } from "@lisse/core";
 import { useCallback, useMemo, useState } from "react";
 import { Collapse } from "../Collapse.tsx";
 import { FigureCard } from "../FigureCard.tsx";
@@ -18,7 +19,7 @@ export function CornerShapeSection() {
   ] as const satisfies ReadonlyArray<{ value: SmoothingPreset; label: string }>;
 
   const [preset, setPreset] = useState<SmoothingPreset>("on");
-  const [smoothing, setSmoothing] = useState(0.6);
+  const [smoothing, setSmoothing] = useState(APPLE_SMOOTHING);
   const [fromDrag, setFromDrag] = useState(false);
 
   const targetSmoothing = preset === "off" ? 0 : smoothing;
@@ -29,7 +30,7 @@ export function CornerShapeSection() {
     setPreset(next);
     if (next === "off") setSmoothing(0);
     // Functional updater so the callback identity doesn't depend on `smoothing`.
-    else if (next === "on") setSmoothing((s) => (s === 0 ? 0.6 : s));
+    else if (next === "on") setSmoothing((s) => (s === 0 ? APPLE_SMOOTHING : s));
   }, []);
 
   const onSmoothingChange = useCallback((v: number, fromDrag = false) => {
@@ -38,17 +39,22 @@ export function CornerShapeSection() {
     setPreset("on");
   }, []);
 
-  // Annotate the iOS/Apple/Figma squircle default with its name; every other
-  // value reads as a plain two-decimal number.
-  const formatSmoothing = useCallback(
-    (v: number) =>
-      Math.abs(v - 0.6) < 0.005
-        ? m.section_cornershape_ios_label({ value: v.toFixed(2) })
-        : v.toFixed(2),
+  // Annotate Apple (default) and Figma's 60% preset; every other value
+  // reads as a plain two-decimal number.
+  const formatSmoothing = useCallback((v: number) => {
+    if (Math.abs(v - APPLE_SMOOTHING) < 0.005) {
+      return m.section_cornershape_ios_label({ value: v.toFixed(2) });
+    }
+    if (Math.abs(v - FIGMA_SMOOTHING) < 0.005) {
+      return m.section_cornershape_figma_label({ value: v.toFixed(2) });
+    }
+    return v.toFixed(2);
+  }, []);
+  const formatSmoothingSeed = useCallback((v: number) => v.toFixed(2), []);
+  const formatSmoothingSamples = useMemo(
+    () => [APPLE_SMOOTHING, FIGMA_SMOOTHING] as const,
     [],
   );
-  const formatSmoothingSeed = useCallback((v: number) => v.toFixed(2), []);
-  const formatSmoothingSamples = useMemo(() => [0.6] as const, []);
 
   return (
     <Section

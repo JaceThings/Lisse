@@ -267,7 +267,9 @@ Decrements the ref count for an anchor element. When the count reaches zero, `po
 
 ```ts
 import {
-  DEFAULT_SMOOTHING,         // 0.6
+  APPLE_SMOOTHING,            // 0.65 — default; closest Apple match on the Figma curve
+  FIGMA_SMOOTHING,            // 0.6  — Figma's labeled "iOS" preset
+  DEFAULT_SMOOTHING,          // === APPLE_SMOOTHING
   DEFAULT_PRESERVE_SMOOTHING, // true
   DEFAULT_SHADOW,             // { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 0 }
 } from "@lisse/core";
@@ -286,7 +288,7 @@ type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
 ```ts
 interface UniformCornerOptions {
   radius: number;
-  smoothing?: number;          // Default: 0.6
+  smoothing?: number;          // Default: 0.65 (APPLE_SMOOTHING)
   preserveSmoothing?: boolean; // Default: true
 }
 ```
@@ -307,7 +309,7 @@ interface PerCornerConfig {
 ```ts
 interface CornerConfig {
   radius: number;
-  smoothing?: number;          // Default: 0.6
+  smoothing?: number;          // Default: 0.65 (APPLE_SMOOTHING)
   preserveSmoothing?: boolean; // Default: true
 }
 ```

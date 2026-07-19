@@ -32,7 +32,7 @@ const NAV_KEYS = new Set([
 
 export function FocusRingOverlay({
   radius = 14,
-  smoothing = 0.6,
+  smoothing = 0.65,
   offsetX = 0,
   offsetY = 0,
   strokeWidth = 2,

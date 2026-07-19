@@ -7,7 +7,9 @@ export interface CornerConfig {
   /** Curve family. Default: `'squircle'`. */
   curve?: CurveType;
   /** 0 (sharp) to 1 (max). Used by `'squircle'` and `'clothoid'`;
-   *  ignored by `'arc'` and `'superellipse'`. Default: `0.6`. */
+   *  ignored by `'arc'` and `'superellipse'`. Default: `0.65`
+   *  (`APPLE_SMOOTHING`); Figma's "iOS" preset is `0.6`
+   *  (`FIGMA_SMOOTHING`). */
   smoothing?: number;
   /** Superellipse exponent, only when `curve === 'superellipse'`.
    *  Default: `4` (matches CSS `corner-shape: squircle`). */

@@ -46,11 +46,11 @@ const ZOOM_EXP = 0.4;
 const RADIUS_MIN = 30;
 const RADIUS_MAX = 200;
 const RADIUS_DEFAULT = 160;
-const SMOOTHING_DEFAULT = 0.6;
+const SMOOTHING_DEFAULT = 0.65;
 // Superellipse exponent. n = 2 = ellipse (κ blows up at the seam, G0).
 // n > 2 ⇒ κ = 0 at the axis crossings (G2). n = 4 is the CSS
 // `corner-shape: squircle` value; n ≈ 5 is the closest numerical fit
-// to Figma 0.6 / iOS — picked as the /math default for visual parity.
+// to Apple-oriented 0.65 — picked as the /math default for visual parity.
 const EXPONENT_MIN = 2.5;
 const EXPONENT_MAX = 8;
 const EXPONENT_DEFAULT = 5;
