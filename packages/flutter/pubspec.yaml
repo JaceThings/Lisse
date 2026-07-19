@@ -2,7 +2,7 @@ name: lisse
 description: >-
   Smooth corners for Flutter — arc, Figma squircle, superellipse and clothoid
   as a ShapeBorder, so clip, border and shadow trace the curve. Pure Dart.
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/JaceThings/Lisse
 issue_tracker: https://github.com/JaceThings/Lisse/issues
 homepage: https://corne.rs

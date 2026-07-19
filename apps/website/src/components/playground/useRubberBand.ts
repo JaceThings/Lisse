@@ -1,12 +1,8 @@
-import { animate, useMotionValue, useTransform } from "framer-motion";
+import { animate, useMotionValue, useTransform } from "../../lib/motion.ts";
 import { prefersReducedMotion } from "./slider-utils.ts";
 import { DEFAULT_TUNING as tuning } from "./PlaygroundTuning.tsx";
 
 export function useRubberBand() {
-  // Signed: negative when the pointer pulls past the left edge, positive
-  // past the right. Width grows by |stretch|; X shifts left by stretch when
-  // negative so the opposite edge stays pinned. Width change (not scaleX)
-  // keeps the corner radius and SmoothCorners path uniform.
   const stretchPx = useMotionValue(0);
 
   const width = useTransform(
@@ -14,8 +10,6 @@ export function useRubberBand() {
     (px) => `calc(100% + ${Math.abs(px)}px)`,
   );
   const x = useTransform(stretchPx, (px) => (px < 0 ? px : 0));
-  // At maxStretchPx in either direction, height squashes to `compressY` —
-  // a subtle pull-thin that tracks the same motion value as width.
   const maxStretch = tuning.maxStretchPx;
   const scaleY = useTransform(
     stretchPx,

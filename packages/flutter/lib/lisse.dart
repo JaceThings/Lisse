@@ -3,7 +3,7 @@
 /// The headline type is [LisseBorder] — an [OutlinedBorder] you can hand to
 /// any Flutter API that takes a shape (`ShapeDecoration`, `Material`, `Card`,
 /// `ClipPath`), so clipping, borders and shadows trace the squircle natively.
-/// [SmoothBox] and [SmoothClip] are convenience widgets on top of it.
+/// [SmoothBox] is a convenience widget on top of it.
 library;
 
 export 'src/geometry/lisse_curve.dart' show LisseCurve;
@@ -17,4 +17,3 @@ export 'src/ui_path.dart' show lissePath;
 export 'src/effects/lisse_effects.dart'
     show LisseInnerShadow, LisseBorderLayer, LisseBorderStyle;
 export 'src/widgets/smooth_box.dart' show SmoothBox;
-export 'src/widgets/smooth_clip.dart' show SmoothClip;

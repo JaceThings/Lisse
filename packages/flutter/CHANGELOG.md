@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- Remove `SmoothClip`. Clip with `ClipPath(clipper: ShapeBorderClipper(LisseBorder(...)))` instead.
+- Trim border styles to `solid`, `dashed`, and `dotted` on `LisseBorderLayer` (`doubleLine`, `groove`, and `ridge` removed).
+- Remove gradient border painting on `LisseBorderLayer` (gradient fills via `SmoothBox` / `ShapeDecoration` remain).
+
 ## 0.2.0
 
 - Smooth capsules: full-radius pills and circles now render as true smoothed

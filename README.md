@@ -67,8 +67,8 @@ Math reference: [`docs/curves.md`](docs/curves.md).
 ## Features
 
 - Four corner curves (`arc`, `squircle`, `superellipse`, `clothoid`) with per-corner mixing
-- Inner / outer / middle borders with style variants (solid, dashed, dotted, double, groove, ridge)
-- Drop shadows and inner shadows, with gradient borders via the API
+- Inner / outer / middle borders with style variants (solid, dashed, dotted)
+- Drop shadows and inner shadows
 - Auto-effects: CSS `border` and `box-shadow` are converted to SVG equivalents on mount
 - ~1.5 µs per `generatePath()` call; 500 corners re-compute in <1 ms ([details](docs/performance.md))
 - Zero runtime dependencies; ESM + CJS dual export; SSR-safe `/path` subpath

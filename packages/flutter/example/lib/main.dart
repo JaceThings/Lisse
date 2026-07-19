@@ -200,7 +200,7 @@ class _Gallery extends StatelessWidget {
 
               _section(
                 'Border styles',
-                'dashed · dotted · double · groove · ridge',
+                'dashed · dotted',
               ),
               Wrap(
                 spacing: 20,
@@ -209,9 +209,6 @@ class _Gallery extends StatelessWidget {
                   for (final e in const [
                     ['dashed', LisseBorderStyle.dashed],
                     ['dotted', LisseBorderStyle.dotted],
-                    ['double', LisseBorderStyle.doubleLine],
-                    ['groove', LisseBorderStyle.groove],
-                    ['ridge', LisseBorderStyle.ridge],
                   ])
                     _labelled(
                       e[0] as String,
@@ -266,13 +263,15 @@ class _Gallery extends StatelessWidget {
               const SizedBox(height: 44),
 
               _section(
-                'SmoothClip',
+                'ClipPath',
                 'Clipping arbitrary content to the silhouette.',
               ),
               Align(
                 alignment: Alignment.centerLeft,
-                child: SmoothClip(
-                  corners: LisseCorners.all(radius: 40),
+                child: ClipPath(
+                  clipper: ShapeBorderClipper(
+                    shape: LisseBorder(corners: LisseCorners.all(radius: 40)),
+                  ),
                   child: Container(
                     width: 320,
                     height: 170,

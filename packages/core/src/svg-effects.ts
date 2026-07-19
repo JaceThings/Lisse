@@ -1,5 +1,5 @@
-import type { SmoothCornerOptions, EffectsConfig, BorderConfig, ShadowConfig, GradientConfig } from "./types.js";
-import { SVG_NS, nextUid, hexToRgb, darkenHex, adjustOptions, isGradient, createGradientDef, updateGradientDef, darkenGradient, createPathCache } from "./svg-shared.js";
+import type { SmoothCornerOptions, EffectsConfig, BorderConfig, ShadowConfig } from "./types.js";
+import { SVG_NS, nextUid, hexToRgb, adjustOptions, createPathCache } from "./svg-shared.js";
 
 export interface SvgEffectsHandle {
   update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
@@ -20,117 +20,43 @@ function padMaskAndRect(mask: Element, rect: Element, pad: number, w: number, h:
   padBounds(rect, pad, w, h);
 }
 
-function createKnockoutMask(
-  maskId: string,
-  defs: Element,
-  userSpaceOnUse: boolean,
-): { mask: Element; rect: Element; knockout: Element } {
-  const mask = document.createElementNS(SVG_NS, "mask");
-  mask.setAttribute("id", maskId);
-  if (userSpaceOnUse) mask.setAttribute("maskUnits", "userSpaceOnUse");
-  const rect = document.createElementNS(SVG_NS, "rect");
-  rect.setAttribute("fill", "white");
-  const knockout = document.createElementNS(SVG_NS, "path");
-  knockout.setAttribute("fill", "none");
-  knockout.setAttribute("stroke", "black");
-  mask.appendChild(rect);
-  mask.appendChild(knockout);
-  defs.appendChild(mask);
-  return { mask, rect, knockout };
-}
-
 function createStrokeGroup(
   clipOrMask?: { attr: "clip-path" | "mask"; value: string },
-): { group: SVGGElement; strokePath: SVGPathElement; grooveOverlay: SVGPathElement } {
+): { group: SVGGElement; strokePath: SVGPathElement } {
   const group = document.createElementNS(SVG_NS, "g") as SVGGElement;
   const strokePath = document.createElementNS(SVG_NS, "path") as SVGPathElement;
   strokePath.setAttribute("fill", "none");
   if (clipOrMask) strokePath.setAttribute(clipOrMask.attr, clipOrMask.value);
   strokePath.style.display = "none";
   group.appendChild(strokePath);
-  const grooveOverlay = document.createElementNS(SVG_NS, "path") as SVGPathElement;
-  grooveOverlay.setAttribute("fill", "none");
-  if (clipOrMask) grooveOverlay.setAttribute(clipOrMask.attr, clipOrMask.value);
-  grooveOverlay.style.display = "none";
-  group.appendChild(grooveOverlay);
-  return { group, strokePath, grooveOverlay };
+  return { group, strokePath };
 }
 
 interface BorderElements {
   strokePath: SVGPathElement;
-  grooveOverlay: SVGPathElement;
-  strokeGroup: SVGGElement;
-  dblMaskId: string;
-  dblKnockout: Element;
-  dblRect: Element;
   strokeMultiplier: number;
-  padDblMask?: (pad: number, w: number, h: number) => void;
-  defs: Element;
-  /** Main-stroke gradient def (null when stroke is a solid color). */
-  gradientEl: Element | null;
-  gradientId: string;
-  /** Groove/ridge overlay-stroke gradient def. */
-  overlayGradientEl: Element | null;
-  overlayGradientId: string;
-}
-
-/** Remove a gradient def from the DOM and clear the reference. */
-function removeGradient(els: BorderElements, which: "main" | "overlay"): void {
-  const key = which === "main" ? "gradientEl" : "overlayGradientEl";
-  els[key]?.remove();
-  els[key] = null;
-}
-
-/** Return a hex string or `url(#id)` reference for the configured stroke. */
-function resolveStroke(
-  color: string | GradientConfig,
-  els: BorderElements,
-  which: "main" | "overlay",
-): string {
-  if (!isGradient(color)) {
-    removeGradient(els, which);
-    return color;
-  }
-  const elKey = which === "main" ? "gradientEl" : "overlayGradientEl";
-  const id = which === "main" ? els.gradientId : els.overlayGradientId;
-  if (els[elKey]) {
-    updateGradientDef(els[elKey], color);
-  } else {
-    els[elKey] = createGradientDef(els.defs, color, id);
-  }
-  return `url(#${id})`;
 }
 
 function updateBorder(
   config: BorderConfig | undefined,
-  d: string, width: number, height: number,
+  d: string,
   els: BorderElements,
 ): void {
   if (!config || config.width <= 0 || config.opacity <= 0) {
     els.strokePath.style.display = "none";
-    els.strokeGroup.removeAttribute("mask");
-    els.grooveOverlay.style.display = "none";
-    removeGradient(els, "main");
-    removeGradient(els, "overlay");
     return;
   }
 
   const m = els.strokeMultiplier;
   els.strokePath.style.display = "";
   els.strokePath.setAttribute("d", d);
-  els.strokePath.setAttribute("stroke", resolveStroke(config.color, els, "main"));
+  els.strokePath.setAttribute("stroke", config.color);
   els.strokePath.setAttribute("stroke-width", String(config.width * m));
   els.strokePath.setAttribute("stroke-opacity", String(config.opacity));
 
   const style = config.style ?? "solid";
-  els.strokeGroup.removeAttribute("mask");
-  els.grooveOverlay.style.display = "none";
   els.strokePath.removeAttribute("stroke-dasharray");
   els.strokePath.setAttribute("stroke-linecap", "butt");
-  // Overlay gradient is groove/ridge-only; re-created below if needed.
-  if (style !== "groove" && style !== "ridge") {
-    removeGradient(els, "overlay");
-  }
 
   switch (style) {
     case "dashed": {
@@ -145,36 +71,6 @@ function updateBorder(
       const dotGap = Math.max(0, config.gap ?? config.width * 2);
       els.strokePath.setAttribute("stroke-dasharray", `${dotDash} ${dotGap}`);
       els.strokePath.setAttribute("stroke-linecap", config.lineCap ?? "round");
-      break;
-    }
-    case "double":
-      if (config.width >= 3) {
-        const third = Math.round(config.width / 3);
-        els.dblKnockout.setAttribute("d", d);
-        els.dblKnockout.setAttribute("stroke-width", String(third * m));
-        els.dblRect.setAttribute("width", String(width));
-        els.dblRect.setAttribute("height", String(height));
-        if (els.padDblMask) els.padDblMask(config.width, width, height);
-        els.strokeGroup.setAttribute("mask", `url(#${els.dblMaskId})`);
-      }
-      break;
-    case "groove": {
-      const grooveBase = isGradient(config.color) ? darkenGradient(config.color) : darkenHex(config.color);
-      els.strokePath.setAttribute("stroke", resolveStroke(grooveBase, els, "main"));
-      els.grooveOverlay.style.display = "";
-      els.grooveOverlay.setAttribute("d", d);
-      els.grooveOverlay.setAttribute("stroke", resolveStroke(config.color, els, "overlay"));
-      els.grooveOverlay.setAttribute("stroke-width", String(config.width * m / 2));
-      els.grooveOverlay.setAttribute("stroke-opacity", String(config.opacity));
-      break;
-    }
-    case "ridge": {
-      const ridgeDark = isGradient(config.color) ? darkenGradient(config.color) : darkenHex(config.color);
-      els.grooveOverlay.style.display = "";
-      els.grooveOverlay.setAttribute("d", d);
-      els.grooveOverlay.setAttribute("stroke", resolveStroke(ridgeDark, els, "overlay"));
-      els.grooveOverlay.setAttribute("stroke-width", String(config.width * m / 2));
-      els.grooveOverlay.setAttribute("stroke-opacity", String(config.opacity));
       break;
     }
   }
@@ -275,18 +171,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   maskEl.appendChild(maskShape);
   defs.appendChild(maskEl);
 
-  const innerDblMaskId = `sc-dbl-inner-${id}`;
-  const { rect: innerDblRect, knockout: innerDblKnockout } =
-    createKnockoutMask(innerDblMaskId, defs, false);
-
-  const outerDblMaskId = `sc-dbl-outer-${id}`;
-  const { mask: outerDblMask, rect: outerDblRect, knockout: outerDblKnockout } =
-    createKnockoutMask(outerDblMaskId, defs, true);
-
-  const middleDblMaskId = `sc-dbl-middle-${id}`;
-  const { mask: middleDblMask, rect: middleDblRect, knockout: middleDblKnockout } =
-    createKnockoutMask(middleDblMaskId, defs, true);
-
   svg.appendChild(defs);
 
   // Shared <g clip-path> wrapper for all inner shadows.
@@ -296,46 +180,23 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
 
   const innerShadowPool: InnerShadowEntry[] = [];
 
-  const { group: innerStrokeGroup, strokePath: innerStrokePath, grooveOverlay: innerGrooveOverlay } =
+  const { group: innerStrokeGroup, strokePath: innerStrokePath } =
     createStrokeGroup({ attr: "clip-path", value: `url(#${clipId})` });
   svg.appendChild(innerStrokeGroup);
 
-  const { group: outerStrokeGroup, strokePath: outerStrokePath, grooveOverlay: outerGrooveOverlay } =
+  const { group: outerStrokeGroup, strokePath: outerStrokePath } =
     createStrokeGroup({ attr: "mask", value: `url(#${maskId})` });
   svg.appendChild(outerStrokeGroup);
 
-  const { group: middleStrokeGroup, strokePath: middleStrokePath, grooveOverlay: middleGrooveOverlay } =
+  const { group: middleStrokeGroup, strokePath: middleStrokePath } =
     createStrokeGroup();
   svg.appendChild(middleStrokeGroup);
 
   anchor.appendChild(svg);
 
-  const innerBorderEls: BorderElements = {
-    strokePath: innerStrokePath, grooveOverlay: innerGrooveOverlay,
-    strokeGroup: innerStrokeGroup, dblMaskId: innerDblMaskId,
-    dblKnockout: innerDblKnockout, dblRect: innerDblRect,
-    strokeMultiplier: 2,
-    defs, gradientEl: null, gradientId: `sc-grad-inner-${id}`,
-    overlayGradientEl: null, overlayGradientId: `sc-grad-inner-ov-${id}`,
-  };
-  const outerBorderEls: BorderElements = {
-    strokePath: outerStrokePath, grooveOverlay: outerGrooveOverlay,
-    strokeGroup: outerStrokeGroup, dblMaskId: outerDblMaskId,
-    dblKnockout: outerDblKnockout, dblRect: outerDblRect,
-    strokeMultiplier: 2,
-    defs, gradientEl: null, gradientId: `sc-grad-outer-${id}`,
-    overlayGradientEl: null, overlayGradientId: `sc-grad-outer-ov-${id}`,
-    padDblMask: (pad, w, h) => padMaskAndRect(outerDblMask, outerDblRect, pad, w, h),
-  };
-  const middleBorderEls: BorderElements = {
-    strokePath: middleStrokePath, grooveOverlay: middleGrooveOverlay,
-    strokeGroup: middleStrokeGroup, dblMaskId: middleDblMaskId,
-    dblKnockout: middleDblKnockout, dblRect: middleDblRect,
-    strokeMultiplier: 1,
-    defs, gradientEl: null, gradientId: `sc-grad-middle-${id}`,
-    overlayGradientEl: null, overlayGradientId: `sc-grad-middle-ov-${id}`,
-    padDblMask: (pad, w, h) => padMaskAndRect(middleDblMask, middleDblRect, pad, w, h),
-  };
+  const innerBorderEls: BorderElements = { strokePath: innerStrokePath, strokeMultiplier: 2 };
+  const outerBorderEls: BorderElements = { strokePath: outerStrokePath, strokeMultiplier: 2 };
+  const middleBorderEls: BorderElements = { strokePath: middleStrokePath, strokeMultiplier: 1 };
 
   return {
     update(options, effects, width, height) {
@@ -345,7 +206,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
       svg.setAttribute("height", String(height));
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-      const getPath = createPathCache(options);
+      const getPath = createPathCache();
       const d = getPath(width, height, options, 0);
 
       clipShape.setAttribute("d", d);
@@ -353,16 +214,16 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
       maskRect.setAttribute("width", String(width));
       maskRect.setAttribute("height", String(height));
 
-      updateBorder(effects.innerBorder, d, width, height, innerBorderEls);
+      updateBorder(effects.innerBorder, d, innerBorderEls);
 
       // Outer border needs an extended mask region before the border call.
       const ob = effects.outerBorder;
       if (ob && ob.width > 0 && ob.opacity > 0) {
         padMaskAndRect(maskEl, maskRect, ob.width, width, height);
       }
-      updateBorder(ob, d, width, height, outerBorderEls);
+      updateBorder(ob, d, outerBorderEls);
 
-      updateBorder(effects.middleBorder, d, width, height, middleBorderEls);
+      updateBorder(effects.middleBorder, d, middleBorderEls);
 
       const rawIs = effects.innerShadow;
       const isArr: ShadowConfig[] = rawIs == null ? [] : Array.isArray(rawIs) ? rawIs : [rawIs];

@@ -1,18 +1,15 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useMotionValueEvent,
-  useTransform,
-} from "framer-motion";
-import NumericText from "@numeric-text/react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import { SmoothCorners } from "@lisse/react";
 import { DEFAULT_TUNING } from "./PlaygroundTuning.tsx";
 import {
+  animate,
+  useMotionValue,
+  useTransform,
+  type AnimationControls,
+} from "../../lib/motion.ts";
+import {
   PROP_CHANGE_DURATION,
   PROP_CHANGE_EASE,
-  READOUT_TRANSITION,
   clamp,
   prefersReducedMotion,
   reservedChars,
@@ -59,7 +56,7 @@ export function Slider({
   const tuning = DEFAULT_TUNING;
   const trackHeight = tuning.trackHeight;
   const trackRef = useRef<HTMLDivElement | null>(null);
-  const propAnimRef = useRef<ReturnType<typeof animate> | null>(null);
+  const propAnimRef = useRef<AnimationControls | null>(null);
   // Captured once on mount — double-click on the label reverts to this.
   // Subsequent prop updates (presets, drags) don't touch the ref.
   const initialValueRef = useRef<number>(value);
@@ -104,16 +101,10 @@ export function Slider({
     return `${((rightEdge - leftEdge) / safeRange) * 100}%`;
   });
 
-  const displayed = useTransform(reported, (v) => {
+  const displayedText = useTransform(reported, (v) => {
     const stepped = clamp(snap(v, step), min, max);
     return format ? format(stepped) : String(stepped);
   });
-
-  // Mirror the motion value into React state — NumericText takes a plain
-  // string prop, so it needs a re-render on every tween frame to morph its
-  // digits in step with the fill bar.
-  const [displayedText, setDisplayedText] = useState(() => displayed.get());
-  useMotionValueEvent(displayed, "change", setDisplayedText);
 
   const drag = usePointerDrag({
     trackRef,
@@ -186,7 +177,7 @@ export function Slider({
           onDoubleClick={handleLabelDoubleClick}
           className="flex-1 min-w-0 select-none text-text-input"
         >
-          <NumericText value={label} transition={READOUT_TRANSITION} />
+          {label}
         </label>
         {editable.editing ? (
           <input
@@ -209,7 +200,7 @@ export function Slider({
             className="playground-slider-value inline-flex shrink-0 select-none justify-end whitespace-nowrap text-[rgba(126,117,108,0.5)]"
             style={{ minWidth: readoutMinWidth }}
           >
-            <NumericText value={displayedText} transition={READOUT_TRANSITION} />
+            {displayedText}
           </span>
         )}
       </div>
@@ -230,12 +221,11 @@ export function Slider({
           className="relative w-full"
           style={{ height: trackHeight }}
         >
-          <motion.div
+          <div
             className="absolute top-0 left-0 h-full"
             style={{
               width: rubberBand.width,
-              x: rubberBand.x,
-              scaleY: rubberBand.scaleY,
+              transform: `translateX(${rubberBand.x}px) scaleY(${rubberBand.scaleY})`,
             }}
           >
             <SmoothCorners
@@ -247,13 +237,13 @@ export function Slider({
                 className="relative h-full w-full overflow-hidden bg-[rgba(126,117,108,0.12)]"
                 aria-hidden
               >
-                <motion.div
+                <div
                   className="absolute top-0 h-full bg-[#7e756c]"
                   style={{ left: fillLeft, width: fillWidth }}
                 />
               </div>
             </SmoothCorners>
-          </motion.div>
+          </div>
           {/* Hidden native range stays as the keyboard + screen-reader path.
               Pointer events are disabled so it never steals drags from the
               elastic handler. It remains focusable via Tab and still

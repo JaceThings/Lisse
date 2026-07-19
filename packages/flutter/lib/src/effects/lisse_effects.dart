@@ -7,7 +7,7 @@ import '../geometry/lisse_corner.dart';
 import '../ui_path.dart';
 
 /// Visual style of a [LisseBorderLayer] stroke.
-enum LisseBorderStyle { solid, dashed, dotted, doubleLine, groove, ridge }
+enum LisseBorderStyle { solid, dashed, dotted }
 
 /// An inner shadow cast inside the silhouette. Flutter has no native inner
 /// shadow; [SmoothBox] paints this above the fill and below the content.
@@ -60,8 +60,7 @@ class LisseBorderLayer {
   final double width;
   final Color? color;
 
-  /// Stroke shader. Ignored by [LisseBorderStyle.groove] and
-  /// [LisseBorderStyle.ridge], which derive light/dark tones from [color].
+  /// Stroke shader.
   final Gradient? gradient;
   final double opacity;
   final LisseBorderStyle style;
@@ -146,7 +145,6 @@ void _stroke(
   LisseBorderLayer layer,
   double strokeWidth,
   Rect rect, {
-  Color? colorOverride,
   StrokeCap? capOverride,
 }) {
   final Paint paint = Paint()
@@ -159,7 +157,7 @@ void _stroke(
       paint.color = const Color(0xFFFFFFFF).withValues(alpha: layer.opacity);
     }
   } else {
-    final Color base = colorOverride ?? layer.color!;
+    final Color base = layer.color!;
     paint.color = base.withValues(alpha: base.a * layer.opacity);
   }
   canvas.drawPath(path, paint);
@@ -204,59 +202,6 @@ void paintBorderLayers(
           w,
           rect,
           capOverride: StrokeCap.round,
-        );
-        break;
-      case LisseBorderStyle.doubleLine:
-        final double sub = w / 3;
-        _stroke(
-          canvas,
-          insetLissePath(rect, corners, offset + sub / 2),
-          layer,
-          sub,
-          rect,
-        );
-        _stroke(
-          canvas,
-          insetLissePath(rect, corners, offset + w - sub / 2),
-          layer,
-          sub,
-          rect,
-        );
-        break;
-      case LisseBorderStyle.groove:
-      case LisseBorderStyle.ridge:
-        final Color base = layer.color ?? const Color(0xFF808080);
-        // Shift tone but keep the base alpha (lerping to opaque would
-        // otherwise make translucent borders solid).
-        final Color dark = Color.lerp(
-          base,
-          const Color(0xFF000000),
-          0.35,
-        )!
-            .withValues(alpha: base.a);
-        final Color light = Color.lerp(
-          base,
-          const Color(0xFFFFFFFF),
-          0.45,
-        )!
-            .withValues(alpha: base.a);
-        final bool groove = layer.style == LisseBorderStyle.groove;
-        final double half = w / 2;
-        _stroke(
-          canvas,
-          insetLissePath(rect, corners, offset + half / 2),
-          layer,
-          half,
-          rect,
-          colorOverride: groove ? dark : light,
-        );
-        _stroke(
-          canvas,
-          insetLissePath(rect, corners, offset + w - half / 2),
-          layer,
-          half,
-          rect,
-          colorOverride: groove ? light : dark,
         );
         break;
     }

@@ -109,7 +109,7 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
       while (pool.length < arr.length) pool.push(createShadowEntry(defs, svg));
       while (pool.length > arr.length) removeShadowEntry(pool.pop()!);
 
-      const getPath = createPathCache(options);
+      const getPath = createPathCache();
 
       // First entry = topmost = rendered last in SVG.
       let anyVisible = false;

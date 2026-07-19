@@ -50,11 +50,13 @@ SmoothBox(
 );
 ```
 
-### Clip anything
+Use `SmoothBox` or clip with a `LisseBorder` shape:
 
 ```dart
-SmoothClip(
-  corners: LisseCorners.all(radius: 40),
+ClipPath(
+  clipper: ShapeBorderClipper(
+    shape: LisseBorder(corners: LisseCorners.all(radius: 40)),
+  ),
   child: Image.asset('hero.jpg', fit: BoxFit.cover),
 );
 ```
@@ -91,8 +93,8 @@ Fills, a single border and outer shadows ride on the native `ShapeDecoration`.
 
 - **Inner shadows** — `innerShadows: [LisseInnerShadow(...)]`.
 - **Concentric borders** — `borders: [LisseBorderLayer(width: 4, color: ...), ...]`, painted outer edge inward.
-- **Styled borders** — `LisseBorderStyle.dashed | dotted | doubleLine | groove | ridge`.
-- **Gradient fills and gradient borders** — native Flutter `Gradient` values.
+- **Styled borders** — `LisseBorderStyle.dashed | dotted`.
+- **Gradient fills** — native Flutter `Gradient` values on `SmoothBox`.
 
 ## Animating
 

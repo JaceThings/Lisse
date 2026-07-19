@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import * as core from "@lisse/core";
+import { acquirePosition, releasePosition } from "../../core/src/position-ref-count.js";
 import { smoothCorners } from "../src/smooth-corners.js";
 
 let container: HTMLDivElement;
@@ -131,9 +131,9 @@ describe("smoothCorners action - destroy idempotency", () => {
 
     // A fresh acquire now should succeed and set position:relative,
     // confirming the anchor's ref-count state wasn't corrupted.
-    expect(core.acquirePosition(anchor)).toBe(true);
+    expect(acquirePosition(anchor)).toBe(true);
     expect(anchor.style.position).toBe("relative");
-    core.releasePosition(anchor);
+    releasePosition(anchor);
     expect(anchor.style.position).toBe("");
   });
 });

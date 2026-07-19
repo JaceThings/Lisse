@@ -111,22 +111,13 @@ describe("parseBorder", () => {
     expect(result!.style).toBe("dotted");
   });
 
-  it("extracts double border style", () => {
-    el.style.border = "3px double rgb(0, 0, 255)";
-    const result = parseBorder(el);
-    expect(result!.style).toBe("double");
-  });
-
-  it("extracts groove border style", () => {
-    el.style.border = "4px groove rgb(128, 128, 128)";
-    const result = parseBorder(el);
-    expect(result!.style).toBe("groove");
-  });
-
-  it("extracts ridge border style", () => {
-    el.style.border = "4px ridge rgb(128, 128, 128)";
-    const result = parseBorder(el);
-    expect(result!.style).toBe("ridge");
+  it("treats unsupported border styles (double, groove, ridge) as solid", () => {
+    for (const style of ["double", "groove", "ridge"] as const) {
+      el.style.border = `3px ${style} rgb(0, 0, 255)`;
+      const result = parseBorder(el);
+      expect(result).toBeDefined();
+      expect(result!.style).toBeUndefined();
+    }
   });
 
   it("does not include style for solid borders", () => {

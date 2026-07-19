@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Divider } from "../components/Divider.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 import { Slider } from "../components/playground/Slider.tsx";
 import { useStateSpring } from "../components/playground/springs.ts";
 import { useMorphedCurve } from "../hooks/useMorphedCurve.ts";
+import { cssEase } from "../lib/motion.ts";
 import { buildCombFromSamples } from "../lib/comb.ts";
 import {
   buildCurve,
@@ -590,33 +590,33 @@ export function MathPage() {
               height (~t = 0.6 with ease-out) the slider is mostly
               de-blurred and the overlap is gone. */}
           <div className="relative flex w-full flex-col px-1">
-            <AnimatePresence initial={false}>
+            <div
+              className="absolute top-0 left-1 right-1"
+              style={{
+                opacity: hasShape ? 1 : 0,
+                filter: hasShape ? "blur(0px)" : "blur(8px)",
+                pointerEvents: hasShape ? "auto" : "none",
+                transition: `opacity ${SLOT_TRANSITION_DURATION}s ${cssEase(SLOT_TRANSITION_EASE)}, filter ${SLOT_TRANSITION_DURATION}s ${cssEase(SLOT_TRANSITION_EASE)}`,
+              }}
+            >
               {hasShape ? (
-                <motion.div
-                  key="shape-slider"
-                  initial={{ opacity: 0, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, filter: "blur(8px)" }}
-                  transition={{ duration: SLOT_TRANSITION_DURATION, ease: SLOT_TRANSITION_EASE }}
-                  style={{ position: "absolute", top: 0, left: 4, right: 4 }}
-                >
-                  <Slider
-                    label={shapeLabel}
-                    value={shapeValue}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={onShapeChange}
-                    format={shapeFormat}
-                  />
-                </motion.div>
+                <Slider
+                  label={shapeLabel}
+                  value={shapeValue}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  onChange={onShapeChange}
+                  format={shapeFormat}
+                />
               ) : null}
-            </AnimatePresence>
-            <motion.div
-              initial={false}
-              animate={{ marginTop: hasShape ? 53 : 0 }}
-              transition={{ duration: SLOT_TRANSITION_DURATION, ease: SLOT_TRANSITION_EASE }}
+            </div>
+            <div
               className="flex flex-col gap-5"
+              style={{
+                marginTop: hasShape ? 53 : 0,
+                transition: `margin-top ${SLOT_TRANSITION_DURATION}s ${cssEase(SLOT_TRANSITION_EASE)}`,
+              }}
             >
               <Slider
                 label={m.math_slider_corner_radius()}
@@ -636,7 +636,7 @@ export function MathPage() {
                 onChange={onCombDensity}
                 format={formatCombDensity}
               />
-            </motion.div>
+            </div>
           </div>
         </Stagger>
 

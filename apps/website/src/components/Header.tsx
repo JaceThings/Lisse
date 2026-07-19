@@ -1,7 +1,5 @@
-import { motion } from "framer-motion";
 import { Divider } from "./Divider.tsx";
 import { Stagger } from "./Stagger.tsx";
-import { LisseFloater, LisseGhost, useLisseDetach } from "./LisseDetach.tsx";
 import { m } from "../paraglide/messages.js";
 
 // Definitions stay as <p> not <dl>: the visible "1, 2, b, 3" numbering is
@@ -14,8 +12,6 @@ interface HeaderProps {
 }
 
 export function Header({ staggerFrom }: HeaderProps) {
-  const { detach, headingRef, wobble, handleClick, onRehang } = useLisseDetach();
-  const detached = detach !== null;
   return (
     <header className="flex w-full flex-col gap-5">
       <div
@@ -25,28 +21,12 @@ export function Header({ staggerFrom }: HeaderProps) {
       >
         <Stagger index={staggerFrom}>
           <div className="flex items-end gap-2 whitespace-nowrap text-text-primary">
-            <motion.h1
-              ref={headingRef}
+            <h1
               id="lisse-heading"
-              data-detached={detached || undefined}
               className="relative text-[16px] leading-none font-[550] tracking-[-0.25px]"
-              onClick={handleClick}
-              // Suppress the browser's word-select-on-multi-click while
-              // leaving single-click + drag-select working. detail is 1
-              // for the first click, 2/3/... for rapid follow-ups —
-              // preventDefault on those kills the highlight box without
-              // touching the cancellable single-click behaviour.
-              onMouseDown={(e) => {
-                if (e.detail > 1) e.preventDefault();
-              }}
-              animate={wobble}
-              style={{ transformOrigin: "50% 100%" }}
             >
-              <span style={detached ? { visibility: "hidden" } : undefined}>
-                lisse
-              </span>
-              {detached ? <LisseGhost /> : null}
-            </motion.h1>
+              lisse
+            </h1>
             <p className="text-[14px] leading-none font-[450] tracking-[-0.25px]">
               <span aria-hidden>
                 /lēs/ <em className="italic">{m.header_pos_adjective()}</em>{" "}
@@ -91,13 +71,6 @@ export function Header({ staggerFrom }: HeaderProps) {
       <Stagger index={staggerFrom + 5}>
         <Divider />
       </Stagger>
-      {detach ? (
-        <LisseFloater
-          origin={detach.origin}
-          initialVel={detach.initialVel}
-          onRehang={onRehang}
-        />
-      ) : null}
     </header>
   );
 }

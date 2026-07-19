@@ -63,21 +63,6 @@ void main() {
                   style: LisseBorderStyle.dashed,
                 ),
                 LisseBorderLayer(
-                  width: 4,
-                  color: Color(0xFF9E9E9E),
-                  style: LisseBorderStyle.doubleLine,
-                ),
-                LisseBorderLayer(
-                  width: 4,
-                  color: Color(0xFF607D8B),
-                  style: LisseBorderStyle.groove,
-                ),
-                LisseBorderLayer(
-                  width: 4,
-                  color: Color(0xFF607D8B),
-                  style: LisseBorderStyle.ridge,
-                ),
-                LisseBorderLayer(
                   width: 2,
                   color: Color(0xFF212121),
                   style: LisseBorderStyle.dotted,
@@ -127,15 +112,15 @@ void main() {
     });
   });
 
-  group('SmoothClip', () {
+  group('ClipPath', () {
     testWidgets('clips a child and mounts without exception', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Center(
-            child: SmoothClip(
-              corners: corners,
+            child: ClipPath(
+              clipper: ShapeBorderClipper(shape: LisseBorder(corners: corners)),
               child: Container(
                 width: 100,
                 height: 100,

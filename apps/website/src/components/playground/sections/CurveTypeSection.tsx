@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { animate } from "framer-motion";
+import { animate, type AnimationControls } from "../../../lib/motion.ts";
 import { generatePath } from "@lisse/core";
 import type { CurveType } from "@lisse/react";
 import { Collapse } from "../Collapse.tsx";
@@ -71,7 +71,7 @@ export function CurveTypeSection() {
     lerpSampledPaths,
     morphT,
   );
-  const animationRef = useRef<ReturnType<typeof animate> | null>(null);
+  const animationRef = useRef<AnimationControls | null>(null);
 
   // Track current curve in a ref so the click handler can read it
   // without taking the state as a callback dep (keeps onCurveChange
@@ -93,7 +93,7 @@ export function CurveTypeSection() {
       type: "tween",
       duration: MORPH_DURATION_S,
       ease: MORPH_EASE,
-      onUpdate: (v) => setMorphT(v),
+      onUpdate: (v: number) => setMorphT(v),
       onComplete: () => setMorphT(1),
     });
     setCurve(next);

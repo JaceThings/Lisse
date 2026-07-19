@@ -2,9 +2,12 @@ import 'dart:math' as math;
 
 import 'builder.dart';
 import 'corner_cache.dart';
+import 'curves/arc.dart';
 import 'curves/blend.dart';
 import 'curves/capsule.dart';
-import 'curves/registry.dart';
+import 'curves/clothoid.dart';
+import 'curves/squircle.dart';
+import 'curves/superellipse.dart';
 import 'distribute.dart';
 import 'lisse_corner.dart';
 import 'lisse_curve.dart';
@@ -74,9 +77,15 @@ void buildLissePath(
   // corners, so build each at most once and only on demand.
   final Map<Corner, CornerOutput> built = <Corner, CornerOutput>{};
   CornerOutput out(Corner corner, LisseCorner config) {
+    final CurveBuilder builder = switch (config.curve) {
+      LisseCurve.arc => buildArc,
+      LisseCurve.squircle => buildSquircle,
+      LisseCurve.superellipse => buildSuperellipse,
+      LisseCurve.clothoid => buildClothoid,
+    };
     return built[corner] ??= getCachedBuilderOutput(
       config.curve,
-      getCurveBuilder(config.curve),
+      builder,
       CurveBuilderInput(
         cornerRadius: normalized[corner]!.radius,
         smoothing: config.smoothing,

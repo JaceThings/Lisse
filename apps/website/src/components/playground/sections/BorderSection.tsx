@@ -10,7 +10,7 @@ import { useBorderKnobSpring, useStateSpring } from "../springs.ts";
 import { ROW_DIVIDER } from "../styles.ts";
 import { m } from "../../../paraglide/messages.js";
 
-type BorderPreset = "none" | "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge";
+type BorderPreset = "none" | "solid" | "dashed" | "dotted";
 type DashCap = "butt" | "square" | "round";
 
 const BORDER_COLOUR = "#eec494";
@@ -41,9 +41,6 @@ export function BorderSection({ id, title, description, position }: BorderSectio
     { value: "solid", label: m.section_border_preset_solid() },
     { value: "dashed", label: m.section_border_preset_dashed() },
     { value: "dotted", label: m.section_border_preset_dotted() },
-    { value: "double", label: m.section_border_preset_double() },
-    { value: "groove", label: m.section_border_preset_groove() },
-    { value: "ridge", label: m.section_border_preset_ridge() },
   ] as const satisfies ReadonlyArray<{ value: BorderPreset; label: string }>;
 
   const DASH_CAP_PRESETS = [
@@ -96,16 +93,11 @@ export function BorderSection({ id, title, description, position }: BorderSectio
       setThickness(6); setDash(6); setGap(6);
     } else if (next === "dotted") {
       setThickness(4); setDash(0); setGap(8);
-    } else if (next === "double") {
-      setThickness(6);
-    } else if (next === "groove" || next === "ridge") {
-      setThickness(6);
     }
   }, []);
 
   // Thickness drives every visible border; dash/gap/cap only apply to
-  // dashed-pattern styles. Uniform styles (solid/double/groove/ridge)
-  // keep Thickness but drop the pattern row.
+  // dashed-pattern styles. Solid keeps Thickness but drops the pattern row.
   const showThickness = preset !== "none";
   const showDashRow = preset === "dashed" || preset === "dotted";
 
@@ -124,7 +116,7 @@ export function BorderSection({ id, title, description, position }: BorderSectio
             options={BORDER_PRESETS}
             value={preset}
             onChange={onPresetChange}
-            pillBasis="basis-[calc(25%-9px)]"
+            pillBasis="basis-[calc(25%-4.5px)]"
           />
         </div>
         <Collapse show={showThickness}>

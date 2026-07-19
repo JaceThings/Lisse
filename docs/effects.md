@@ -74,9 +74,8 @@ All three border types (`innerBorder`, `outerBorder`, `middleBorder`) support st
 | `solid` | Default. Continuous stroke. |
 | `dashed` | Dashed stroke. Customise with `dash` and `gap`. |
 | `dotted` | Dotted stroke (round caps by default). Customise with `dash` and `gap`. |
-| `double` | Two lines with a gap in the middle. Requires `width >= 3`. |
-| `groove` | 3D grooved effect (darker shade on the outside). |
-| `ridge` | 3D ridged effect (darker shade on the inside). |
+
+`BorderConfig.color` is a hex string.
 
 ```tsx
 <SmoothCorners
@@ -92,71 +91,6 @@ All three border types (`innerBorder`, `outerBorder`, `middleBorder`) support st
   }}
 >
   Dashed border
-</SmoothCorners>
-```
-
-## Gradient borders
-
-`BorderConfig.color` accepts either a hex string or a `GradientConfig` object, enabling gradient-coloured borders on any border type and any border style.
-
-Gradient borders are **API-only** — they cannot be auto-extracted from CSS `border-image`.
-
-Two gradient types are available:
-
-- **`LinearGradientConfig`**: `{ type: "linear", angle?: number, stops: GradientStop[] }`. The `angle` is in CSS degrees (default `0`, bottom-to-top; `90` is left-to-right).
-- **`RadialGradientConfig`**: `{ type: "radial", cx?: number, cy?: number, r?: number, stops: GradientStop[] }`. All values are relative (0 to 1), defaulting to `0.5`.
-
-Each `GradientStop` is `{ offset: number, color: string, opacity?: number }` where `offset` ranges from 0 to 1.
-
-For `groove` and `ridge` border styles, each stop's colour is automatically darkened (`RGB * 2/3`) to produce the 3D shading effect.
-
-```tsx
-<SmoothCorners
-  corners={{ radius: 24 }}
-  innerBorder={{
-    width: 2,
-    color: {
-      type: "linear",
-      angle: 135,
-      stops: [
-        { offset: 0, color: "#667eea" },
-        { offset: 1, color: "#764ba2" },
-      ],
-    },
-    opacity: 1,
-  }}
-  style={{ background: "#fff", padding: 32 }}
->
-  Gradient border
-</SmoothCorners>
-```
-
-Radial gradient example:
-
-```tsx
-<SmoothCorners
-  corners={{ radius: 24 }}
-  outerBorder={{
-    width: 3,
-    color: {
-      type: "radial",
-      cx: 0.5,
-      cy: 0.5,
-      r: 0.7,
-      stops: [
-        { offset: 0, color: "#ff6b6b" },
-        { offset: 0.5, color: "#feca57", opacity: 0.8 },
-        { offset: 1, color: "#48dbfb" },
-      ],
-    },
-    opacity: 1,
-    style: "dashed",
-    dash: 8,
-    gap: 4,
-  }}
-  style={{ background: "#1a1a2e", padding: 32, color: "#fff" }}
->
-  Radial gradient dashed border
 </SmoothCorners>
 ```
 
@@ -199,7 +133,7 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 
 | CSS property | SVG effect | Notes |
 |---|---|---|
-| `border` | `innerBorder` | Width, colour, opacity, and style (including `dashed`, `dotted`, `double`, `groove`, `ridge`) are extracted from the top edge. |
+| `border` | `innerBorder` | Width, colour, opacity, and style (`solid`, `dashed`, `dotted`) are extracted from the top edge. |
 | `box-shadow` (outer) | `shadow` | All outer shadows (supports multiple). |
 | `box-shadow` (inset) | `innerShadow` | All inset shadows (supports multiple). |
 
@@ -210,17 +144,15 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 | CSS feature | What happens |
 |---|---|
 | Per-side borders | Only the top border is read. All four sides are stripped. |
+| `double`, `groove`, `ridge` | Not supported. Rendered as solid. |
 | `inset`, `outset` border styles | Rendered as solid. |
-| `border-image` | Not detected. Use gradient borders via the API instead. |
+| `border-image` | Not detected. |
+| Gradient borders via CSS | Not supported. |
 | `outline` | Not read or stripped. |
 
-- **`groove` / `ridge` shading**: the dark shade is computed as `RGB * 2/3`, matching Firefox's algorithm.
-- **Gradient border auto-extraction**: gradient borders are API-only. CSS `border-image` is not detected or extracted.
-- **`double` border minimum width**: requires `border-width >= 3px` because the double style needs space for two lines and a gap. Below 3px, the border falls back to solid.
-- **`outline`**: not extracted because CSS outlines don't follow `border-radius` in all browsers, and the squircle shape would make standard outlines look incorrect.
 - **CSS transitions**: stripped properties (`border`, `box-shadow`) will not animate because they are removed from the element and replaced with SVG. Use `autoEffects: false` and drive explicit effect props instead.
 - **Wrapper div (React/Vue)**: the `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. Use the hook/composable/action approach for full layout control.
-- **`border-image`**: not detected because CSS `border-image` syntax is complex (angle units, colour spaces, slice semantics). Use gradient borders via the explicit `BorderConfig.color` API instead.
+- **`border-image`**: not detected because CSS `border-image` syntax is complex (angle units, colour spaces, slice semantics).
 - **`!important` rules**: cannot be overridden because the library strips effects via inline styles, and `!important` stylesheet rules take precedence over inline styles. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
 - **Per-side borders**: only the top border is read during auto-extraction because `getComputedStyle` returns per-side values (`borderTopWidth`, `borderTopColor`, etc.) and the SVG overlay renders a single uniform border around the entire squircle. If you need different colours per side, use explicit effect props.
 - **One-time extraction (mount-time snapshot)**: CSS effects are read once on mount because continuously polling `getComputedStyle` would hurt performance, and a `MutationObserver` on the host element can't see ancestor class changes or CSS variable updates that affect computed style. **Re-mount the element to re-extract** after a theme switch or token change. An imperative `refresh()` API for in-place re-extraction is planned for v0.4. Until then, use explicit effect props for dynamic values.

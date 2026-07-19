@@ -167,26 +167,6 @@ function Cta({ children }: { children: React.ReactNode }) {
 
 The child receives the internal ref. Class names merge (parent first, child second). Event handlers compose: the child handler runs first, and the parent handler runs next unless the child called `event.preventDefault()`. When using `asChild`, the `as` prop is ignored.
 
-#### Standalone `Slot`
-
-`Slot` is exported for advanced composition. It is generic over the element type it will merge onto, so you can opt into element-specific attributes by passing a type parameter:
-
-```tsx
-import { Slot } from "@lisse/react";
-
-<Slot<"a"> href="/x" className="underline">
-  <a>link</a>
-</Slot>;
-
-<Slot<"button"> type="submit" onClick={handleClick}>
-  <button>submit</button>
-</Slot>;
-```
-
-Without a type parameter, `Slot` accepts the common `HTMLAttributes<HTMLElement>` surface. Use the exported `SlotPropsFor<E>` to compose element-specific shapes yourself.
-
-At runtime every prop is forwarded to the cloned child regardless of type. The generic parameter is a type-level hint only.
-
 ### Basic Usage
 
 ```tsx
@@ -381,20 +361,19 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 | CSS feature | What happens |
 |---|---|
 | Per-side borders | Only the top border is read. All four sides are stripped; differing sides are lost. |
-| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
+| `dashed`, `dotted` | Supported. Extracted from CSS and rendered as SVG equivalents. |
+| `double`, `groove`, `ridge` | Not supported. Rendered as solid. |
 | `inset`, `outset` border styles | Not replicated. Rendered as solid. |
 | Multiple `box-shadow` layers | All shadow layers are extracted and rendered. Each outer shadow becomes a `shadow` entry and each inset shadow becomes an `innerShadow` entry. |
 | `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. |
-| Gradient borders via CSS | CSS gradient borders (e.g. `border-image`) cannot be auto-extracted because `getComputedStyle` does not expose gradient data as structured values. Use the `GradientConfig` type on `BorderConfig.color` instead. |
+| Gradient borders via CSS | Not supported. CSS gradient borders (`border-image`) cannot be auto-extracted. |
 | `outline` | Not read or stripped. Outlines are painted outside the border box and are not part of `clip-path`, so they remain visible but follow the rectangular bounding box rather than the squircle shape. |
 
 **Behavioral notes:**
 
 - **One-time extraction**: CSS is read once on mount. Use explicit effect props for dynamic values.
-- **`double` minimum width**: `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid.
 - **CSS transitions**: `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
 - **`!important` rules**: inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **`groove` / `ridge` approximation**: the dark shade is computed as `RGB × 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
 - **Wrapper div**: the `SmoothCorners` component always renders a wrapper `<div>` with `position: relative` around the inner element for SVG overlay positioning. This can affect flex/grid layouts and CSS child selectors (`:first-child`, `>`). Use the `useSmoothCorners` hook to avoid the wrapper; you provide your own element and control the layout.
 
 ## CSS Borders and Shadows
@@ -408,9 +387,9 @@ Lisse works by applying a CSS `clip-path` to the element. This means CSS `border
 | Property | Type | Description |
 |----------|------|-------------|
 | `width` | `number` | Border width in pixels |
-| `color` | `string \| GradientConfig` | Border color: a hex string or a gradient configuration |
+| `color` | `string` | Border color (hex) |
 | `opacity` | `number` | Border opacity (0-1) |
-| `style` | `BorderStyle` | Border style: `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, or `"ridge"`. Default: `"solid"` |
+| `style` | `BorderStyle` | Border style: `"solid"`, `"dashed"`, or `"dotted"`. Default: `"solid"` |
 | `dash` | `number` | Custom dash length for dashed/dotted styles |
 | `gap` | `number` | Custom gap length for dashed/dotted styles |
 | `lineCap` | `"butt" \| "round" \| "square"` | Line cap for dashed/dotted strokes. Default: `"butt"` for dashed, `"round"` for dotted |
@@ -425,40 +404,6 @@ Lisse works by applying a CSS `clip-path` to the element. This means CSS `border
 | `spread` | `number` | Spread distance in pixels |
 | `color` | `string` | Shadow color (hex) |
 | `opacity` | `number` | Shadow opacity (0-1) |
-
-### `GradientStop`
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `offset` | `number` | Position within the gradient (0 to 1) |
-| `color` | `string` | Stop color (hex) |
-| `opacity` | `number` | Stop opacity (0-1). Default: `1` |
-
-### `LinearGradientConfig`
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `type` | `"linear"` | Discriminant. Must be `"linear"` |
-| `angle` | `number` | Angle in degrees (CSS convention). Default: `0` (bottom to top) |
-| `stops` | `GradientStop[]` | Array of color stops |
-
-### `RadialGradientConfig`
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `type` | `"radial"` | Discriminant. Must be `"radial"` |
-| `cx` | `number` | Horizontal center (0-1 relative). Default: `0.5` |
-| `cy` | `number` | Vertical center (0-1 relative). Default: `0.5` |
-| `r` | `number` | Radius (0-1 relative). Default: `0.5` |
-| `stops` | `GradientStop[]` | Array of color stops |
-
-### `GradientConfig`
-
-```ts
-type GradientConfig = LinearGradientConfig | RadialGradientConfig;
-```
-
-A union of `LinearGradientConfig` and `RadialGradientConfig`. Use the `type` discriminant to select between them.
 
 ## Examples
 
@@ -506,31 +451,6 @@ Or with the component:
   style={{ background: "#fff", padding: 32 }}
 >
   Layered shadow
-</SmoothCorners>
-```
-
-### Gradient Border
-
-Use a `GradientConfig` for the border `color` to render a gradient stroke:
-
-```tsx
-<SmoothCorners
-  corners={{ radius: 24 }}
-  innerBorder={{
-    width: 2,
-    color: {
-      type: "linear",
-      angle: 135,
-      stops: [
-        { offset: 0, color: "#667eea" },
-        { offset: 1, color: "#764ba2" },
-      ],
-    },
-    opacity: 1,
-  }}
-  style={{ background: "#fff", padding: 32 }}
->
-  Gradient border
 </SmoothCorners>
 ```
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { distributeAndNormalize } from "../src/index.js";
+import { distributeAndNormalize } from "../src/distribute.js";
 
 describe("distributeAndNormalize", () => {
   it("returns original radii when they fit", () => {

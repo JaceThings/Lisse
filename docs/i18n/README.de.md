@@ -67,8 +67,8 @@ Mathematische Referenz: [`docs/curves.md`](../curves.md).
 ## Funktionen
 
 - Vier Eckkurven (`arc`, `squircle`, `superellipse`, `clothoid`) mit Mischung pro Ecke
-- Innen-/Außen-/Mittelrahmen mit Stilvarianten (solid, dashed, dotted, double, groove, ridge)
-- Schlagschatten und Innenschatten, mit Verlaufsrahmen über die API
+- Innen-/Außen-/Mittelrahmen mit Stilvarianten (solid, dashed, dotted)
+- Schlagschatten und Innenschatten
 - Auto-Effekte: CSS-`border` und -`box-shadow` werden beim Mount in SVG-Äquivalente umgewandelt
 - ~1,5 µs pro `generatePath()`-Aufruf; 500 Ecken werden in <1 ms neu berechnet ([Details](../performance.md))
 - Keine Laufzeitabhängigkeiten; dualer ESM- + CJS-Export; SSR-sicherer `/path`-Subpfad

@@ -1,4 +1,4 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, getLayoutSize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
+import { createSmoothCornersController } from "@lisse/core";
 import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
 
 export interface SmoothCornersAction {
@@ -34,81 +34,13 @@ export function smoothCorners(
   let currentEffects: EffectsConfig | undefined = config.effects;
   let currentAutoEffects = config.autoEffects ?? true;
 
-  // Effects handles. The anchor is captured the first time we attach to a
-  // parent and reused thereafter, so reparenting the node doesn't strand
-  // the SVG overlay on the old parent or leak its position ref-count.
-  let effectsHandle: ReturnType<typeof createSvgEffects> | undefined;
-  let shadowHandle: ReturnType<typeof createDropShadow> | undefined;
-  let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
-  let attachedAnchor: HTMLElement | null = null;
-  let didAcquire = false;
+  const controller = createSmoothCornersController({
+    getOptions: () => currentOptions,
+    getEffects: () => currentEffects,
+    getAutoEffects: () => currentAutoEffects,
+  });
 
-  // Start or stop auto-extraction to match the desired state.
-  function setAutoExtraction(enable: boolean): void {
-    if (enable && !extractedResult) {
-      extractedResult = extractAndStripEffects(node);
-    } else if (!enable && extractedResult) {
-      restoreStyles(node, extractedResult.savedStyles);
-      extractedResult = undefined;
-    }
-  }
-
-  setAutoExtraction(currentAutoEffects);
-
-  function getMergedEffects(): EffectsConfig {
-    return mergeEffects(extractedResult, currentEffects);
-  }
-
-  function attachEffects(): void {
-    const merged = getMergedEffects();
-    if (!hasEffects(merged)) return;
-
-    // Lazy anchor capture. Only happens once; reused if the shadow
-    // handle is added later.
-    if (!attachedAnchor) {
-      const anchor = node.parentElement;
-      if (!anchor) return;
-      attachedAnchor = anchor;
-      didAcquire = acquirePosition(anchor);
-    }
-
-    if (!effectsHandle) {
-      effectsHandle = createSvgEffects(attachedAnchor);
-    }
-    // Border-only configs skip the drop-shadow handle (avoids the
-    // isolation:isolate mutation).
-    if (!shadowHandle && merged.shadow) {
-      shadowHandle = createDropShadow(attachedAnchor);
-    }
-  }
-
-  attachEffects();
-
-  const savedClipPath = node.style.clipPath;
-  node.setAttribute("data-slot", "smooth-corners");
-  node.setAttribute("data-state", "pending");
-
-  function apply() {
-    const { width, height } = getLayoutSize(node);
-    if (width > 0 && height > 0) {
-      node.style.clipPath = generateClipPath(width, height, currentOptions);
-      node.setAttribute("data-state", "ready");
-
-      const merged = getMergedEffects();
-      if (effectsHandle) {
-        effectsHandle.update(currentOptions, merged, width, height);
-      }
-      if (shadowHandle) {
-        shadowHandle.update(
-          currentOptions,
-          merged.shadow ?? DEFAULT_SHADOW,
-          width, height,
-        );
-      }
-    }
-  }
-
-  let unobserve = observeResize(node, apply);
+  controller.attach(node);
 
   return {
     update(newConfig: SmoothCornersConfig) {
@@ -118,31 +50,13 @@ export function smoothCorners(
       const nextAuto = newConfig.autoEffects ?? true;
       if (nextAuto !== currentAutoEffects) {
         currentAutoEffects = nextAuto;
-        setAutoExtraction(currentAutoEffects);
+        controller.setAutoEffects(currentAutoEffects);
+      } else {
+        controller.sync();
       }
-
-      attachEffects();
-
-      apply();
     },
     destroy() {
-      unobserve();
-      node.style.clipPath = savedClipPath;
-      node.removeAttribute("data-slot");
-      node.removeAttribute("data-state");
-      effectsHandle?.destroy();
-      effectsHandle = undefined;
-      shadowHandle?.destroy();
-      shadowHandle = undefined;
-      if (extractedResult) {
-        restoreStyles(node, extractedResult.savedStyles);
-        extractedResult = undefined;
-      }
-      if (didAcquire && attachedAnchor) {
-        releasePosition(attachedAnchor);
-      }
-      attachedAnchor = null;
-      didAcquire = false;
+      controller.detach();
     },
   };
 }

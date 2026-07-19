@@ -67,8 +67,8 @@ Vue、Svelte、またはフレームワーク非依存のコアについては�
 ## 機能
 
 - 角ごとのミキシングに対応した 4 種類の角の曲線（`arc`、`squircle`、`superellipse`、`clothoid`）
-- スタイルのバリエーション（solid、dashed、dotted、double、groove、ridge）を備えた内側 / 外側 / 中央のボーダー
-- ドロップシャドウと内側シャドウ、API 経由のグラデーションボーダー
+- スタイルのバリエーション（solid、dashed、dotted）を備えた内側 / 外側 / 中央のボーダー
+- ドロップシャドウと内側シャドウ
 - 自動エフェクト: マウント時に CSS の `border` と `box-shadow` を SVG 相当に変換
 - `generatePath()` 呼び出しあたり約 1.5 µs。500 個の角を 1 ms 未満で再計算（[詳細](../performance.md)）
 - ランタイム依存ゼロ。ESM + CJS のデュアルエクスポート。SSR セーフな `/path` サブパス

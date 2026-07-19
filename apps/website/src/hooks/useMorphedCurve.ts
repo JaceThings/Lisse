@@ -5,7 +5,7 @@
 // already been overwritten with the new target.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { animate } from "framer-motion";
+import { animate } from "../lib/motion.ts";
 import { type CurveSamples, lerpSamples } from "../lib/curves.ts";
 import { lerp, lerpOverlay, type MorphedOverlay } from "../lib/overlay.ts";
 import { useMorphedValue } from "./useMorphedValue.ts";

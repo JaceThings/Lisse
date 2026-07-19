@@ -194,18 +194,17 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 | CSS feature | What happens | Why |
 |---|---|---|
 | Per-side borders | Only the top border is read. All four sides are stripped; differing sides are lost. | SVG strokes follow a single path and cannot vary width/color per side. |
-| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |  |
+| `dashed`, `dotted` | Supported. Extracted from CSS and rendered as SVG equivalents. |  |
+| `double`, `groove`, `ridge` | Not supported. Rendered as solid. |  |
 | `inset`, `outset` border styles | Not replicated. Rendered as solid. | These styles rely on per-side light/dark shading that has no SVG equivalent on a continuous path. |
 | Multiple `box-shadow` layers | All shadow layers are extracted and rendered. |  |
 | `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. | `getComputedStyle` does not expose `border-image` in a way that can be reliably parsed into SVG. |
+| Gradient borders via CSS | Not supported. CSS gradient borders (`border-image`) cannot be auto-extracted. |  |
 | `outline` | Not read or stripped. | `outline` is not clipped by `clip-path`, so it continues to work, but it renders as a rectangle, not a squircle. |
-| Gradient borders from CSS | Not auto-extracted. CSS gradient borders must be set manually via the `GradientConfig` API. | CSS border colors are returned as flat `rgb()`/`rgba()` values by `getComputedStyle`, so gradient information is lost. |
 
 **Behavioral notes:**
 
 - **One-time extraction**: CSS is read once on init (not re-evaluated on `update()`). This avoids repeated `getComputedStyle` calls on every resize. Use explicit effects in config mode for dynamic values.
-- **`double` minimum width**: `double` borders require at least 3px `border-width` to render as double. Thinner double borders fall back to solid. This matches CSS behaviour where the three lines of a `double` border need minimum space to be visible.
-- **`groove` / `ridge` approximation**: the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles) because SVG strokes follow a single continuous path without per-segment color control.
 - **CSS transitions**: `border` and `box-shadow` are stripped via inline styles, so CSS transitions on those properties won't animate. The library removes these properties to prevent clipped artifacts. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
 - **`!important` rules**: inline style overrides can't beat `!important`. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. This is a fundamental limitation of inline style specificity. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
 
@@ -264,38 +263,6 @@ Pass an array of `ShadowConfig` objects to `shadow` or `innerShadow` to render m
 </div>
 ```
 
-### Gradient Borders
-
-Use a `GradientConfig` object for the border `color` property to render a gradient border:
-
-```svelte
-<script>
-  import { smoothCorners } from "@lisse/svelte";
-</script>
-
-<div style="position: relative">
-  <div use:smoothCorners={{
-    corners: { radius: 24, smoothing: 0.6 },
-    effects: {
-      innerBorder: {
-        width: 2,
-        color: {
-          type: "linear",
-          angle: 135,
-          stops: [
-            { offset: 0, color: "#667eea" },
-            { offset: 1, color: "#764ba2" },
-          ],
-        },
-        opacity: 1,
-      },
-    },
-  }} style="background: #fff; padding: 32px">
-    Gradient border
-  </div>
-</div>
-```
-
 ### Effect Types
 
 **`BorderConfig`**
@@ -303,9 +270,9 @@ Use a `GradientConfig` object for the border `color` property to render a gradie
 | Property | Type | Description |
 |----------|------|-------------|
 | `width` | `number` | Border width in pixels |
-| `color` | `string \| GradientConfig` | Border color: a hex string or a gradient configuration |
+| `color` | `string` | Border color (hex) |
 | `opacity` | `number` | Border opacity (0-1) |
-| `style` | `BorderStyle` | Border style (default: `"solid"`). One of `"solid"`, `"dashed"`, `"dotted"`, `"double"`, `"groove"`, `"ridge"`. |
+| `style` | `BorderStyle` | Border style: `"solid"`, `"dashed"`, or `"dotted"`. Default: `"solid"` |
 | `dash` | `number` | Custom dash length for dashed/dotted styles |
 | `gap` | `number` | Custom gap length for dashed/dotted styles |
 | `lineCap` | `"butt" \| "round" \| "square"` | Line cap for dashed/dotted strokes. Default: `"butt"` for dashed, `"round"` for dotted. |
@@ -342,7 +309,7 @@ interface SmoothCornersConfig {
 }
 ```
 
-The action also re-exports all core types: `SmoothCornerOptions`, `UniformCornerOptions`, `PerCornerConfig`, `CornerConfig`, `BorderConfig`, `ShadowConfig`, `EffectsConfig`, `GradientStop`, `LinearGradientConfig`, `RadialGradientConfig`, `GradientConfig`.
+The action also re-exports all core types: `SmoothCornerOptions`, `PerCornerConfig`, `CornerConfig`, `BorderConfig`, `ShadowConfig`, `EffectsConfig`.
 
 ### `EffectsConfig`
 
@@ -354,32 +321,6 @@ interface EffectsConfig {
   innerShadow?: ShadowConfig | ShadowConfig[];
   shadow?: ShadowConfig | ShadowConfig[];
 }
-```
-
-### Gradient Types
-
-```ts
-interface GradientStop {
-  offset: number;    // 0 to 1
-  color: string;     // hex color
-  opacity?: number;  // 0 to 1, default 1
-}
-
-interface LinearGradientConfig {
-  type: "linear";
-  angle?: number;       // degrees (CSS convention), default 0 (bottom to top)
-  stops: GradientStop[];
-}
-
-interface RadialGradientConfig {
-  type: "radial";
-  cx?: number;  // 0-1 relative, default 0.5
-  cy?: number;  // 0-1 relative, default 0.5
-  r?: number;   // 0-1 relative, default 0.5
-  stops: GradientStop[];
-}
-
-type GradientConfig = LinearGradientConfig | RadialGradientConfig;
 ```
 
 ## SSR / SvelteKit

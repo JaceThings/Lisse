@@ -244,32 +244,12 @@ shadow.destroy();
 
 **Returns:** `DropShadowHandle` with the shape `{ update(options, shadow | shadows[], width, height): void; destroy(): void }`. Accepts a single `ShadowConfig` or an array.
 
-### `acquirePosition(anchor)`
-
-Ref-counted helper that sets `position: relative` on an anchor element if it currently has `position: static`. Returns `true` if the position was changed, `false` if it was already non-static. Multiple calls on the same element increment a counter; the position is only restored when all callers release.
-
-```ts
-import { acquirePosition, releasePosition } from "@lisse/core";
-
-const didSet = acquirePosition(wrapperDiv);
-// wrapperDiv.style.position is now "relative" (if it was "static")
-
-// Later, on cleanup:
-if (didSet) releasePosition(wrapperDiv);
-// position restored to "" only when all acquires are released
-```
-
-### `releasePosition(anchor)`
-
-Decrements the ref count for an anchor element. When the count reaches zero, `position` is cleared (restored to its original value). Safe to call even if `acquirePosition` was never called on this element.
-
 ### Constants
 
 ```ts
 import {
-  DEFAULT_SMOOTHING,         // 0.6
+  DEFAULT_SMOOTHING,          // 0.6
   DEFAULT_PRESERVE_SMOOTHING, // true
-  DEFAULT_SHADOW,             // { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 0 }
 } from "@lisse/core";
 ```
 
@@ -277,18 +257,10 @@ import {
 
 ### `SmoothCornerOptions`
 
-```ts
-type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
-```
-
-### `UniformCornerOptions`
+Uniform corners use `CornerConfig` directly. Per-corner configs use `PerCornerConfig`:
 
 ```ts
-interface UniformCornerOptions {
-  radius: number;
-  smoothing?: number;          // Default: 0.6
-  preserveSmoothing?: boolean; // Default: true
-}
+type SmoothCornerOptions = CornerConfig | PerCornerConfig;
 ```
 
 ### `PerCornerConfig`
@@ -307,53 +279,17 @@ interface PerCornerConfig {
 ```ts
 interface CornerConfig {
   radius: number;
+  curve?: CurveType;           // Default: 'squircle'
   smoothing?: number;          // Default: 0.6
+  exponent?: number;           // superellipse only. Default: 4
   preserveSmoothing?: boolean; // Default: true
 }
-```
-
-### `GradientStop`
-
-```ts
-interface GradientStop {
-  offset: number;    // 0 to 1
-  color: string;     // hex color (3 or 6 digit)
-  opacity?: number;  // 0 to 1, default 1
-}
-```
-
-### `LinearGradientConfig`
-
-```ts
-interface LinearGradientConfig {
-  type: "linear";
-  angle?: number;    // CSS degrees: 0 = bottom-to-top, 90 = left-to-right. Default: 0
-  stops: GradientStop[];
-}
-```
-
-### `RadialGradientConfig`
-
-```ts
-interface RadialGradientConfig {
-  type: "radial";
-  cx?: number;   // 0-1, default 0.5
-  cy?: number;   // 0-1, default 0.5
-  r?: number;    // 0-1, default 0.5
-  stops: GradientStop[];
-}
-```
-
-### `GradientConfig`
-
-```ts
-type GradientConfig = LinearGradientConfig | RadialGradientConfig;
 ```
 
 ### `BorderStyle`
 
 ```ts
-type BorderStyle = "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge";
+type BorderStyle = "solid" | "dashed" | "dotted";
 ```
 
 ### `BorderConfig`
@@ -361,7 +297,7 @@ type BorderStyle = "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge"
 ```ts
 interface BorderConfig {
   width: number;
-  color: string | GradientConfig;
+  color: string;
   opacity: number;
   style?: BorderStyle;
   dash?: number;
@@ -480,11 +416,11 @@ import { generatePath, generateClipPath } from "@lisse/core/path";
 
 ### Included
 
-`generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `DEFAULT_SHADOW`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`
+`generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`
 
 ### Excluded
 
-`createSvgEffects`, `createDropShadow`, `observeResize`, `extractAndStripEffects`, `restoreStyles`, `parseBorder`, `parseBoxShadow`, `parseColor`. These depend on the DOM and are only available from the main entry point.
+`createSvgEffects`, `createDropShadow`, `observeResize`, `parseBorder`, `parseBoxShadow`, `parseColor`. These depend on the DOM and are only available from the main entry point.
 
 ### When to use it
 
@@ -495,35 +431,7 @@ import { generatePath, generateClipPath } from "@lisse/core/path";
 
 ## Auto Effects
 
-The `extractAndStripEffects` and `restoreStyles` functions power the "auto effects" feature used by all framework bindings. When applied to an element, they:
-
-1. Read the element's computed CSS `border` and `box-shadow`
-2. Convert them to equivalent `EffectsConfig` values (`innerBorder`, `shadow`, `innerShadow`)
-3. Strip those CSS properties from the element's inline style (so they don't get clipped by `clip-path`)
-4. Return the extracted effects and saved original styles for later restoration
-
-This is used internally by `@lisse/react`, `@lisse/vue`, and `@lisse/svelte` to make existing CSS borders and shadows "just work" without manual conversion. If you're using the core package directly, you can use these functions to implement the same behaviour:
-
-```ts
-import { extractAndStripEffects, restoreStyles, createSvgEffects, createDropShadow } from "@lisse/core";
-
-const el = document.getElementById("card")!;
-const wrapper = el.parentElement!;
-
-// Extract and strip CSS effects
-const { effects, savedStyles } = extractAndStripEffects(el);
-
-// Use extracted effects with SVG overlay
-const svgEffects = createSvgEffects(wrapper);
-const shadow = createDropShadow(wrapper);
-
-// ... apply effects ...
-
-// Later, on cleanup:
-svgEffects.destroy();
-shadow.destroy();
-restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
-```
+Framework bindings use `createSmoothCornersController`, which reads computed CSS once on mount, converts borders and box-shadows to SVG equivalents, strips the CSS properties, and restores them on unmount. Pass explicit `EffectsConfig` props to override auto-extracted values per key, or set `autoEffects: false` to disable extraction.
 
 ### How CSS properties are mapped
 
@@ -540,21 +448,19 @@ restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
 | CSS feature | What happens | Why |
 |---|---|---|
 | Per-side borders | Only the top border is read. All four sides are stripped; differing sides are lost. | The SVG overlay renders a uniform border along a single squircle path; per-side variation is not possible. |
-| `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |  |
+| `dashed`, `dotted` | Supported. Extracted from CSS and rendered as SVG equivalents. |  |
+| `double`, `groove`, `ridge` | Not supported. Rendered as solid. |  |
 | `inset`, `outset` border styles | Not replicated. Rendered as solid. |  |
-| `border-image` | Not detected. Use the gradient border API (`GradientConfig`) instead. | `border-image` syntax is too complex to reliably parse from `getComputedStyle`. |
+| `border-image` | Not detected. May be misread as a solid border and stripped incorrectly. | `border-image` syntax is too complex to reliably parse from `getComputedStyle`. |
 | `outline` | Not read or stripped. | `outline` does not follow `border-radius` consistently across browsers, so extraction would be unreliable. |
-| Gradient borders | Not auto-extracted from CSS. Use the `GradientConfig` API on `BorderConfig.color` instead. | CSS gradient borders are set via `border-image`, which cannot be reliably parsed (see above). |
+| Gradient borders | Not supported. | CSS gradient borders use `border-image`, which cannot be reliably parsed. |
 
 **Behavioral notes:**
 
 - **Wrapper div**: the SVG overlay is inserted into a wrapper element, which can affect `flex` and `grid` layouts. Account for the wrapper when styling parent containers.
-- **`double` minimum width**: `double` borders require at least 3px `border-width` to render as double (needs space for two lines plus a gap). Thinner double borders fall back to solid.
 - **One-time extraction**: reads CSS once when called. Subsequent dynamic changes won't be reflected. Continuous `getComputedStyle` polling would be expensive, so use explicit `EffectsConfig` values for dynamic effects.
 - **CSS transitions**: stripped properties (`border`, `box-shadow`) are replaced with SVG equivalents that are not animatable via CSS transitions. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
-- **`groove` / `ridge` approximation**: the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
 - **`!important` rules**: inline style stripping can't override `!important` stylesheet rules. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **Content-box border compensation**: when `extractAndStripEffects` removes a border from an element using `box-sizing: content-box`, the content area would expand by the border width (since content-box sizing excludes borders from the content dimensions). To prevent this layout shift, padding is automatically increased by the border width on each side. The original padding values are saved and restored when `restoreStyles` is called.
 
 ## Examples
 
@@ -653,64 +559,6 @@ effects.update(
 ```
 
 Shadows are rendered in CSS order: the first shadow in the array is topmost (closest to the element). Each shadow gets its own SVG filter and path element.
-
-### Linear gradient border
-
-```ts
-import { createSvgEffects } from "@lisse/core";
-
-const effects = createSvgEffects(wrapperElement);
-
-effects.update(
-  { radius: 24, smoothing: 0.6 },
-  {
-    outerBorder: {
-      width: 2,
-      color: {
-        type: "linear",
-        angle: 135,
-        stops: [
-          { offset: 0, color: "#ff0080" },
-          { offset: 1, color: "#7928ca" },
-        ],
-      },
-      opacity: 1,
-    },
-  },
-  300,
-  200,
-);
-```
-
-### Radial gradient border
-
-```ts
-import { createSvgEffects } from "@lisse/core";
-
-const effects = createSvgEffects(wrapperElement);
-
-effects.update(
-  { radius: 24, smoothing: 0.6 },
-  {
-    innerBorder: {
-      width: 1.5,
-      color: {
-        type: "radial",
-        cx: 0.5,
-        cy: 0,
-        r: 0.7,
-        stops: [
-          { offset: 0, color: "#ffffff", opacity: 0.8 },
-          { offset: 1, color: "#ffffff", opacity: 0.1 },
-        ],
-      },
-      opacity: 1,
-    },
-  },
-  300,
-  200,
-);
-```
 
 ## License
 

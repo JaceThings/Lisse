@@ -1,23 +1,15 @@
-import { useEffect, useRef } from "react";
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
-  type AnimationPlaybackControls,
-} from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { generatePath } from "@lisse/core";
-
-// Persistent squircle ring tracking the focused `[data-focus-ring]`.
-// Within a `[data-focus-section]` group the ring springs between targets;
-// across groups it fades out, snaps while invisible, and fades back in —
-// soft cross-dissolve instead of a long visible slide.
-//
-// Position is in page coordinates (rect.x + scrollX) on an absolute SVG,
-// so it stays glued through scroll without a listener. Hides if modality
-// flips to mouse.
+import {
+  animate,
+  useMotionValue,
+  useMotionValueEvent,
+  useSpring,
+  useTransform,
+  type AnimationControls,
+  type MotionValue,
+} from "../lib/motion.ts";
 
 const RING_SELECTOR = "[data-focus-ring]";
 const SECTION_SELECTOR = "[data-focus-section]";
@@ -54,14 +46,10 @@ export function FocusRingOverlay({
   const hS = useSpring(h, SPRING);
   const opacity = useMotionValue(0);
 
-  const d = useTransform([wS, hS], ([wv, hv]) => {
-    const ww = Math.max(0, wv as number);
-    const hh = Math.max(0, hv as number);
+  const d = useTransform([wS, hS], (wv, hv) => {
+    const ww = Math.max(0, wv);
+    const hh = Math.max(0, hv);
     if (ww === 0 || hh === 0) return "";
-    // Cap radius against the rect's min dimension so small elements
-    // (e.g. compact footer links) don't render as near-capsules — the
-    // smoothing extends the curve past `radius` and eats the straight
-    // edge entirely on the short axis without this clamp.
     const r = Math.min(
       radius + Math.min(offsetX, offsetY),
       Math.min(ww, hh) / 2.5,
@@ -69,14 +57,17 @@ export function FocusRingOverlay({
     return generatePath(ww, hh, { radius: r, smoothing });
   });
 
+  const svgX = useStateSync(xS);
+  const svgY = useStateSync(yS);
+  const svgW = useStateSync(wS);
+  const svgH = useStateSync(hS);
+  const svgOpacity = useStateSync(opacity);
+
   const visible = useRef(false);
   const targetRef = useRef<HTMLElement | null>(null);
-  const fadeRef = useRef<AnimationPlaybackControls | null>(null);
+  const fadeRef = useRef<AnimationControls | null>(null);
   const lastModality = useRef<"keyboard" | "mouse">("mouse");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // The route-change effect below reuses the main effect's hide() via this
-  // ref, so its full reset (incl. the cross-section fade state) stays in one
-  // place rather than being half-duplicated.
   const hideRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -84,9 +75,6 @@ export function FocusRingOverlay({
     type Rect = { nx: number; ny: number; nw: number; nh: number };
     let pendingTarget: Rect | null = null;
 
-    // Per-element outset via `data-focus-inset-x` / `-y` (in px). Lets
-    // text-only links (e.g. footer nav) request a wider ring without
-    // changing layout. Falls back to the prop defaults when absent.
     const measure = (el: HTMLElement): Rect => {
       const r = el.getBoundingClientRect();
       const insetX = Number(el.dataset.focusInsetX) || offsetX;
@@ -99,15 +87,22 @@ export function FocusRingOverlay({
       };
     };
 
-    // Jump springs alongside raw values so they don't interpolate from
-    // the previous position.
     const snap = ({ nx, ny, nw, nh }: Rect) => {
-      xS.jump(nx); yS.jump(ny); wS.jump(nw); hS.jump(nh);
-      x.set(nx); y.set(ny); w.set(nw); h.set(nh);
+      xS.jump(nx);
+      yS.jump(ny);
+      wS.jump(nw);
+      hS.jump(nh);
+      x.set(nx);
+      y.set(ny);
+      w.set(nw);
+      h.set(nh);
     };
 
     const slide = ({ nx, ny, nw, nh }: Rect) => {
-      x.set(nx); y.set(ny); w.set(nw); h.set(nh);
+      x.set(nx);
+      y.set(ny);
+      w.set(nw);
+      h.set(nh);
     };
 
     const fadeTo = (to: number, opts: typeof FADE_IN | typeof FADE_OUT) => {
@@ -131,15 +126,12 @@ export function FocusRingOverlay({
     const onFocusIn = (e: FocusEvent) => {
       const t = (e.target as HTMLElement | null)?.closest(RING_SELECTOR) as HTMLElement | null;
       if (!t) return;
-      // A click flips modality to mouse; the subsequent focusin must hide
-      // the ring rather than stranding it at the previous keyboard position.
       if (lastModality.current !== "keyboard") {
         hide();
         return;
       }
       const dest = measure(t);
       if (fadingOut) {
-        // Coalesce — the in-flight onComplete will snap to the most recent.
         pendingTarget = dest;
         targetRef.current = t;
         return;
@@ -157,8 +149,6 @@ export function FocusRingOverlay({
         getSection(targetRef.current) !== getSection(t);
 
       if (crossingSections) {
-        // Fade out, snap while invisible, fade back in — no long-distance
-        // slide between groups (e.g. Comparison pill → first install row).
         targetRef.current = t;
         fadingOut = true;
         pendingTarget = dest;
@@ -183,8 +173,6 @@ export function FocusRingOverlay({
     };
 
     const onFocusOut = () => {
-      // Defer one frame so a synchronous focus move (Tab) lands its focusin
-      // before we decide whether to hide.
       requestAnimationFrame(() => {
         const active = document.activeElement as HTMLElement | null;
         if (active?.closest(RING_SELECTOR)) return;
@@ -192,12 +180,8 @@ export function FocusRingOverlay({
       });
     };
 
-    // Activation keys (Enter/Space/Escape) don't indicate in-page
-    // navigation; counting them would re-trigger the ring on the next
-    // programmatic .focus().
     const onModalityKey = (e: KeyboardEvent) => {
       if (!NAV_KEYS.has(e.key)) return;
-      // Modifier + arrow is a browser shortcut, not in-page navigation.
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       lastModality.current = "keyboard";
     };
@@ -205,10 +189,6 @@ export function FocusRingOverlay({
       lastModality.current = "mouse";
     };
 
-    // The focused link itself never fades; its motion.span ancestor does
-    // (Home link exit, AnimatedBody route exit). Any ancestor below
-    // opacity 1 means we're being animated out — fade the ring instead
-    // of tracking the moving target.
     const isMidExit = (el: HTMLElement): boolean => {
       let node: HTMLElement | null = el;
       while (node && node !== document.body) {
@@ -219,11 +199,6 @@ export function FocusRingOverlay({
       return false;
     };
 
-    // Targets can move externally (footer slides on route change). The
-    // poll re-feeds raw values so the springs follow; writes are no-ops
-    // when nothing's moving. Bail on removed or mid-exit elements —
-    // otherwise getBoundingClientRect on a detached node returns the
-    // zero-rect and the ring snaps to the viewport origin.
     let rafId = 0;
     const follow = () => {
       if (visible.current && targetRef.current && !fadingOut) {
@@ -253,37 +228,39 @@ export function FocusRingOverlay({
     };
   }, [x, y, w, h, xS, yS, wS, hS, opacity, offsetX, offsetY]);
 
-  // Route-change reset — the follow-poll misses rings anchored to persistent
-  // chrome or instant route swaps. Reuse hide() so the cross-section fade
-  // state is reset too (a manual fade-out would leave fadingOut stuck true,
-  // killing the ring until reload). No-op when nothing's shown.
   useEffect(() => {
     hideRef.current?.();
   }, [pathname]);
 
   return (
-    <motion.svg
+    <svg
       aria-hidden
+      x={svgX}
+      y={svgY}
+      width={svgW}
+      height={svgH}
       style={{
         position: "absolute",
         left: 0,
         top: 0,
-        x: xS,
-        y: yS,
-        width: wS,
-        height: hS,
-        opacity,
+        opacity: svgOpacity,
         pointerEvents: "none",
         zIndex: 9999,
         overflow: "visible",
       }}
     >
-      <motion.path
+      <path
         d={d}
         fill="none"
         stroke="var(--color-text-primary)"
         strokeWidth={strokeWidth}
       />
-    </motion.svg>
+    </svg>
   );
+}
+
+function useStateSync(value: MotionValue) {
+  const [state, setState] = useState(value.get());
+  useMotionValueEvent(value, "change", setState);
+  return state;
 }

@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import {
   HeadContent,
   Scripts,
@@ -7,12 +7,6 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { getLocale, getTextDirection } from "../paraglide/runtime.js";
-import {
-  AnimatePresence,
-  LayoutGroup,
-  MotionConfig,
-  motion,
-} from "framer-motion";
 
 // Style order is load-bearing.
 import "@fontsource-variable/inter/standard.css";
@@ -27,10 +21,10 @@ import "../styles/global.css";
 import { FocusRingOverlay } from "../components/FocusRingOverlay.tsx";
 import { Header } from "../components/Header.tsx";
 import { Layout } from "../components/Layout.tsx";
-import { SelectionHighlight } from "../components/SelectionHighlight.tsx";
 import { LanguageToast } from "../components/LanguageToast.tsx";
 import { Stagger } from "../components/Stagger.tsx";
 import { Footer } from "../components/playground/Footer.tsx";
+import { cssEase } from "../lib/motion.ts";
 import { ogLocale } from "../lib/route-meta.ts";
 import { SITE_ORIGIN } from "../lib/site.ts";
 import { m } from "../paraglide/messages.js";
@@ -38,7 +32,6 @@ import { Home } from "../pages/Home.tsx";
 import { What } from "../pages/What.tsx";
 import { Playground } from "../pages/Playground.tsx";
 import { MathPage } from "../pages/Math.tsx";
-import { CurvesTest } from "../pages/CurvesTest.tsx";
 import { ChromeRedirect } from "./chrome.tsx";
 
 const FADE_MS = 250;
@@ -134,87 +127,114 @@ export const Route = createRootRoute({
   component: RootComponent,
 });
 
-// Dev-only agentation toolbar.
-function DevAgentation() {
-  const [Toolbar, setToolbar] = useState<ComponentType | null>(null);
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    import("agentation")
-      .then((m) => setToolbar(() => m.PageFeedbackToolbarCSS))
-      .catch(() => {});
-  }, []);
-  return Toolbar ? <Toolbar /> : null;
-}
-
 // Body renders via an explicit pathname -> component map, NOT <Outlet/>.
-// <Outlet/> subscribes to a LIVE router store, so AnimatePresence's exiting
-// element would re-render to the DESTINATION route and the old page would
-// never fade out. A distinct plain per-pathname element freezes the exiting
-// page. New animated routes must be added here. ($.tsx redirects unknowns.)
+// <Outlet/> subscribes to a LIVE router store, so an exiting element would
+// re-render to the DESTINATION route and the old page would never fade out.
+// A distinct plain per-pathname element freezes the exiting page. New animated
+// routes must be added here. ($.tsx redirects unknowns.)
 const PAGES: Record<string, ComponentType> = {
   "/": Home,
   "/what": What,
   "/playground": Playground,
   "/math": MathPage,
   "/chrome": ChromeRedirect,
-  // Dev-only harness; the route redirects to home in production.
-  ...(import.meta.env.DEV ? { "/curves-test": CurvesTest } : {}),
 };
 
-// Route-keyed body cross-fade. First mount has no preceding footer to slide,
-// so its enter is undelayed; later navs delay the body fade-in by the footer
-// slide so the new body appears only after the footer settles.
+interface BodyFrame {
+  pathname: string;
+  Page: ComponentType;
+  visible: boolean;
+}
+
 function AnimatedBody() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isFirstMount = useRef(true);
+  const [frame, setFrame] = useState<BodyFrame>(() => ({
+    pathname,
+    Page: PAGES[pathname] ?? Home,
+    visible: true,
+  }));
+
   useEffect(() => {
     isFirstMount.current = false;
   }, []);
-  const enterDelay = isFirstMount.current ? 0 : FOOTER_SLIDE_MS / 1000;
-  const Page = PAGES[pathname] ?? Home;
+
+  useEffect(() => {
+    if (pathname === frame.pathname) return;
+    if (isFirstMount.current) {
+      setFrame({
+        pathname,
+        Page: PAGES[pathname] ?? Home,
+        visible: true,
+      });
+      return;
+    }
+
+    setFrame((prev) => ({ ...prev, visible: false }));
+    let fadeIn: number | undefined;
+    const fadeOut = window.setTimeout(() => {
+      const Page = PAGES[pathname] ?? Home;
+      setFrame({ pathname, Page, visible: false });
+      fadeIn = window.setTimeout(() => {
+        setFrame({ pathname, Page, visible: true });
+      }, FOOTER_SLIDE_MS);
+    }, FADE_MS);
+
+    return () => {
+      window.clearTimeout(fadeOut);
+      if (fadeIn !== undefined) window.clearTimeout(fadeIn);
+    };
+  }, [pathname, frame.pathname]);
+
+  const { Page, visible } = frame;
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={pathname}
-        className="w-full"
-        // First mount paints at opacity:1 so SSR content is visible pre-hydration;
-        // only client navs fade in.
-        initial={isFirstMount.current ? false : { opacity: 0 }}
-        animate={{
-          opacity: 1,
-          transition: { duration: FADE_MS / 1000, ease: EASE, delay: enterDelay },
-        }}
-        exit={{ opacity: 0, transition: { duration: FADE_MS / 1000, ease: EASE } }}
-      >
-        <Page />
-      </motion.div>
-    </AnimatePresence>
+    <div
+      className="w-full"
+      style={{
+        opacity: isFirstMount.current ? 1 : visible ? 1 : 0,
+        transition: isFirstMount.current
+          ? undefined
+          : `opacity ${FADE_MS}ms ${cssEase(EASE)}`,
+      }}
+    >
+      <Page />
+    </div>
   );
 }
 
-// Footer slides on route height change. The ancestor <LayoutGroup> is required
-// -- without it framer-motion never sees the sibling's size change and the
-// footer's translateY never animates.
 function PersistentFooter() {
+  const footerRef = useRef<HTMLElement>(null);
+  const prevTop = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const el = footerRef.current;
+    if (!el) return;
+    const nextTop = el.offsetTop;
+    if (prevTop.current !== null && prevTop.current !== nextTop) {
+      const delta = prevTop.current - nextTop;
+      el.style.transform = `translateY(${delta}px)`;
+      el.style.transition = "transform 0ms";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.transition = `transform ${FOOTER_SLIDE_MS}ms ${cssEase(EASE)}`;
+          el.style.transform = "";
+        });
+      });
+    }
+    prevTop.current = nextTop;
+  });
+
   return (
-    <motion.footer
-      layout="position"
-      transition={{ layout: { duration: FOOTER_SLIDE_MS / 1000, ease: EASE } }}
-      className="w-full"
-    >
+    <footer ref={footerRef} className="w-full">
       <Stagger index={14}>
         <Footer />
       </Stagger>
-    </motion.footer>
+    </footer>
   );
 }
 
 function RootComponent() {
-  // Locale resolved per-request from the URL (server: via paraglideMiddleware +
-  // AsyncLocalStorage; client: from the path). dir is derived so RTL locales,
-  // if added later, flip automatically. Both are "en"/"ltr" until other locales
-  // are registered in project.inlang/settings.json.
   const locale = getLocale();
   return (
     <html lang={locale} dir={getTextDirection(locale)}>
@@ -222,19 +242,13 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body>
-        <MotionConfig reducedMotion="user">
-          <LayoutGroup>
-            <Layout>
-              <Header staggerFrom={0} />
-              <AnimatedBody />
-              <PersistentFooter />
-            </Layout>
-          </LayoutGroup>
-          <FocusRingOverlay />
-          <SelectionHighlight />
-          <LanguageToast />
-          <DevAgentation />
-        </MotionConfig>
+        <Layout>
+          <Header staggerFrom={0} />
+          <AnimatedBody />
+          <PersistentFooter />
+        </Layout>
+        <FocusRingOverlay />
+        <LanguageToast />
         <Scripts />
       </body>
     </html>

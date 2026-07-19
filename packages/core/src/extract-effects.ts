@@ -48,7 +48,6 @@ export function parseBorder(el: HTMLElement): BorderConfig | undefined {
 
   const supportedStyles: Record<string, BorderStyle> = {
     solid: "solid", dashed: "dashed", dotted: "dotted",
-    double: "double", groove: "groove", ridge: "ridge",
   };
   const borderStyle = supportedStyles[style];
 

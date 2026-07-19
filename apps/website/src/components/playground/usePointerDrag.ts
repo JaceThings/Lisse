@@ -1,5 +1,5 @@
 import { useRef, type RefObject } from "react";
-import { animate, type MotionValue } from "framer-motion";
+import { animate, type AnimationControls, type MotionValue } from "../../lib/motion.ts";
 import {
   CLICK_THRESHOLD,
   PROP_CHANGE_DURATION,
@@ -24,7 +24,7 @@ interface UsePointerDragOptions {
   max: number;
   step: number;
   onChange: (next: number, fromDrag?: boolean) => void;
-  reported: MotionValue<number>;
+  reported: MotionValue;
   rubberBand: RubberBandApi;
   /** Stops any in-flight prop-change tween before the pointer takes over.
    *  Owned by the parent so its prop-change effect stays the sole writer
@@ -50,11 +50,8 @@ export function usePointerDrag({
   // inside `onPointerDown`. The cleanup fires when the parent's `value`
   // updates in response to that same pointerdown — wiping the tween
   // would freeze the fill at its pre-tap position.
-  const pointerAnimRef = useRef<ReturnType<typeof animate> | null>(null);
-  // Snap-tween that eases the fill from its current visual position into
-  // the freshly-stepped integer. Held separately from the click-tween so a
-  // mid-drag crossing can replace just the snap without killing the rest.
-  const stepAnimRef = useRef<ReturnType<typeof animate> | null>(null);
+  const pointerAnimRef = useRef<AnimationControls | null>(null);
+  const stepAnimRef = useRef<AnimationControls | null>(null);
   // Last integer the drag committed to. null between drags so the first
   // crossing of a fresh drag doesn't tick against a stale baseline.
   const lastDragSteppedRef = useRef<number | null>(null);
