@@ -75,7 +75,13 @@ cpSync(resolve(dist, "chrome"), resolve(dist, "firefox"), { recursive: true });
 const firefoxManifest = {
   ...manifest,
   background: { scripts: ["background.js"] },
-  browser_specific_settings: { gecko: { id: "extension@corne.rs" } },
+  browser_specific_settings: {
+    gecko: {
+      id: "extension@corne.rs",
+      // AMO requires an explicit data-collection declaration; Lisse collects none.
+      data_collection_permissions: { required: ["none"] },
+    },
+  },
 };
 writeFileSync(resolve(dist, "firefox/manifest.json"), JSON.stringify(firefoxManifest, null, 2) + "\n");
 
