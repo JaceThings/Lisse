@@ -11,8 +11,9 @@ const double kAppleSmoothing = 0.65;
 /// Figma's labeled "iOS" preset (60%). Use for design-handoff parity.
 const double kFigmaSmoothing = 0.6;
 
-/// Default corner smoothing. Apple-oriented; use [kFigmaSmoothing] for Figma's 60% preset.
-const double kDefaultSmoothing = kAppleSmoothing;
+/// Default corner smoothing — same value as [kAppleSmoothing].
+/// Use [kFigmaSmoothing] for Figma's 60% preset.
+const double kDefaultSmoothing = 0.65;
 
 /// Preserve smoothing when space is limited.
 const bool kDefaultPreserveSmoothing = true;
