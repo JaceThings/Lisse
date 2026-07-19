@@ -182,10 +182,13 @@ export function FocusRingOverlay({
       fadeTo(1, FADE_IN);
     };
 
+    let focusOutRaf = 0;
     const onFocusOut = () => {
       // Defer one frame so a synchronous focus move (Tab) lands its focusin
       // before we decide whether to hide.
-      requestAnimationFrame(() => {
+      cancelAnimationFrame(focusOutRaf);
+      focusOutRaf = requestAnimationFrame(() => {
+        focusOutRaf = 0;
         const active = document.activeElement as HTMLElement | null;
         if (active?.closest(RING_SELECTOR)) return;
         hide();
@@ -244,6 +247,7 @@ export function FocusRingOverlay({
     document.addEventListener("pointerdown", onModalityPointer, true);
     return () => {
       cancelAnimationFrame(rafId);
+      cancelAnimationFrame(focusOutRaf);
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);
       document.removeEventListener("keydown", onModalityKey, true);
