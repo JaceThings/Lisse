@@ -30,13 +30,25 @@ export function parseColor(raw: string): { hex: string; opacity: number } | unde
   return { hex, opacity: a };
 }
 
+/** The computed-style fields `parseBorder` reads. */
+export type BorderStyleSource = Pick<
+  CSSStyleDeclaration,
+  "borderTopStyle" | "borderTopWidth" | "borderTopColor"
+>;
+
 /**
  * Read the computed border from an element as a BorderConfig.
  * Returns undefined when the border is effectively invisible (none/hidden,
  * width 0, or transparent).
+ *
+ * Pass a pre-read `cs` to reuse an existing `getComputedStyle` result (its
+ * values must be snapshotted before any layout-dirtying write — computed
+ * style is live); omit it and the element's computed style is read here.
  */
-export function parseBorder(el: HTMLElement): BorderConfig | undefined {
-  const cs = getComputedStyle(el);
+export function parseBorder(
+  el: HTMLElement,
+  cs: BorderStyleSource = getComputedStyle(el),
+): BorderConfig | undefined {
   const style = cs.borderTopStyle;
   if (style === "none" || style === "hidden") return undefined;
 
@@ -46,17 +58,18 @@ export function parseBorder(el: HTMLElement): BorderConfig | undefined {
   const color = parseColor(cs.borderTopColor);
   if (!color || color.opacity <= 0) return undefined;
 
-  const supportedStyles: Record<string, BorderStyle> = {
-    solid: "solid", dashed: "dashed", dotted: "dotted",
-    double: "double", groove: "groove", ridge: "ridge",
+  // "solid" is the default and stays implicit; only non-solid supported
+  // styles are carried through. Anything else (inset/outset/…) is dropped.
+  const nonSolid: Record<string, BorderStyle> = {
+    dashed: "dashed", dotted: "dotted", double: "double", groove: "groove", ridge: "ridge",
   };
-  const borderStyle = supportedStyles[style];
+  const borderStyle = nonSolid[style];
 
   return {
     width,
     color: color.hex,
     opacity: color.opacity,
-    ...(borderStyle && borderStyle !== "solid" ? { style: borderStyle } : {}),
+    ...(borderStyle ? { style: borderStyle } : {}),
   };
 }
 
@@ -149,11 +162,17 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
     paddingLeft: el.style.paddingLeft,
   };
 
-  const innerBorder = parseBorder(el);
+  // ONE getComputedStyle for the whole element. Computed style is live, so
+  // every value we need is snapshotted into plain strings/numbers here,
+  // BEFORE the first layout-dirtying write below — including the fields
+  // parseBorder needs, which are handed to it rather than re-read.
   const cs = getComputedStyle(el);
-  const { shadow, innerShadow } = parseBoxShadow(cs.boxShadow);
-
-  // Snapshot computed values BEFORE stripping — getComputedStyle is live.
+  const borderStyleSource: BorderStyleSource = {
+    borderTopStyle: cs.borderTopStyle,
+    borderTopWidth: cs.borderTopWidth,
+    borderTopColor: cs.borderTopColor,
+  };
+  const boxShadow = cs.boxShadow;
   const boxSizing = cs.boxSizing;
   const borderTopW = parseFloat(cs.borderTopWidth) || 0;
   const borderRightW = parseFloat(cs.borderRightWidth) || 0;
@@ -163,6 +182,9 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   const paddingRight = parseFloat(cs.paddingRight) || 0;
   const paddingBottom = parseFloat(cs.paddingBottom) || 0;
   const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+
+  const innerBorder = parseBorder(el, borderStyleSource);
+  const { shadow, innerShadow } = parseBoxShadow(boxShadow);
 
   // Only strip what we successfully parsed. Wiping unparseable values
   // (currentcolor, oklch(), border-image, ...) without an SVG replacement

@@ -13,12 +13,8 @@ const ANGLE_EPSILON = 1e-6;
  *
  * Smoothing s ∈ [0, 1] splits the 90° rotation: each clothoid half
  * rotates (π/4)·s, the arc rotates (π/2)(1 − s). s = 0 is a quarter
- * circle; s = 1 is the pure Cornu corner.
- *
- * One cubic Bézier per half-fillet + one native SVG `a` for the arc.
- * The cubic uses the midpoint-match scheme (see the comment above the
- * `h0` / `h1` solve below) — Hausdorff error stays sub-pixel across
- * R ∈ [10, 200] and smoothing ∈ [0, 1].
+ * circle; s = 1 is the pure Cornu corner. One cubic Bézier per
+ * half-fillet + one native SVG `a` for the arc.
  */
 export const buildClothoid: CurveBuilder = ({
   cornerRadius,
@@ -34,9 +30,8 @@ export const buildClothoid: CurveBuilder = ({
   const A = L > 0 ? 1 / (R * L) : 0;
 
   // Integrate clothoid 1 in its local frame (origin, tangent along +X).
-  // The endpoint drives the natural `p` and the cubic handle lengths;
-  // the midpoint is the third constraint that pins the cubic fit so it
-  // can't bow away from the spiral.
+  // The endpoint drives the natural `p` and cubic handle lengths; the
+  // midpoint is the third constraint pinning the fit to the spiral.
   const { x: xC, y: yC } = L > 0
     ? integrateClothoid(0, 0, A, L)
     : { x: 0, y: 0 };
@@ -67,9 +62,7 @@ export const buildClothoid: CurveBuilder = ({
     effMx = xMid * scale;
     effMy = yMid * scale;
   }
-  if (p <= 0) {
-    return EMPTY_BUILDER_OUTPUT;
-  }
+  if (p <= 0) return EMPTY_BUILDER_OUTPUT;
 
   // Midpoint-match cubic for the half-fillet. Endpoint position +
   // tangent (4 constraints) and the clothoid midpoint (2) pin h0, h1:
@@ -77,11 +70,9 @@ export const buildClothoid: CurveBuilder = ({
   //   P(0.5) = ½(B0 + B3) + (3/8)(h0·T_a − h1·T_b) = midpoint
   //
   // T_a = (1, 0), T_b = (cos dTheta, sin dTheta); the Y equation gives
-  // h1, back-substitution gives h0. Stays under 1 px from the true
-  // clothoid for R ∈ [10, 200], smoothing ∈ [0, 1]. Walton–Meek's
-  // closed-form (cos α_a / cos α_b weights) placed B2 below the entry
-  // tangent — the cubic dipped ~0.45 px outside the rectangle at
-  // R = 40 / smoothing = 0.6.
+  // h1, back-substitution gives h0. Walton–Meek's closed-form
+  // (cos α_a / cos α_b weights) instead dipped B2 ~0.45 px outside the
+  // rectangle at R = 40 / smoothing = 0.6.
   let h0 = 0;
   let h1 = 0;
   if (L > 0) {

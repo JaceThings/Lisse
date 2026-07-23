@@ -73,12 +73,12 @@ export function drawBlendPath(
   const V = shoulder(R, clampEdge(height / 2, R, smoothing), preserveSmoothing, height / 2);
 
   // One corner, oriented by unit axes: u points from the corner back along the
-  // edge we arrive on, v along the edge we leave on. Horizontal edges use the
-  // width shoulder H, vertical edges the height shoulder V. The arc runs
-  // between the two shoulder→arc junctions j1, j2 on the corner's R-circle
-  // (centre o), collapsing to nothing when the shoulders consume the full 90°.
-  // Emitted like the other drawers: an absolute `L` onto the shoulder start,
-  // then relative cubic/arc/cubic — so the four corner deltas stay symmetric.
+  // arrival edge, v along the departure edge. Horizontal edges use the width
+  // shoulder H, vertical edges the height shoulder V. The arc runs between the
+  // two shoulder→arc junctions j1, j2 on the corner's R-circle (centre o),
+  // collapsing to nothing when the shoulders consume the full 90°. Emitted like
+  // the other drawers: absolute `L` onto the shoulder start, then relative
+  // cubic/arc/cubic, so the four corner deltas stay symmetric.
   const seg = (
     cx: number,
     cy: number,

@@ -52,7 +52,6 @@ describe("generatePath", () => {
 
   it("produces symmetrical output for uniform corners on a square", () => {
     const path = generatePath(200, 200, { radius: 40, smoothing: 0.6 });
-    // The path should start and end properly
     expect(path.startsWith("M ")).toBe(true);
     expect(path.endsWith("Z")).toBe(true);
   });

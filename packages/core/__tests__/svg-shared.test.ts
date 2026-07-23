@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { SVG_NS, nextUid, hexToRgb, DEFAULT_SHADOW, darkenHex, darkenGradient, angleToCoords, adjustOptions, createPathCache } from "../src/svg-shared.js";
-import type { LinearGradientConfig, RadialGradientConfig, CornerConfig } from "../src/types.js";
+import { SVG_NS, nextUid, hexToRgb, DEFAULT_SHADOW, darkenHex, darkenGradient, angleToCoords, adjustOptions, createPathCache, PATH_CACHE_CAPACITY } from "../src/svg-shared.js";
+import { generatePath } from "../src/generate-path.js";
+import type { LinearGradientConfig, RadialGradientConfig, CornerConfig, SmoothCornerOptions } from "../src/types.js";
 
 describe("SVG_NS", () => {
   it("equals the SVG namespace URI", () => {
@@ -88,7 +89,6 @@ describe("darkenGradient", () => {
     expect(result.stops).toHaveLength(2);
     expect(result.stops[0].color).toBe("#aaaaaa");
     expect(result.stops[1].color).toBe("#aa0000");
-    // Preserves angle
     expect((result as LinearGradientConfig).angle).toBe(90);
   });
 
@@ -108,7 +108,6 @@ describe("darkenGradient", () => {
     expect(result.stops[0].color).toBe("#00aa00");
     expect(result.stops[0].opacity).toBe(0.5);
     expect(result.stops[1].color).toBe("#4c4c4c");
-    // Preserves radial params
     expect((result as RadialGradientConfig).cx).toBe(0.3);
     expect((result as RadialGradientConfig).cy).toBe(0.7);
     expect((result as RadialGradientConfig).r).toBe(0.4);
@@ -210,5 +209,59 @@ describe("createPathCache — curve invalidation", () => {
     const sqPath = getSq(200, 200, baseSquircle, 0);
     const clPath = getCl(200, 200, baseClothoid, 0);
     expect(sqPath).not.toBe(clPath);
+  });
+});
+
+// Regression: setOptions must re-serialize every call, not just on reference
+// change. Vue reactive props mutate a retained object in place, so a bare
+// reference check would keep serving the old shape's border/shadow paths.
+describe("createPathCache — in-place options mutation", () => {
+  it("busts the cache when a same-reference options object is mutated", () => {
+    const opts: SmoothCornerOptions = { radius: 20, curve: "squircle" };
+    const getPath = createPathCache(opts);
+    const before = getPath(200, 100, opts, 0);
+    expect(before).toBe(generatePath(200, 100, { radius: 20, curve: "squircle" }));
+
+    // Mutate the same object reference (no new allocation).
+    (opts as { radius: number }).radius = 60;
+    getPath.setOptions(opts);
+    const after = getPath(200, 100, opts, 0);
+
+    expect(after).not.toBe(before);
+    expect(after).toBe(generatePath(200, 100, { radius: 60, curve: "squircle" }));
+  });
+
+  it("re-uses the cache and does not clear when the serialized shape is unchanged", () => {
+    const opts: SmoothCornerOptions = { radius: 20, curve: "squircle" };
+    const getPath = createPathCache(opts);
+    getPath(200, 100, opts, 0);
+    getPath(300, 100, opts, 0);
+    expect(getPath._size()).toBe(2);
+    // Same shape, fresh object reference — no clear.
+    getPath.setOptions({ radius: 20, curve: "squircle" });
+    expect(getPath._size()).toBe(2);
+  });
+});
+
+// Regression: the per-size Map had no eviction, so a resize animation would
+// accumulate one entry per unique (w, h, spread) without bound.
+describe("createPathCache — LRU cap", () => {
+  it("keeps the map bounded to the capacity across many unique sizes", () => {
+    const opts: SmoothCornerOptions = { radius: 8, curve: "arc" };
+    const getPath = createPathCache(opts);
+    for (let i = 0; i < PATH_CACHE_CAPACITY + 250; i++) {
+      getPath(100 + i, 60, opts, 0);
+    }
+    expect(getPath._size()).toBeLessThanOrEqual(PATH_CACHE_CAPACITY);
+  });
+
+  it("evicts the oldest entry first (LRU order)", () => {
+    const opts: SmoothCornerOptions = { radius: 8, curve: "arc" };
+    const getPath = createPathCache(opts);
+    // Fill to capacity with distinct widths starting at 1000.
+    for (let i = 0; i < PATH_CACHE_CAPACITY; i++) getPath(1000 + i, 60, opts, 0);
+    // One more unique size evicts the oldest (width 1000).
+    getPath(9999, 60, opts, 0);
+    expect(getPath._size()).toBe(PATH_CACHE_CAPACITY);
   });
 });

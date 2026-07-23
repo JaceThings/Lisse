@@ -3,14 +3,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let observeResize: typeof import("../src/observe-resize.js").observeResize;
 
-// Mock ResizeObserver
 let roCallback: ResizeObserverCallback;
 let observedElements: Set<Element>;
 const mockObserve = vi.fn((el: Element) => observedElements.add(el));
 const mockUnobserve = vi.fn((el: Element) => observedElements.delete(el));
 const mockDisconnect = vi.fn(() => observedElements.clear());
 
-// Mock rAF
 let rafCallbacks: Map<number, FrameRequestCallback>;
 let nextRafId: number;
 
@@ -57,6 +55,22 @@ function triggerResize(...elements: Element[]) {
   roCallback(entries, {} as ResizeObserver);
 }
 
+// Resize with a border-box size on the entry. `boxForm` chooses the spec
+// array shape or the bare-object shape some engines emit.
+function triggerResizeSized(
+  el: Element,
+  width: number,
+  height: number,
+  boxForm: "array" | "singleton" = "array",
+) {
+  const box = { inlineSize: width, blockSize: height } as ResizeObserverSize;
+  const borderBoxSize = boxForm === "array" ? [box] : box;
+  roCallback(
+    [{ target: el, borderBoxSize } as unknown as ResizeObserverEntry],
+    {} as ResizeObserver,
+  );
+}
+
 describe("observeResize", () => {
   it("fires initial callback after rAF flush", () => {
     const el = document.createElement("div");
@@ -88,12 +102,10 @@ describe("observeResize", () => {
     observeResize(el1, cb1);
     observeResize(el2, cb2);
 
-    // Flush initial callbacks
     flushRaf();
     cb1.mockClear();
     cb2.mockClear();
 
-    // Only el1 resizes
     triggerResize(el1);
     flushRaf();
     expect(cb1).toHaveBeenCalledOnce();
@@ -155,7 +167,6 @@ describe("observeResize", () => {
     const unsub1 = observeResize(el1, vi.fn());
     const unsub2 = observeResize(el2, vi.fn());
 
-    // Don't flush — rAF is still pending
     unsub1();
     expect(mockDisconnect).not.toHaveBeenCalled();
 
@@ -187,10 +198,81 @@ describe("observeResize", () => {
     const el = document.createElement("div");
     const unsub = observeResize(el, vi.fn());
 
-    // rAF was scheduled but not yet flushed
     expect(rafCallbacks.size).toBe(1);
     unsub();
     expect(rafCallbacks.size).toBe(0);
+  });
+
+  it("threads the entry's border-box size and reads no computed style on that tick", () => {
+    const el = document.createElement("div");
+    const cb = vi.fn();
+    observeResize(el, cb);
+    flushRaf();
+    cb.mockClear();
+
+    const gcs = vi.spyOn(window, "getComputedStyle");
+    triggerResizeSized(el, 200, 100);
+    flushRaf();
+
+    expect(gcs).not.toHaveBeenCalled();
+    expect(cb).toHaveBeenCalledOnce();
+    expect(cb).toHaveBeenCalledWith({ width: 200, height: 100 });
+  });
+
+  it("accepts the bare (non-array) borderBoxSize form some engines emit", () => {
+    const el = document.createElement("div");
+    const cb = vi.fn();
+    observeResize(el, cb);
+    flushRaf();
+    cb.mockClear();
+
+    const gcs = vi.spyOn(window, "getComputedStyle");
+    triggerResizeSized(el, 320, 240, "singleton");
+    flushRaf();
+
+    expect(gcs).not.toHaveBeenCalled();
+    expect(cb).toHaveBeenCalledWith({ width: 320, height: 240 });
+  });
+
+  it("falls back to a measured read when the entry has no borderBoxSize", () => {
+    const el = document.createElement("div");
+    Object.defineProperty(el, "offsetWidth", { value: 150, configurable: true });
+    Object.defineProperty(el, "offsetHeight", { value: 60, configurable: true });
+    const cb = vi.fn();
+    observeResize(el, cb);
+    flushRaf();
+    cb.mockClear();
+
+    const gcs = vi
+      .spyOn(window, "getComputedStyle")
+      .mockReturnValue({ width: "auto", height: "auto", boxSizing: "content-box" } as CSSStyleDeclaration);
+    triggerResize(el);
+    flushRaf();
+
+    expect(gcs).toHaveBeenCalledWith(el);
+    expect(cb).toHaveBeenCalledWith({ width: 150, height: 60 });
+  });
+
+  it("performs all reads before any writes across multiple observed elements", () => {
+    const log: string[] = [];
+    vi.spyOn(window, "getComputedStyle").mockImplementation(((el: Element) => {
+      log.push(`read:${(el as HTMLElement).id}`);
+      return { width: "auto", height: "auto", boxSizing: "content-box" } as CSSStyleDeclaration;
+    }) as typeof window.getComputedStyle);
+
+    const el1 = document.createElement("div");
+    el1.id = "a";
+    const el2 = document.createElement("div");
+    el2.id = "b";
+    observeResize(el1, () => log.push("write:a"));
+    observeResize(el2, () => log.push("write:b"));
+
+    flushRaf();
+
+    expect(log).toEqual(["read:a", "read:b", "write:a", "write:b"]);
+    const firstWrite = log.findIndex((e) => e.startsWith("write:"));
+    const lastRead = log.map((e) => e.startsWith("read:")).lastIndexOf(true);
+    expect(lastRead).toBeLessThan(firstWrite);
   });
 
   it("snapshots the callback set during flush so sibling unsubscribe mid-tick is safe", () => {
@@ -211,5 +293,30 @@ describe("observeResize", () => {
     flushRaf();
     expect(cb1).toHaveBeenCalledOnce();
     expect(cb2).toHaveBeenCalledOnce();
+  });
+
+  it("unsubscribe is idempotent — a stray double-call can't evict a re-subscription", () => {
+    // Regression: the returned unsubscribe closes over the element's callback
+    // Set. After it tears the last subscriber down (observer disconnects), a
+    // second call would still run `set.delete` + the empty-set branch, which —
+    // once a NEW subscriber has re-registered the same element — would delete
+    // the new subscriber's registration and unobserve it. A `done` guard makes
+    // the second call a no-op.
+    const el = document.createElement("div");
+    const cbA = vi.fn();
+    const unsubA = observeResize(el, cbA);
+    flushRaf();
+
+    unsubA(); // full teardown: observer disconnects, element unobserved.
+
+    const cbB = vi.fn();
+    observeResize(el, cbB); // rebuild: fresh Set + re-observe.
+
+    unsubA(); // stray double-call — must NOT touch B's registration.
+
+    triggerResize(el);
+    flushRaf();
+
+    expect(cbB).toHaveBeenCalled();
   });
 });

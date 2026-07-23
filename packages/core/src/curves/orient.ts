@@ -2,15 +2,12 @@ import type { Orient } from "./types.js";
 
 /**
  * Rotate a canonical (X = entry direction, Y = exit direction) delta into
- * the display (dx, dy) for `orient`. Clockwise traversal:
+ * the display (dx, dy) for `orient`, clockwise:
  *
- *   TR — enter +x, exit +y
- *   BR — enter +y, exit −x
- *   BL — enter −x, exit −y
- *   TL — enter −y, exit +x
+ *   TR — enter +x, exit +y      BL — enter −x, exit −y
+ *   BR — enter +y, exit −x      TL — enter −y, exit +x
  *
- * Returned as scalars (not a tuple) so V8 keeps the hot loops
- * allocation-free.
+ * Scalar return (not a tuple) keeps the hot loops allocation-free.
  */
 export function transformX(X: number, Y: number, orient: Orient): number {
   switch (orient) {

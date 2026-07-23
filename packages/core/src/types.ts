@@ -34,8 +34,6 @@ export type UniformCornerOptions = CornerConfig;
 /** Options for generating a smooth-cornered path. */
 export type SmoothCornerOptions = UniformCornerOptions | PerCornerConfig;
 
-// --- Internal types ---
-
 /** Squircle-only resolved parameters (`a, b, c, d, p, arcSectionLength`).
  *  Implementation detail of the Figma squircle curve — not meaningful
  *  for arc / superellipse / clothoid. New code should treat this as
@@ -95,8 +93,6 @@ export interface RoundedRectangle {
   height: number;
 }
 
-// --- Gradient types ---
-
 /** A single color stop within a gradient. */
 export interface GradientStop {
   offset: number;    // 0 to 1
@@ -122,8 +118,6 @@ export interface RadialGradientConfig {
 
 /** A gradient configuration — either linear or radial. */
 export type GradientConfig = LinearGradientConfig | RadialGradientConfig;
-
-// --- Effects types ---
 
 /** Supported border style values for SVG rendering. */
 export type BorderStyle = "solid" | "dashed" | "dotted" | "double" | "groove" | "ridge";

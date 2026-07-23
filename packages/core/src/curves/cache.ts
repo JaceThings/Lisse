@@ -3,14 +3,10 @@ import type { CurveBuilder, CurveBuilderInput, CurveBuilderOutput, CurveType, Or
 /**
  * LRU cache for curve-builder output. The corner shape depends only on
  * `(curve, radius, smoothing, exponent, preserveSmoothing, budget)` —
- * width/height affect where the corner sits in the outer skeleton, not
- * its shape. Without memoisation, pages with many elements sharing one
- * corner config re-run the full math (including 32-point Simpson
- * integration for clothoid) per element.
+ * width/height place the corner in the skeleton but don't change its shape.
  *
- * Map insertion order = LRU order: touch by delete+set, evict the
- * first key. Capacity 64 is several multiples of any realistic
- * working set.
+ * Map insertion order = LRU order: touch by delete+set, evict the first
+ * key. Capacity 64 is several multiples of any realistic working set.
  */
 const CAPACITY = 64;
 const cache = new Map<string, CurveBuilderOutput>();
@@ -35,11 +31,8 @@ function key(curve: CurveType, input: CurveBuilderInput): string {
   );
 }
 
-/**
- * Non-finite inputs (NaN, Infinity) bypass the cache — they'd
- * otherwise occupy a permanent `"NaN"`-keyed slot that never evicts.
- * Builder still runs; output just isn't memoised.
- */
+/** Non-finite inputs bypass the cache — they'd otherwise pin a permanent
+ *  `"NaN"`-keyed slot that never evicts. The builder still runs. */
 function hasNonFiniteKeyField(input: CurveBuilderInput): boolean {
   return (
     !Number.isFinite(input.cornerRadius) ||
@@ -49,13 +42,8 @@ function hasNonFiniteKeyField(input: CurveBuilderInput): boolean {
   );
 }
 
-/**
- * Lazy per-orient string memoisation. The builder's `pathSegment` re-
- * runs the cubic-arc-cubic blend, `transformX/Y`, and toFixed work on
- * every call. Real workloads call each orient once per `generatePath`
- * so subsequent calls for the same cached shape return the pre-built
- * string directly.
- */
+/** Lazy per-orient string memoisation — `pathSegment` re-runs the blend,
+ *  transforms, and toFixed on every call, so cache the string per orient. */
 function wrapWithOrientCache(fresh: CurveBuilderOutput): CurveBuilderOutput {
   const orients: Partial<Record<Orient, string>> = {};
   return {
@@ -98,7 +86,6 @@ export function _curveCacheSize(): number {
   return cache.size;
 }
 
-/** Clears the entire cache. */
 export function clearCurveCache(): void {
   cache.clear();
 }

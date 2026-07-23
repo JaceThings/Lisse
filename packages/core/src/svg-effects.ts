@@ -6,7 +6,6 @@ export interface SvgEffectsHandle {
   destroy(): void;
 }
 
-/** Set x/y/width/height on an element to cover a `w`×`h` area padded by `pad` on every side. */
 function padBounds(el: Element, pad: number, w: number, h: number): void {
   el.setAttribute("x", String(-pad));
   el.setAttribute("y", String(-pad));
@@ -14,7 +13,6 @@ function padBounds(el: Element, pad: number, w: number, h: number): void {
   el.setAttribute("height", String(h + pad * 2));
 }
 
-/** Apply `padBounds` to a mask and its inner rect together. */
 function padMaskAndRect(mask: Element, rect: Element, pad: number, w: number, h: number): void {
   padBounds(mask, pad, w, h);
   padBounds(rect, pad, w, h);
@@ -74,7 +72,6 @@ interface BorderElements {
   overlayGradientId: string;
 }
 
-/** Remove a gradient def from the DOM and clear the reference. */
 function removeGradient(els: BorderElements, which: "main" | "overlay"): void {
   const key = which === "main" ? "gradientEl" : "overlayGradientEl";
   els[key]?.remove();
@@ -158,21 +155,16 @@ function updateBorder(
         els.strokeGroup.setAttribute("mask", `url(#${els.dblMaskId})`);
       }
       break;
-    case "groove": {
-      const grooveBase = isGradient(config.color) ? darkenGradient(config.color) : darkenHex(config.color);
-      els.strokePath.setAttribute("stroke", resolveStroke(grooveBase, els, "main"));
-      els.grooveOverlay.style.display = "";
-      els.grooveOverlay.setAttribute("d", d);
-      els.grooveOverlay.setAttribute("stroke", resolveStroke(config.color, els, "overlay"));
-      els.grooveOverlay.setAttribute("stroke-width", String(config.width * m / 2));
-      els.grooveOverlay.setAttribute("stroke-opacity", String(config.opacity));
-      break;
-    }
+    // groove and ridge are the same two-tone stroke with light/dark swapped:
+    // groove darkens the main stroke and keeps the overlay at the base color;
+    // ridge keeps the main stroke and darkens the overlay.
+    case "groove":
     case "ridge": {
-      const ridgeDark = isGradient(config.color) ? darkenGradient(config.color) : darkenHex(config.color);
+      const dark = isGradient(config.color) ? darkenGradient(config.color) : darkenHex(config.color);
+      if (style === "groove") els.strokePath.setAttribute("stroke", resolveStroke(dark, els, "main"));
       els.grooveOverlay.style.display = "";
       els.grooveOverlay.setAttribute("d", d);
-      els.grooveOverlay.setAttribute("stroke", resolveStroke(ridgeDark, els, "overlay"));
+      els.grooveOverlay.setAttribute("stroke", resolveStroke(style === "groove" ? config.color : dark, els, "overlay"));
       els.grooveOverlay.setAttribute("stroke-width", String(config.width * m / 2));
       els.grooveOverlay.setAttribute("stroke-opacity", String(config.opacity));
       break;
@@ -180,7 +172,6 @@ function updateBorder(
   }
 }
 
-/** Pool entry for a single inner shadow. */
 interface InnerShadowEntry {
   maskId: string;
   mask: Element;
@@ -256,7 +247,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
 
   const defs = document.createElementNS(SVG_NS, "defs");
 
-  // ClipPath for the inner border.
   const clipPathEl = document.createElementNS(SVG_NS, "clipPath");
   clipPathEl.setAttribute("id", clipId);
   const clipShape = document.createElementNS(SVG_NS, "path");
@@ -289,7 +279,6 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
 
   svg.appendChild(defs);
 
-  // Shared <g clip-path> wrapper for all inner shadows.
   const isShadowClip = document.createElementNS(SVG_NS, "g");
   isShadowClip.setAttribute("clip-path", `url(#${clipId})`);
   svg.appendChild(isShadowClip);
@@ -337,6 +326,8 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
     padDblMask: (pad, w, h) => padMaskAndRect(middleDblMask, middleDblRect, pad, w, h),
   };
 
+  const getPath = createPathCache();
+
   return {
     update(options, effects, width, height) {
       if (width <= 0 || height <= 0) return;
@@ -345,7 +336,7 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
       svg.setAttribute("height", String(height));
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-      const getPath = createPathCache(options);
+      getPath.setOptions(options);
       const d = getPath(width, height, options, 0);
 
       clipShape.setAttribute("d", d);

@@ -16,6 +16,18 @@ vi.mock("../src/generate-path.js", async (importOriginal) => {
 let anchor: HTMLElement;
 const opts: SmoothCornerOptions = { radius: 16 };
 
+function visibleInnerStroke(svg: SVGElement): SVGPathElement | undefined {
+  return [...svg.querySelectorAll("path")].find(
+    (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none",
+  );
+}
+
+function visibleOuterStroke(svg: SVGElement): SVGPathElement | undefined {
+  return [...svg.querySelectorAll("path")].find(
+    (p) => p.getAttribute("mask") !== null && p.style.display !== "none",
+  );
+}
+
 beforeEach(() => {
   anchor = document.createElement("div");
   document.body.appendChild(anchor);
@@ -31,10 +43,8 @@ describe("createSvgEffects", () => {
     expect(defs.querySelector("clipPath")).not.toBeNull();
     expect(defs.querySelector("mask")).not.toBeNull();
 
-    // No filter before first inner shadow update (pool is empty)
     expect(defs.querySelector("filter")).toBeNull();
 
-    // After update with inner shadow, filter is created
     handle.update(opts, {
       innerShadow: { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 },
     }, 200, 100);
@@ -64,7 +74,6 @@ describe("createSvgEffects", () => {
     const mask2 = anchor2.querySelector("mask")!;
     expect(mask1.getAttribute("id")).not.toBe(mask2.getAttribute("id"));
 
-    // Trigger inner shadow update to create filters on demand
     const effects = {
       innerShadow: { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 },
     };
@@ -84,10 +93,7 @@ describe("createSvgEffects", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
     expect(innerStroke!.getAttribute("stroke")).toBe("#ff0000");
     expect(innerStroke!.getAttribute("stroke-width")).toBe("4");
@@ -116,10 +122,7 @@ describe("createSvgEffects", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const outerStroke = [...paths].find(
-      (p) => p.getAttribute("mask") !== null && p.style.display !== "none"
-    );
+    const outerStroke = visibleOuterStroke(svg);
     expect(outerStroke).not.toBeUndefined();
     expect(outerStroke!.getAttribute("stroke")).toBe("#00ff00");
 
@@ -146,11 +149,9 @@ describe("createSvgEffects", () => {
 
     const svg = anchor.querySelector("svg")!;
 
-    // Blur filter
     const feBlur = svg.querySelector("feGaussianBlur")!;
     expect(feBlur.getAttribute("stdDeviation")).toBe("8");
 
-    // Shadow rect is displayed with correct fill
     const rects = svg.querySelectorAll("rect");
     const shadowRect = [...rects].find(
       (r) => r.getAttribute("mask") !== null && r.style.display !== "none"
@@ -159,7 +160,6 @@ describe("createSvgEffects", () => {
     expect(shadowRect!.getAttribute("fill")).toBe("rgb(255,0,0)");
     expect(shadowRect!.getAttribute("fill-opacity")).toBe("0.5");
 
-    // Mask has a cutout path with fill="black"
     const masks = svg.querySelectorAll("mask");
     const isMask = [...masks].find(
       (m) => m.getAttribute("id")?.includes("ishadow-mask")
@@ -248,20 +248,17 @@ describe("createSvgEffects", () => {
 
     const svg = anchor.querySelector("svg")!;
 
-    // Should have two inner shadow masks (ishadow-mask)
     const masks = [...svg.querySelectorAll("mask")].filter(
       (m) => m.getAttribute("id")?.includes("ishadow-mask"),
     );
     expect(masks).toHaveLength(2);
     expect(masks[0].getAttribute("id")).not.toBe(masks[1].getAttribute("id"));
 
-    // Should have two inner shadow filters (ishadow-blur)
     const filters = [...svg.querySelectorAll("filter")].filter(
       (f) => f.getAttribute("id")?.includes("ishadow-blur"),
     );
     expect(filters).toHaveLength(2);
 
-    // Should have two visible shadow rects
     const rects = [...svg.querySelectorAll("rect")].filter(
       (r) => r.getAttribute("mask")?.includes("ishadow-mask") && r.style.display !== "none",
     );
@@ -286,7 +283,6 @@ describe("createSvgEffects", () => {
     );
     expect(masks).toHaveLength(2);
 
-    // Reduce to one
     const oneShadow: EffectsConfig = {
       innerShadow: { offsetX: 2, offsetY: 4, blur: 8, spread: 0, color: "#ff0000", opacity: 0.5 },
     };
@@ -313,10 +309,7 @@ describe("border styles", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
     expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("12 8");
   });
@@ -329,10 +322,7 @@ describe("border styles", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
     expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("0 8");
     expect(innerStroke!.getAttribute("stroke-linecap")).toBe("round");
@@ -346,12 +336,8 @@ describe("border styles", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
-    // The parent <g> should have a mask attribute for the knockout
     const group = innerStroke!.parentElement!;
     expect(group.tagName.toLowerCase()).toBe("g");
     expect(group.getAttribute("mask")).toMatch(/url\(#sc-dbl-inner-/);
@@ -365,10 +351,7 @@ describe("border styles", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
     const group = innerStroke!.parentElement!;
     expect(group.getAttribute("mask")).toBeNull();
@@ -382,17 +365,12 @@ describe("border styles", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
-    // Base stroke should be darkened
     expect(innerStroke!.getAttribute("stroke")).toBe("#aaaaaa");
 
-    // Overlay should be visible with original color
     const group = innerStroke!.parentElement!;
-    const overlay = group.querySelectorAll("path")[1]; // second path in group
+    const overlay = group.querySelectorAll("path")[1];
     expect(overlay).not.toBeUndefined();
     expect(overlay.style.display).not.toBe("none");
     expect(overlay.getAttribute("stroke")).toBe("#ffffff");
@@ -406,15 +384,10 @@ describe("border styles", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
-    // Base stroke keeps original color
     expect(innerStroke!.getAttribute("stroke")).toBe("#ffffff");
 
-    // Overlay should have darkened color
     const group = innerStroke!.parentElement!;
     const overlay = group.querySelectorAll("path")[1];
     expect(overlay).not.toBeUndefined();
@@ -429,13 +402,9 @@ describe("border styles", () => {
     }, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("12 8");
 
-    // Switch to solid
     handle.update(opts, {
       innerBorder: { width: 4, color: "#ff0000", opacity: 1 },
     }, 200, 100);
@@ -472,10 +441,7 @@ describe("border styles", () => {
     handle.update(opts, effects, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const outerStroke = [...paths].find(
-      (p) => p.getAttribute("mask") !== null && p.style.display !== "none"
-    );
+    const outerStroke = visibleOuterStroke(svg);
     expect(outerStroke).not.toBeUndefined();
     expect(outerStroke!.getAttribute("stroke-dasharray")).toBe("9 6");
   });
@@ -551,10 +517,7 @@ describe("gradient borders", () => {
     }, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
     expect(innerStroke!.getAttribute("stroke")).toMatch(/^url\(#sc-grad-inner-/);
   });
@@ -566,10 +529,7 @@ describe("gradient borders", () => {
     }, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke).not.toBeUndefined();
     expect(innerStroke!.getAttribute("stroke")).toMatch(/^url\(#/);
     expect(innerStroke!.getAttribute("stroke-dasharray")).toBe("12 8");
@@ -586,12 +546,9 @@ describe("gradient borders", () => {
     const grads = defs.querySelectorAll("linearGradient");
     expect(grads.length).toBe(2);
 
-    // One should have the original colors, one should have darkened colors
     const allStops = [...grads].map(g =>
       [...g.querySelectorAll("stop")].map(s => s.getAttribute("stop-color"))
     );
-    // Check that one gradient has the darkened first stop (#aa0000) and
-    // the other has the original first stop (#ff0000)
     const flatColors = allStops.flat();
     expect(flatColors).toContain("#ff0000");
     expect(flatColors).toContain("#aa0000");
@@ -600,7 +557,6 @@ describe("gradient borders", () => {
   it("switching from gradient to solid color removes gradient def", () => {
     const handle = createSvgEffects(anchor);
 
-    // Start with gradient
     handle.update(opts, {
       innerBorder: { width: 2, color: linearGrad, opacity: 1 },
     }, 200, 100);
@@ -609,24 +565,19 @@ describe("gradient borders", () => {
     const defs = svg.querySelector("defs")!;
     expect(defs.querySelector("linearGradient")).not.toBeNull();
 
-    // Switch to solid color
     handle.update(opts, {
       innerBorder: { width: 2, color: "#ff0000", opacity: 1 },
     }, 200, 100);
 
     expect(defs.querySelector("linearGradient")).toBeNull();
 
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke!.getAttribute("stroke")).toBe("#ff0000");
   });
 
   it("switching from solid to gradient works", () => {
     const handle = createSvgEffects(anchor);
 
-    // Start with solid color
     handle.update(opts, {
       innerBorder: { width: 2, color: "#ff0000", opacity: 1 },
     }, 200, 100);
@@ -635,23 +586,19 @@ describe("gradient borders", () => {
     const defs = svg.querySelector("defs")!;
     expect(defs.querySelector("linearGradient")).toBeNull();
 
-    // Switch to gradient
     handle.update(opts, {
       innerBorder: { width: 2, color: linearGrad, opacity: 1 },
     }, 200, 100);
 
     expect(defs.querySelector("linearGradient")).not.toBeNull();
 
-    const paths = svg.querySelectorAll("path");
-    const innerStroke = [...paths].find(
-      (p) => p.getAttribute("clip-path") !== null && p.style.display !== "none"
-    );
+    const innerStroke = visibleInnerStroke(svg);
     expect(innerStroke!.getAttribute("stroke")).toMatch(/^url\(#/);
   });
 });
 
-describe("generatePath memoisation per update dispatch", () => {
-  it("calls generatePath once per unique (width, height, spread, options) combo within a dispatch, and repeats the cost on subsequent dispatches", () => {
+describe("generatePath memoisation across update dispatches (R7)", () => {
+  it("calls generatePath once per unique (width, height, spread, options) combo within a dispatch", () => {
     const spy = vi.mocked(generatePathModule.generatePath);
     spy.mockClear();
 
@@ -671,12 +618,55 @@ describe("generatePath memoisation per update dispatch", () => {
 
     handle.update(opts, effects, 200, 100);
     expect(spy).toHaveBeenCalledTimes(2);
+  });
 
-    // Second dispatch with identical args recomputes because the cache is
-    // scoped to a single update() call.
+  it("persists the cache across dispatches: a second identical dispatch regenerates nothing", () => {
+    const spy = vi.mocked(generatePathModule.generatePath);
     spy.mockClear();
+
+    const handle = createSvgEffects(anchor);
+    const effects: EffectsConfig = {
+      innerShadow: [
+        { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 0.5 },
+        { offsetX: 0, offsetY: 0, blur: 4, spread: 4, color: "#00f", opacity: 0.5 },
+      ],
+    };
+
     handle.update(opts, effects, 200, 100);
     expect(spy).toHaveBeenCalledTimes(2);
+
+    // The per-handle cache Map survives — the identical second dispatch is
+    // served entirely from it, so generatePath is not called again.
+    spy.mockClear();
+    handle.update(opts, effects, 200, 100);
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  it("re-serialises options every dispatch, so an in-place mutation is picked up", () => {
+    const spy = vi.mocked(generatePathModule.generatePath);
+    const handle = createSvgEffects(anchor);
+    // A local, mutable options object (idiomatic in Vue reactive props, which
+    // mutate a retained object in place rather than allocating a new one).
+    const localOpts: SmoothCornerOptions = { radius: 16 };
+    const effects: EffectsConfig = {
+      innerBorder: { width: 2, color: "#000", opacity: 1 },
+    };
+
+    handle.update(localOpts, effects, 200, 100);
+    const svg = anchor.querySelector("svg")!;
+    const firstStroke = visibleInnerStroke(svg)!.getAttribute("d");
+    expect(firstStroke).toBeTruthy();
+
+    // Mutate the SAME reference and re-dispatch. A reference-only serialization
+    // guard would miss this and keep serving the radius-16 border path; always
+    // re-serialising in setOptions busts the cache and regenerates the shape.
+    spy.mockClear();
+    (localOpts as { radius: number }).radius = 48;
+    handle.update(localOpts, effects, 200, 100);
+
+    const secondStroke = visibleInnerStroke(svg)!.getAttribute("d");
+    expect(secondStroke).not.toBe(firstStroke);
+    expect(spy).toHaveBeenCalled();
   });
 });
 
