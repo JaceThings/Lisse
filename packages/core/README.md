@@ -482,7 +482,7 @@ import { generatePath, generateClipPath } from "@lisse/core/path";
 
 ### Included
 
-`generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `DEFAULT_SHADOW`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`
+`generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `getCurveBuilder`, `buildArc`, `buildSquircle`, `buildSuperellipse`, `buildClothoid`, `CURVE_TYPES`, `DEFAULT_SHADOW`, `APPLE_SMOOTHING`, `FIGMA_SMOOTHING`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`, `DEFAULT_CURVE`, `DEFAULT_EXPONENT`
 
 ### Excluded
 
