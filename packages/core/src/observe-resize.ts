@@ -30,7 +30,7 @@ const pendingSizes = new Map<Element, Size>();
  * compensation is needed (border-box is border-box regardless of box-sizing).
  *
  * The spec exposes `borderBoxSize` as an array; some engines expose a bare
- * `ResizeObserverSize`. Both forms are handled; engines that omit it entirely
+ * `ResizeObserverSize`. We handle both; engines that omit it entirely
  * fall through to the measured path. Sizes map from the inline/block axes of
  * the default horizontal-tb writing mode Lisse targets.
  */

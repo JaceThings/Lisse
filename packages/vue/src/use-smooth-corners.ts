@@ -203,8 +203,8 @@ export function useSmoothCorners(
     lastSyncKey = null;
 
     clearedFallbackRadius = false;
-    // Note: we deliberately do NOT restore the SSR border-radius fallback here,
-    // nor reset `clipPathApplied`. Vue re-runs setup()→cleanup() on every
+    // We deliberately do NOT restore the SSR border-radius fallback here, nor
+    // reset `clipPathApplied`. Vue re-runs setup()→cleanup() on every
     // re-render (the `watch(target)` fires), and a real unmount → remount builds
     // a fresh component with a fresh `clipPathApplied = ref(false)` that re-emits
     // the fallback on its own. Restoring/resetting here would instead resurrect

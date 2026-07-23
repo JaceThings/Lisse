@@ -9,32 +9,13 @@ import {
 } from "vue";
 import { useSmoothCorners } from "./use-smooth-corners.js";
 import { Slot } from "./slot.js";
-import { hasEffects } from "@lisse/core";
+import { hasEffects, cornerOptionsToBorderRadius } from "@lisse/core";
 import type {
   SmoothCornerOptions,
   BorderConfig,
   ShadowConfig,
   EffectsConfig,
 } from "@lisse/core";
-
-// Inline `border-radius` for server-rendered markup, so corners are rounded
-// before hydration replaces them with the clip-path.
-function cornerOptionsToBorderRadius(options: SmoothCornerOptions): string {
-  if ("radius" in options) return `${options.radius}px`;
-  const radiusOf = (v: BorderlessCorner): number => {
-    if (v === undefined) return 0;
-    if (typeof v === "number") return v;
-    return v.radius;
-  };
-  const tl = radiusOf(options.topLeft);
-  const tr = radiusOf(options.topRight);
-  const br = radiusOf(options.bottomRight);
-  const bl = radiusOf(options.bottomLeft);
-  return `${tl}px ${tr}px ${br}px ${bl}px`;
-}
-
-type BorderlessCorner =
-  Extract<SmoothCornerOptions, { topLeft?: unknown }>["topLeft"];
 
 // True when a consumer-supplied `style` (object, string, or nested array —
 // Vue's accepted forms) already sets a border-radius, so the SSR fallback must

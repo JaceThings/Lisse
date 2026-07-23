@@ -14,7 +14,7 @@ export {
 } from "./generate-path.js";
 export { DEFAULT_EXPONENT, CURVE_TYPES, getCurveBuilder, buildArc, buildSquircle, buildSuperellipse, buildClothoid } from "./curves/index.js";
 export { clearCurveCache } from "./curves/cache.js";
-export { DEFAULT_SHADOW } from "./svg-shared.js";
+export { DEFAULT_SHADOW, cornerOptionsToBorderRadius } from "./svg-shared.js";
 export {
   extractAndStripEffects,
   restoreStyles,

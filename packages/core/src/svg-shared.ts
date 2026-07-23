@@ -112,6 +112,24 @@ export function adjustOptions(options: SmoothCornerOptions, spread: number): Smo
 }
 
 /**
+ * Best-effort CSS `border-radius` matching the per-corner radii. The SSR
+ * fallback and the box-shadow sibling both derive their rounding from this.
+ */
+export function cornerOptionsToBorderRadius(options: SmoothCornerOptions): string {
+  if ("radius" in options) return `${options.radius}px`;
+  const radiusOf = (v: CornerConfig | number | undefined): number => {
+    if (v === undefined) return 0;
+    if (typeof v === "number") return v;
+    return v.radius;
+  };
+  const tl = radiusOf(options.topLeft);
+  const tr = radiusOf(options.topRight);
+  const br = radiusOf(options.bottomRight);
+  const bl = radiusOf(options.bottomLeft);
+  return `${tl}px ${tr}px ${br}px ${bl}px`;
+}
+
+/**
  * Darken each RGB channel by 2/3 — Firefox's groove/ridge algorithm.
  * Pure black maps to #4c4c4c so the darkened edge stays visible.
  */

@@ -15,7 +15,7 @@ import {
 import { useSmoothCorners } from "./use-smooth-corners.js";
 import { Slot } from "./slot.js";
 import { composeRefs } from "./compose-refs.js";
-import { hasEffects } from "@lisse/core";
+import { hasEffects, cornerOptionsToBorderRadius } from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@lisse/core";
 
 /**
@@ -106,21 +106,6 @@ function hexToRgbChannels(hex: string): { r: number; g: number; b: number } | nu
     g: parseInt(expanded.substring(2, 4), 16),
     b: parseInt(expanded.substring(4, 6), 16),
   };
-}
-
-/** Best-effort `border-radius` for the box-shadow sibling div, mimicking the per-corner shape. */
-function cornerOptionsToBorderRadius(options: SmoothCornerOptions): string {
-  if ("radius" in options) return `${options.radius}px`;
-  const radiusOf = (v: typeof options.topLeft): number => {
-    if (v === undefined) return 0;
-    if (typeof v === "number") return v;
-    return v.radius;
-  };
-  const tl = radiusOf(options.topLeft);
-  const tr = radiusOf(options.topRight);
-  const br = radiusOf(options.bottomRight);
-  const bl = radiusOf(options.bottomLeft);
-  return `${tl}px ${tr}px ${br}px ${bl}px`;
 }
 
 function SmoothCornersImpl<E extends ElementType = "div">(

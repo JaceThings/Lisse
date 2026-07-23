@@ -13,10 +13,9 @@ export interface SmoothCornersConfig {
 }
 
 /**
- * Svelte action that applies smooth-cornered clip-path to an element.
- * Automatically updates on resize via a shared ResizeObserver.
- * By default, CSS `border` and `box-shadow` are automatically extracted and
- * converted to SVG effects (autoEffects).
+ * Svelte action that clips an element to smooth corners and re-syncs on
+ * resize via a shared ResizeObserver. CSS `border` and `box-shadow` get
+ * pulled out and re-rendered as SVG effects by default (autoEffects).
  *
  * @example
  * ```svelte
