@@ -69,12 +69,13 @@ export function distributeAndNormalize({
   ) {
     const budget = Math.min(width, height) / 2;
     const radius = Math.min(OTL, budget);
+    // Shared reference is safe: callers only read the returned corners.
     const corner = { radius, roundingAndSmoothingBudget: budget };
     return {
       topLeft: corner,
-      topRight: { radius, roundingAndSmoothingBudget: budget },
-      bottomLeft: { radius, roundingAndSmoothingBudget: budget },
-      bottomRight: { radius, roundingAndSmoothingBudget: budget },
+      topRight: corner,
+      bottomLeft: corner,
+      bottomRight: corner,
     };
   }
 

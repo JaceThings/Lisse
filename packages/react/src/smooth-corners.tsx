@@ -78,11 +78,16 @@ function buildBoxShadowChain(shadows: ShadowConfig | ShadowConfig[]): string {
     const { offsetX, offsetY, blur, spread, color, opacity } = s;
     const geometry = `${offsetX}px ${offsetY}px ${blur}px ${spread}px`;
     const rgb = hexToRgbChannels(color);
-    // Non-hex colors (oklch/lab/color()…) can't be split into channels; emit
-    // them verbatim (their alpha is already embedded by the parse flow).
-    // Feeding them through parseInt would yield `rgba(NaN,…)`, which CSS
-    // treats as invalid and drops the entire box-shadow declaration.
-    const paint = rgb ? `rgba(${rgb.r},${rgb.g},${rgb.b},${opacity})` : color;
+    // Non-hex colors (oklch/lab/color()…) can't be split into channels —
+    // parseInt would yield `rgba(NaN,…)`, which CSS treats as invalid and
+    // drops the entire box-shadow declaration. Extraction embeds alpha in the
+    // string with opacity 1 (verbatim is exact); API-supplied opacity < 1 is
+    // applied via color-mix to match the SVG strategy's fill-opacity.
+    const paint = rgb
+      ? `rgba(${rgb.r},${rgb.g},${rgb.b},${opacity})`
+      : opacity < 1
+        ? `color-mix(in srgb, ${color} ${opacity * 100}%, transparent)`
+        : color;
     parts.push(`${geometry} ${paint}`);
   }
   return parts.join(", ");

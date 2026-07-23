@@ -565,8 +565,10 @@ describe("<SmoothCorners /> - shadowStrategy='box-shadow'", () => {
           corners={{ radius: 16 }}
           shadowStrategy="box-shadow"
           shadow={[
-            // Non-hex color (alpha already embedded) — must pass through as-is.
+            // Non-hex color with API opacity < 1 — alpha applied via color-mix.
             { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "oklch(0.6 0.15 250 / 0.3)", opacity: 0.3 },
+            // Non-hex color at opacity 1 (extraction case) — passes through as-is.
+            { offsetX: 2, offsetY: 2, blur: 4, spread: 0, color: "lab(50% 40 59)", opacity: 1 },
             // Sibling hex layer must still render as rgba and survive.
             { offsetX: 0, offsetY: 1, blur: 2, spread: -1, color: "#ff0000", opacity: 0.5 },
           ]}
@@ -583,8 +585,12 @@ describe("<SmoothCorners /> - shadowStrategy='box-shadow'", () => {
     const chain = sibling!.style.boxShadow;
     // The whole declaration is valid: no fabricated NaN channels.
     expect(chain).not.toContain("NaN");
-    // oklch color survives verbatim.
-    expect(chain).toContain("oklch(0.6 0.15 250 / 0.3)");
+    // API opacity < 1 composes onto the non-hex color via color-mix.
+    expect(chain).toContain(
+      "color-mix(in srgb, oklch(0.6 0.15 250 / 0.3) 30%, transparent)",
+    );
+    // opacity 1 keeps the raw string untouched.
+    expect(chain).toContain("2px 2px 4px 0px lab(50% 40 59)");
     // The hex sibling layer still becomes rgba and survives.
     expect(chain).toContain("rgba(255,0,0,0.5)");
   });
