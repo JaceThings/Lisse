@@ -13,7 +13,7 @@ One `generatePath()` call (200×100 box, radius 24, smoothing 0.6):
 | `arc` | ~1.3 µs |
 | `squircle` (default) | ~1.5 µs |
 | `superellipse` | ~1.4 µs |
-| `clothoid` | ~1.5 µs |
+| `clothoid` | ~1.4 µs |
 
 ## 500 corners in a tight loop
 
@@ -21,10 +21,10 @@ What a resize event on a busy page costs (varied widths/heights, shared corner c
 
 | Curve | 500 corners |
 |---|---|
-| `arc` | ~0.80 ms |
-| `squircle` | ~0.85 ms |
-| `superellipse` | ~0.81 ms |
-| `clothoid` | ~0.85 ms |
+| `arc` | ~0.78 ms |
+| `squircle` | ~0.80 ms |
+| `superellipse` | ~0.78 ms |
+| `clothoid` | ~0.78 ms |
 
 **Effects setup** (`createSvgEffects` + first update with a border): ~130 µs per element, one-shot at mount.
 
