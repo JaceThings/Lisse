@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createApp, h, ref, type App } from "vue";
+import { createApp, createSSRApp, h, ref, type App } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { createSSRApp } from "vue";
 import {
   installHarness,
   uninstallHarness,
@@ -51,7 +50,7 @@ function readyWrites(spy: ReturnType<typeof vi.spyOn>): number {
   return spy.mock.calls.filter((c) => c[0] === "data-state" && c[1] === "ready").length;
 }
 
-describe("Vue change guard (R2/R6)", () => {
+describe("Vue change guard", () => {
   it("no-op reactive/resize ticks cause zero regenerations; a real change causes exactly one", async () => {
     const radius = ref(16);
     mount(() =>
@@ -134,7 +133,7 @@ describe("Vue change guard (R2/R6)", () => {
     expect(readyWrites(spy)).toBe(1);
   });
 
-  it("SSR markup contains an inline border-radius derived from the corner radius (R10)", async () => {
+  it("SSR markup contains an inline border-radius derived from the corner radius", async () => {
     const app = createSSRApp({
       render: () =>
         h(SmoothCorners, { corners: { radius: 16, smoothing: 0.6 } }, () => "hello"),

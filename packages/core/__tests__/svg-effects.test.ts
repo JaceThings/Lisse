@@ -597,7 +597,7 @@ describe("gradient borders", () => {
   });
 });
 
-describe("generatePath memoisation across update dispatches (R7)", () => {
+describe("generatePath memoisation across update dispatches", () => {
   it("calls generatePath once per unique (width, height, spread, options) combo within a dispatch", () => {
     const spy = vi.mocked(generatePathModule.generatePath);
     spy.mockClear();

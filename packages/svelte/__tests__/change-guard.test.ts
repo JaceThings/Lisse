@@ -43,7 +43,7 @@ function countReadyWrites(node: HTMLElement): () => number {
     spy.mock.calls.filter((c) => c[0] === "data-state" && c[1] === "ready").length;
 }
 
-describe("smoothCorners action — change guard (R3)", () => {
+describe("smoothCorners action — change guard", () => {
   it("no-op update() with an equivalent-but-new config does zero regenerations", () => {
     const node = makeNode();
     stubLayout(node);

@@ -38,11 +38,9 @@ export const DEFAULT_SHADOW: ShadowConfig = {
  *
  * The cache Map and the serialized options key live on the handle: create
  * one per effects/shadow handle and reuse it across `update()` calls.
- * `setOptions` re-serialises on every call and compares the *serialized*
- * key, so an options object mutated in place (idiomatic in Vue reactive
- * props) is detected — a bare reference check would serve stale paths. The
- * per-size entries are cleared whenever that key changes, and are bounded by
- * an LRU cap so a resize animation can't grow the map without limit.
+ * `setOptions` clears the per-size entries whenever the serialized shape
+ * changes; they're bounded by an LRU cap so a resize animation can't grow the
+ * map without limit.
  */
 export interface PathCache {
   (w: number, h: number, opts: SmoothCornerOptions, spread: number): string;
@@ -82,8 +80,7 @@ export function createPathCache(options?: SmoothCornerOptions): PathCache {
     }
     const fresh = generatePath(w, h, opts);
     if (cache.size >= PATH_CACHE_CAPACITY) {
-      const firstKey = cache.keys().next().value;
-      if (firstKey !== undefined) cache.delete(firstKey);
+      cache.delete(cache.keys().next().value!);
     }
     cache.set(key, fresh);
     return fresh;

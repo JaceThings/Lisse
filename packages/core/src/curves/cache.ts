@@ -73,8 +73,7 @@ export function getCachedBuilderOutput(
   }
   const fresh = wrapWithOrientCache(builder(input));
   if (cache.size >= CAPACITY) {
-    const firstKey = cache.keys().next().value;
-    if (firstKey !== undefined) cache.delete(firstKey);
+    cache.delete(cache.keys().next().value!);
   }
   cache.set(k, fresh);
   return fresh;

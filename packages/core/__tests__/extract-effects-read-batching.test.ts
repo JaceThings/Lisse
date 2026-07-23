@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 //
-// R9: mount extraction must issue exactly one getComputedStyle per element,
-// with every computed-style read completing before the first layout-dirtying
-// write. getComputedStyle is a layout-flush point; interleaving it with the
+// Mount extraction must issue exactly one getComputedStyle per element, with
+// every computed-style read completing before the first layout-dirtying write.
+// getComputedStyle is a layout-flush point; interleaving it with the
 // padding/border writes forces repeated recalcs. These tests pin the batching.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { extractAndStripEffects } from "../src/extract-effects.js";
@@ -55,7 +55,7 @@ function instrument(el: HTMLElement): { events: string[]; restore: () => void } 
   };
 }
 
-describe("extractAndStripEffects — batched reads (R9)", () => {
+describe("extractAndStripEffects — batched reads", () => {
   let el: HTMLElement;
 
   beforeEach(() => {

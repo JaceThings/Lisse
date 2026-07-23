@@ -4,7 +4,7 @@
 // `tests/consumer-smoke/ssr-smoke.mjs` (import the adapter's component and
 // call its framework's string-renderer directly).
 //
-// `@lisse/vue`'s renderToString path additionally exercises the R10 inline
+// `@lisse/vue`'s renderToString path additionally exercises the inline
 // `border-radius` fallback markup computed at render time.
 import { bench, describe } from "vitest";
 import { createElement } from "react";

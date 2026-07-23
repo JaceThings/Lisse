@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 //
-// R10 (hydration-safety) + R12 (stable composed ref). The server-rendered
-// border-radius fallback must hydrate on the client without a mismatch, and
-// the Slot's composed ref must keep a stable identity across re-renders so
-// the child ref isn't detached/re-attached on unrelated parent updates.
+// The server-rendered border-radius fallback must hydrate on the client
+// without a mismatch, and the Slot's composed ref must keep a stable identity
+// across re-renders so the child ref isn't detached/re-attached on unrelated
+// parent updates.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act } from "react";
 import { renderToString } from "react-dom/server";
@@ -14,7 +14,7 @@ import { installHarness, uninstallHarness } from "../../core/__tests__/harness/r
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-describe("SmoothCorners SSR hydration (R10)", () => {
+describe("SmoothCorners SSR hydration", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
   let warnSpy: ReturnType<typeof vi.spyOn>;
   let container: HTMLDivElement;
@@ -60,7 +60,7 @@ describe("SmoothCorners SSR hydration (R10)", () => {
   });
 });
 
-describe("Slot composed ref stability (R12)", () => {
+describe("Slot composed ref stability", () => {
   let container: HTMLDivElement;
   let root: Root;
 
