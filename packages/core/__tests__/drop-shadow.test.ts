@@ -16,10 +16,12 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  // Clear DOM between tests so previous test's anchor children don't
-  // confuse document-wide queries.
   document.body.innerHTML = "";
 });
+
+function shadowPaths(svg: SVGElement): Element[] {
+  return [...svg.querySelectorAll("path")].filter((p) => !p.closest("defs"));
+}
 
 describe("createDropShadow", () => {
   it("creates SVG child with defs; filter and path are created on first update", () => {
@@ -28,11 +30,9 @@ describe("createDropShadow", () => {
     expect(svg).not.toBeNull();
     expect(svg.querySelector("defs")).not.toBeNull();
 
-    // No filter/path before first update (pool is empty)
     expect(svg.querySelector("filter")).toBeNull();
     expect(svg.querySelector("path")).toBeNull();
 
-    // After update, filter and path are created
     handle.update(opts, { offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000", opacity: 1 }, 200, 100);
     expect(svg.querySelector("filter")).not.toBeNull();
     expect(svg.querySelector("filter")!.querySelector("feGaussianBlur")).not.toBeNull();
@@ -54,8 +54,6 @@ describe("createDropShadow", () => {
   });
 
   it("restores to empty string when the anchor had no prior inline isolation", () => {
-    // No pre-set inline value -- destroy should leave the slot empty,
-    // not leak "isolate" onto the anchor.
     expect(anchor.style.isolation).toBe("");
     const handle = createDropShadow(anchor);
     expect(anchor.style.isolation).toBe("isolate");
@@ -164,13 +162,11 @@ describe("createDropShadow", () => {
   });
 
   it("blur=0 + spread that exceeds the inner radius — four corners stay symmetric", () => {
-    // Regression for the top-left squircle notch reported at
-    // radius=20 / size=100 / blur=0 / spread=40. The previous
-    // stroked-ring renderer self-intersected at corners when
-    // stroke-width > 2 × inner radius, dropping a rectangular notch
-    // out of one corner. With the filled spread-expanded path the
-    // generated `d` is a uniformly-enlarged squircle whose four
-    // corner arcs share identical curvature.
+    // A stroked ring self-intersects at corners when stroke-width exceeds
+    // 2 × inner radius (radius=20, spread=40 here), which used to drop a
+    // notch out of one corner. The filled spread-expanded path instead
+    // generates a uniformly-enlarged squircle whose four corner arcs share
+    // identical curvature.
     const handle = createDropShadow(anchor);
     const cornerOpts: SmoothCornerOptions = { radius: 20, smoothing: 0.6 };
     handle.update(
@@ -228,7 +224,6 @@ describe("createDropShadow", () => {
         expect(path.getAttribute("stroke")).toBeNull();
         const d = path.getAttribute("d")!;
         expect(d).toBeTruthy();
-        // Four corner arcs, regardless of blur/spread.
         const arcs = [...d.matchAll(/a\s/g)];
         expect(arcs).toHaveLength(4);
       }
@@ -282,9 +277,7 @@ describe("createDropShadow", () => {
 
   it("update() with blur: 0 — filter attribute removed", () => {
     const handle = createDropShadow(anchor);
-    // First apply blur
     handle.update(opts, { offsetX: 0, offsetY: 0, blur: 8, spread: 0, color: "#000", opacity: 1 }, 200, 100);
-    // Then remove blur
     handle.update(opts, { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 1 }, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
@@ -317,12 +310,7 @@ describe("createDropShadow", () => {
     handle.update(opts, shadows, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    // Paths outside <defs>
-    const paths = [...svg.querySelectorAll("path")].filter(
-      (p) => !p.closest("defs"),
-    );
-    expect(paths).toHaveLength(2);
-    // Each filter should be unique
+    expect(shadowPaths(svg)).toHaveLength(2);
     const filters = svg.querySelectorAll("filter");
     expect(filters).toHaveLength(2);
     expect(filters[0].getAttribute("id")).not.toBe(filters[1].getAttribute("id"));
@@ -379,21 +367,14 @@ describe("createDropShadow", () => {
     handle.update(opts, twoShadows, 200, 100);
 
     const svg = anchor.querySelector("svg")!;
-    let paths = [...svg.querySelectorAll("path")].filter(
-      (p) => !p.closest("defs"),
-    );
-    expect(paths).toHaveLength(2);
+    expect(shadowPaths(svg)).toHaveLength(2);
 
-    // Reduce to one shadow
     const oneShadow: ShadowConfig = {
       offsetX: 0, offsetY: 0, blur: 4, spread: 0, color: "#000000", opacity: 1,
     };
     handle.update(opts, oneShadow, 200, 100);
 
-    paths = [...svg.querySelectorAll("path")].filter(
-      (p) => !p.closest("defs"),
-    );
-    expect(paths).toHaveLength(1);
+    expect(shadowPaths(svg)).toHaveLength(1);
     expect(svg.querySelectorAll("filter")).toHaveLength(1);
   });
 });

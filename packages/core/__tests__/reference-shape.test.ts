@@ -132,16 +132,14 @@ function clothoidReference(
   const A = L > 0 ? 1 / (R * L) : 0;
   const arcSweep = Math.PI / 2 - 2 * dTheta;
 
-  // Endpoint of cloth1 in its local frame.
   const cloth1End =
     L > 0 ? integrateClothoid(0, 0, A, L) : { x: 0, y: 0, theta: 0 };
 
-  // Arc centre — same math as the builder.
+  // Arc centre uses the same math as the builder (not independently derived).
   const arcCx = cloth1End.x - R * Math.sin(dTheta);
   const arcCy = cloth1End.y + R * Math.cos(dTheta);
 
   const reference: SamplePoint[] = [];
-  // Cloth1: 0 → L
   if (L > 0) {
     for (let i = 0; i <= steps; i++) {
       const t = (i / steps) * L;
@@ -152,9 +150,7 @@ function clothoidReference(
     reference.push({ x: 0, y: 0 });
   }
 
-  // Arc: param-circle from cloth1End to its mirror.
   if (Math.abs(arcSweep) > 1e-6) {
-    // Angle at arc start (cloth1End) from the centre.
     const startAngle = Math.atan2(cloth1End.y - arcCy, cloth1End.x - arcCx);
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
@@ -173,7 +169,6 @@ function clothoidReference(
     for (let i = 0; i <= steps; i++) {
       const t = ((steps - i) / steps) * L;
       const p = integrateClothoid(0, 0, A, t);
-      // Reflection in local (unscaled) frame, then scale.
       reference.push({
         x: (pUnscaled - p.y) * budgetScale,
         y: (pUnscaled - p.x) * budgetScale,

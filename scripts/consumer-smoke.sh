@@ -24,6 +24,14 @@ for pkg in "${PACKAGES[@]}"; do
   PKG_DIR="$ROOT_DIR/packages/$pkg"
   ( cd "$PKG_DIR" && pnpm pack --pack-destination "$VENDOR_DIR" >/dev/null )
 done
+# Content-hash the filenames. pnpm's store aliases local tarballs by their
+# file: spec, so a repacked tarball with the same name-version can serve
+# STALE content from a warm store (CI caches the store between runs). A
+# hash suffix makes every distinct build a distinct spec.
+for tarball in "$VENDOR_DIR"/*.tgz; do
+  HASH=$(shasum "$tarball" | cut -c1-8)
+  mv "$tarball" "${tarball%.tgz}-$HASH.tgz"
+done
 ls "$VENDOR_DIR"
 
 echo "[consumer-smoke] linting tarballs with publint"
@@ -42,17 +50,31 @@ for tarball in "$VENDOR_DIR"/*.tgz; do
   pnpm exec attw "$tarball" || echo "  (attw warnings — non-fatal pending upstream fix)"
 done
 
+echo "[consumer-smoke] pinning tarballs into the fixture manifest"
+# The adapters depend on @lisse/core@<version>, which pnpm would happily
+# resolve from the npm REGISTRY — silently smoking the published core
+# instead of the one packed above. pnpm overrides force every resolution
+# (direct and transitive) onto the local tarballs. The manifest is
+# restored afterwards so the hash-suffixed specs never leak into git.
+cp "$FIXTURE_DIR/package.json" "$FIXTURE_DIR/package.json.orig"
+trap 'mv "$FIXTURE_DIR/package.json.orig" "$FIXTURE_DIR/package.json"' EXIT
+node -e '
+  const fs = require("fs");
+  const [manifestPath, vendorDir] = process.argv.slice(1);
+  const pkg = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  pkg.pnpm = pkg.pnpm ?? {};
+  pkg.pnpm.overrides = pkg.pnpm.overrides ?? {};
+  for (const tgz of fs.readdirSync(vendorDir)) {
+    const name = "@lisse/" + tgz.replace(/^lisse-/, "").replace(/-\d.*$/, "");
+    const spec = "file:./vendor/" + tgz;
+    pkg.dependencies[name] = spec;
+    pkg.pnpm.overrides[name] = spec;
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify(pkg, null, 2) + "\n");
+' "$FIXTURE_DIR/package.json" "$VENDOR_DIR"
+
 echo "[consumer-smoke] installing fixture deps"
 ( cd "$FIXTURE_DIR" && pnpm install --no-frozen-lockfile --ignore-workspace )
-
-echo "[consumer-smoke] adding packed Lisse tarballs to fixture"
-# pnpm add accepts file: specs. The tarballs glob into one add to keep
-# resolution consistent.
-PACK_ARGS=()
-for tarball in "$VENDOR_DIR"/*.tgz; do
-  PACK_ARGS+=("file:./vendor/$(basename "$tarball")")
-done
-( cd "$FIXTURE_DIR" && pnpm add --save-prod --ignore-workspace "${PACK_ARGS[@]}" )
 
 echo "[consumer-smoke] running ESM smoke"
 ( cd "$FIXTURE_DIR" && node esm-smoke.mjs )

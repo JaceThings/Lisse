@@ -8,6 +8,12 @@ import {
   restoreStyles,
 } from "../src/extract-effects.js";
 
+function freshDiv(): HTMLElement {
+  const el = document.createElement("div");
+  document.body.appendChild(el);
+  return el;
+}
+
 describe("parseColor", () => {
   it("parses rgb() to hex + opacity 1", () => {
     const result = parseColor("rgb(255, 0, 0)");
@@ -70,8 +76,7 @@ describe("parseBorder", () => {
   let el: HTMLElement;
 
   beforeEach(() => {
-    el = document.createElement("div");
-    document.body.appendChild(el);
+    el = freshDiv();
   });
 
   it("parses a solid border", () => {
@@ -262,8 +267,7 @@ describe("extractAndStripEffects", () => {
   let el: HTMLElement;
 
   beforeEach(() => {
-    el = document.createElement("div");
-    document.body.appendChild(el);
+    el = freshDiv();
   });
 
   it("extracts border and strips CSS", () => {
@@ -350,7 +354,6 @@ describe("extractAndStripEffects", () => {
 
     extractAndStripEffects(el);
 
-    // Padding must not shift when the border was not actually stripped.
     expect(el.style.paddingTop).toBe("5px");
     expect(el.style.paddingRight).toBe("5px");
     expect(el.style.paddingBottom).toBe("5px");
@@ -362,8 +365,7 @@ describe("restoreStyles", () => {
   let el: HTMLElement;
 
   beforeEach(() => {
-    el = document.createElement("div");
-    document.body.appendChild(el);
+    el = freshDiv();
   });
 
   it("restores original inline values", () => {
@@ -412,8 +414,7 @@ describe("extractAndStripEffects -- content-box compensation", () => {
   let el: HTMLElement;
 
   beforeEach(() => {
-    el = document.createElement("div");
-    document.body.appendChild(el);
+    el = freshDiv();
   });
 
   it("increases padding by border width for content-box elements", () => {

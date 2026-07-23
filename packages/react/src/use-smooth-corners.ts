@@ -48,6 +48,13 @@ interface State {
   lastWidth: number;
   lastHeight: number;
   lastSyncKey: string | null;
+  // SSR border-radius fallback the wrapper wrote (undefined when the user
+  // supplied their own border-radius). CSS intersects border-radius with the
+  // clip-path, and the rounded rect is a strict subset of the squircle, so the
+  // fallback must be cleared once the clip-path lands or it cancels smoothing
+  // on the element's own background. Restored on teardown for remount safety.
+  fallbackBorderRadius: string | undefined;
+  clearedFallbackRadius: boolean;
 }
 
 interface SyncRefs {
@@ -59,6 +66,7 @@ interface SyncRefs {
     ((shadow: ShadowConfig | ShadowConfig[] | undefined) => void) | undefined
   >;
   syncKeyRef: React.MutableRefObject<string>;
+  fallbackBorderRadiusRef: React.MutableRefObject<string | undefined>;
 }
 
 /**
@@ -66,12 +74,15 @@ interface SyncRefs {
  * handles are created on first sight of effects, reused thereafter, and a
  * zero-size element bails out (the next resize tick picks it up).
  */
-function runSync(s: State, refs: SyncRefs): void {
+function runSync(s: State, refs: SyncRefs, size?: { width: number; height: number }): void {
   const merged = mergeEffects(s.extracted, refs.effectsPropRef.current);
   if (hasEffects(merged))
     ensureHandles(s, merged, refs.wrapperRefRef.current, refs.skipShadowHandleRef.current);
 
-  const { width, height } = getLayoutSize(s.el);
+  // Resize ticks thread the observer entry's border-box size; the initial
+  // mount and the every-commit sync below pass none and read it here (the
+  // latter deliberately, for WebKit mid-animation correctness).
+  const { width, height } = size ?? getLayoutSize(s.el);
   if (width <= 0 || height <= 0) return;
 
   const key = refs.syncKeyRef.current;
@@ -83,6 +94,14 @@ function runSync(s: State, refs: SyncRefs): void {
   s.el.style.clipPath = generateClipPath(width, height, refs.optionsRef.current);
   s.el.setAttribute("data-state", "ready");
 
+  // The clip-path is now the silhouette; drop the SSR border-radius fallback so
+  // it stops intersecting (and squaring off) the squircle. Only clears the
+  // fallback the wrapper wrote — a user-supplied border-radius leaves this unset.
+  if (s.fallbackBorderRadius !== undefined && !s.clearedFallbackRadius) {
+    s.el.style.borderRadius = "";
+    s.clearedFallbackRadius = true;
+  }
+
   if (s.effectsHandle) {
     syncEffects(refs.optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
   }
@@ -91,9 +110,8 @@ function runSync(s: State, refs: SyncRefs): void {
 /**
  * Ensure the overlay handles exist for `merged`. The anchor is captured
  * once so a late-arriving shadow piggy-backs on the same ref-counted
- * position. Drop-shadow setup (and the `isolation:isolate` anchor
- * mutation) is skipped for border-only configs. Idempotent at every
- * call-site so no path can double-acquire.
+ * position; drop-shadow setup (and its `isolation:isolate` anchor mutation)
+ * is skipped for border-only configs. Idempotent, so no path double-acquires.
  */
 function ensureHandles(
   s: State,
@@ -143,6 +161,16 @@ export interface UseEffectsOptions {
    * consumer element and never re-rendered.
    */
   onExtractedShadow?: (shadow: ShadowConfig | ShadowConfig[] | undefined) => void;
+  /**
+   * The inline `border-radius` fallback the caller rendered for SSR/first
+   * paint. When set, the hook clears it from the DOM once the clip-path lands
+   * (CSS intersects border-radius with clip-path, so leaving it squares off the
+   * squircle) and restores it on teardown. Pass `undefined` when the user
+   * supplied their own `border-radius` so it's left untouched.
+   *
+   * `<SmoothCorners>` wires this internally; it's not needed for direct hook use.
+   */
+  fallbackBorderRadius?: string;
 }
 
 /**
@@ -166,7 +194,7 @@ export function useSmoothCorners(
   options: SmoothCornerOptions,
   effectsOptions?: UseEffectsOptions,
 ): void {
-  const { wrapperRef, effects, autoEffects, skipShadowHandle, onExtractedShadow } =
+  const { wrapperRef, effects, autoEffects, skipShadowHandle, onExtractedShadow, fallbackBorderRadius } =
     effectsOptions ?? {};
 
   const optionsRef = useRef(options);
@@ -185,6 +213,9 @@ export function useSmoothCorners(
   const onExtractedShadowRef = useRef(onExtractedShadow);
   onExtractedShadowRef.current = onExtractedShadow;
 
+  const fallbackBorderRadiusRef = useRef(fallbackBorderRadius);
+  fallbackBorderRadiusRef.current = fallbackBorderRadius;
+
   // Stable signatures for the effect deps. JSON.stringify is safe on these
   // bounded objects; useMemo would never hit since callers pass fresh literals.
   const optionsKey = JSON.stringify(options);
@@ -192,11 +223,16 @@ export function useSmoothCorners(
   const autoEffectsKey = autoEffects ?? true;
   const skipShadowHandleKey = skipShadowHandle ?? false;
 
+  // `skipShadowHandleKey` is part of the sync key: toggling the SVG drop-shadow
+  // on/off changes the rendered overlay, so a commit that flips only that flag
+  // (options/effects unchanged) must still get past runSync's unchanged-key
+  // guard and re-run ensureHandles/syncEffects.
   const syncKeyRef = useRef("");
-  syncKeyRef.current = `${optionsKey}|${effectsKey}`;
+  syncKeyRef.current = `${optionsKey}|${effectsKey}|${skipShadowHandleKey ? 1 : 0}`;
 
   const refsRef = useRef<SyncRefs>({
     optionsRef, effectsPropRef, wrapperRefRef, skipShadowHandleRef, onExtractedShadowRef, syncKeyRef,
+    fallbackBorderRadiusRef,
   });
 
   // Per-mount state. SVG handles are created lazily on first sync that
@@ -204,8 +240,8 @@ export function useSmoothCorners(
   // doesn't rebuild the overlay.
   const stateRef = useRef<State | null>(null);
 
-  // Main setup. Re-runs only when the element ref changes. `autoEffectsKey`
-  // is captured at mount; subsequent toggles are handled below.
+  // `autoEffectsKey` is captured at mount here; later toggles are handled by
+  // the separate effect below, so this effect depends only on `ref`.
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -227,6 +263,8 @@ export function useSmoothCorners(
       lastWidth: 0,
       lastHeight: 0,
       lastSyncKey: null,
+      fallbackBorderRadius: fallbackBorderRadiusRef.current,
+      clearedFallbackRadius: false,
     };
     stateRef.current = s;
 
@@ -238,7 +276,7 @@ export function useSmoothCorners(
 
     onExtractedShadowRef.current?.(s.extracted?.effects.shadow);
 
-    const unobserve = observeResize(el, () => runSync(s, refsRef.current));
+    const unobserve = observeResize(el, (size) => runSync(s, refsRef.current, size));
 
     return () => {
       unobserve();
@@ -248,6 +286,12 @@ export function useSmoothCorners(
       onExtractedShadowRef.current?.(undefined);
       if (s.didAcquire && s.anchor) releasePosition(s.anchor);
       stateRef.current = null;
+
+      // Restore the SSR fallback we cleared, so an SSR→unmount→remount cycle
+      // that reuses this element still shows rounded corners pre-clip-path.
+      if (s.clearedFallbackRadius && s.fallbackBorderRadius !== undefined) {
+        el.style.borderRadius = s.fallbackBorderRadius;
+      }
 
       el.style.clipPath = savedClipPath;
       el.removeAttribute("data-slot");
@@ -271,15 +315,20 @@ export function useSmoothCorners(
   // runtime (e.g. shadowStrategy "svg" → "box-shadow"). Re-creation in the
   // other direction is handled by `ensureHandles` on the next sync.
   useIsoLayoutEffect(() => {
-    if (!skipShadowHandleKey) return;
     const s = stateRef.current;
-    if (!s || !s.shadowHandle) return;
-    s.shadowHandle.destroy();
-    s.shadowHandle = undefined;
-    s.lastSyncKey = null; // effects state changed outside the render keys
+    if (!s) return;
+    if (skipShadowHandleKey) {
+      if (!s.shadowHandle) return;
+      s.shadowHandle.destroy();
+      s.shadowHandle = undefined;
+      s.lastSyncKey = null; // effects state changed outside the render keys
+    } else {
+      // Re-enabling the SVG drop-shadow: invalidate so the next sync re-runs
+      // ensureHandles (which re-creates the handle) and renders the shadow.
+      s.lastSyncKey = null;
+    }
   }, [skipShadowHandleKey]);
 
-  // Start/stop CSS extraction when `autoEffects` toggles.
   useIsoLayoutEffect(() => {
     const s = stateRef.current;
     if (!s) return;

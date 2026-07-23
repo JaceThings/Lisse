@@ -50,4 +50,41 @@ describe("SmoothCorners - server-side rendering", () => {
     expect(errorSpy).not.toHaveBeenCalled();
     expect(warnSpy).not.toHaveBeenCalled();
   });
+
+  it("emits an inline border-radius fallback derived from the corner radius", () => {
+    const html = renderToString(
+      <SmoothCorners corners={{ radius: 16, smoothing: 0.6 }}>hello</SmoothCorners>,
+    );
+    expect(html).toContain("border-radius:16px");
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("emits a per-corner border-radius fallback for per-corner options", () => {
+    const html = renderToString(
+      <SmoothCorners corners={{ topLeft: 4, topRight: 8, bottomRight: 12, bottomLeft: 16 }}>
+        hi
+      </SmoothCorners>,
+    );
+    expect(html).toContain("border-radius:4px 8px 12px 16px");
+  });
+
+  it("carries the fallback through asChild onto the child element", () => {
+    const html = renderToString(
+      <SmoothCorners asChild corners={{ radius: 20 }}>
+        <a href="/x">link</a>
+      </SmoothCorners>,
+    );
+    expect(html).toMatch(/<a[^>]*style="[^"]*border-radius:20px/);
+  });
+
+  it("user-supplied style.borderRadius wins over the fallback", () => {
+    const html = renderToString(
+      <SmoothCorners corners={{ radius: 16 }} style={{ borderRadius: 4 }}>
+        hi
+      </SmoothCorners>,
+    );
+    expect(html).toContain("border-radius:4px");
+    expect(html).not.toContain("border-radius:16px");
+  });
 });

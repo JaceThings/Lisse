@@ -1,6 +1,5 @@
-// Property-based geometric invariants. fast-check generates random
-// inputs; the seed is logged on failure so any reproducer is one
-// re-run away.
+// Property-based geometric invariants. fast-check generates random inputs;
+// the seed is logged on failure so any reproducer is one re-run away.
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 import { svgPathProperties } from "svg-path-properties";
@@ -34,7 +33,7 @@ function input(
     smoothing,
     exponent,
     preserveSmoothing: true,
-    roundingAndSmoothingBudget: budget ?? radius * 100, // effectively unlimited
+    roundingAndSmoothingBudget: budget ?? radius * 100,
   };
 }
 
@@ -64,11 +63,10 @@ describe("Invariant 1 — monotonic x/y progress along TR", () => {
         const out = getCurveBuilder(curve)(input(curve, r, s, e));
         const samples = samplePath(out.pathSegment("TR"), 32);
         if (samples.length < 2) return true;
-        // Allow sub-pixel float-drift slack; reject true reversals.
-        const slack = 1e-3;
+        const subPixelDriftSlack = 1e-3;
         for (let i = 1; i < samples.length; i++) {
-          if (samples[i].x < samples[i - 1].x - slack) return false;
-          if (samples[i].y < samples[i - 1].y - slack) return false;
+          if (samples[i].x < samples[i - 1].x - subPixelDriftSlack) return false;
+          if (samples[i].y < samples[i - 1].y - subPixelDriftSlack) return false;
         }
         return true;
       }),
@@ -110,7 +108,8 @@ describe("Invariant 3 — symmetry", () => {
     fc.assert(
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
         const out = getCurveBuilder(curve)(input(curve, r, s, e));
-        const tr = samplePath(out.pathSegment("TR"), 17); // odd so middle hits the diagonal
+        const oddSampleCountSoMiddleHitsDiagonal = 17;
+        const tr = samplePath(out.pathSegment("TR"), oddSampleCountSoMiddleHitsDiagonal);
         if (tr.length < 4) return true;
         const p = out.p;
         const tol = Math.max(0.5, p * 0.01);
@@ -138,16 +137,12 @@ describe("Invariant 3 — symmetry", () => {
         const tr = samplePath(out.pathSegment("TR"), 16);
         const bl = samplePath(out.pathSegment("BL"), 16);
         if (tr.length === 0 || bl.length === 0) return tr.length === bl.length;
-        // Pull canonical (0..p, 0..p) frame for TR. BL is the rotation
-        // by 180° (relative path commands negate both axes), so its
-        // samples in its local frame should match TR's reflected.
+        // BL is TR rotated 180°: relative path commands negate both axes, so
+        // after M 0 0 the BL samples land at (-tr.x, -tr.y) in local frame.
         const tolerance = Math.max(0.5, out.p * 0.01);
         for (let i = 0; i < Math.min(tr.length, bl.length); i++) {
           const a = tr[i];
           const b = bl[i];
-          // BL traces the same arc rotated 180°: its (dx, dy) deltas
-          // are −(dx, dy) of TR. After M 0 0 + relative, BL samples
-          // are at (-tr.x, -tr.y) in local frame.
           if (Math.abs(a.x + b.x) > tolerance) return false;
           if (Math.abs(a.y + b.y) > tolerance) return false;
         }
@@ -164,14 +159,11 @@ describe("Invariant 4 — scale invariance", () => {
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
         const small = getCurveBuilder(curve)(input(curve, r, s, e));
         const big = getCurveBuilder(curve)(input(curve, r * 2, s, e));
-        // p scales linearly with radius when budget isn't binding.
         // Tolerance: 0.1% to absorb rounding-to-4-decimal noise.
         const expectedP = small.p * 2;
         if (Math.abs(big.p - expectedP) > Math.max(1e-3, expectedP * 1e-3)) return false;
 
-        // Now the full geometry: every sampled point on the big curve
-        // should be 2× the matching point on the small curve. Sample
-        // both at the same arc-length fractions.
+        // Sample both curves at the same arc-length fractions.
         const sSmall = samplePath(small.pathSegment("TR"), 24);
         const sBig = samplePath(big.pathSegment("TR"), 24);
         if (sSmall.length !== sBig.length) return false;
@@ -194,21 +186,21 @@ describe("Invariant 5 — endpoint tangent direction", () => {
         const out = getCurveBuilder(curve)(input(curve, r, s, e));
         const samples = samplePath(out.pathSegment("TR"), 64);
         if (samples.length < 4) return true;
-        // Numerical derivative near start: (samples[1] - samples[0]).
-        // Should point along +X (tangent (1, 0)).
-        const sdx = samples[1].x - samples[0].x;
-        const sdy = samples[1].y - samples[0].y;
-        const sn = Math.hypot(sdx, sdy);
-        // End: (samples[N-1] - samples[N-2]) should point along +Y.
+        // Numerical derivative (chord) at each end, approximating the tangent.
+        const startTangentX = samples[1].x - samples[0].x;
+        const startTangentY = samples[1].y - samples[0].y;
+        const startTangentLen = Math.hypot(startTangentX, startTangentY);
         const N = samples.length;
-        const edx = samples[N - 1].x - samples[N - 2].x;
-        const edy = samples[N - 1].y - samples[N - 2].y;
-        const en = Math.hypot(edx, edy);
-        // Tangent angle slack — chord approximates tangent; large
-        // step + sharp shoulder can drift by a few degrees. Test
-        // that the dominant direction is correct.
-        return sdx > 0 && sn > 0 && Math.abs(sdy) / sn < 0.5 &&
-          edy > 0 && en > 0 && Math.abs(edx) / en < 0.5;
+        const endTangentX = samples[N - 1].x - samples[N - 2].x;
+        const endTangentY = samples[N - 1].y - samples[N - 2].y;
+        const endTangentLen = Math.hypot(endTangentX, endTangentY);
+        // Slack of 0.5: a large step + sharp shoulder can drift the chord a
+        // few degrees off the true tangent, so only the dominant axis matters.
+        const angleSlack = 0.5;
+        return startTangentX > 0 && startTangentLen > 0 &&
+          Math.abs(startTangentY) / startTangentLen < angleSlack &&
+          endTangentY > 0 && endTangentLen > 0 &&
+          Math.abs(endTangentX) / endTangentLen < angleSlack;
       }),
       { numRuns: NUM_RUNS, verbose: true },
     );
@@ -220,8 +212,8 @@ describe("Invariant 6 — budget clamping", () => {
     fc.assert(
       fc.property(curveArb, smoothingArb, exponentArb, (curve, s, e) => {
         const tightBudget = 20;
-        const r = 200; // natural p ≈ r ≫ tightBudget
-        const out = getCurveBuilder(curve)(input(curve, r, s, e, tightBudget));
+        const radiusFarAboveBudget = 200;
+        const out = getCurveBuilder(curve)(input(curve, radiusFarAboveBudget, s, e, tightBudget));
         return Math.abs(out.p - tightBudget) <= 1e-4;
       }),
       { numRuns: NUM_RUNS, verbose: true },
@@ -231,19 +223,17 @@ describe("Invariant 6 — budget clamping", () => {
   it("p = natural unclamped when budget is generous (continuity at the boundary)", () => {
     fc.assert(
       fc.property(curveArb, radiusArb, smoothingArb, exponentArb, (curve, r, s, e) => {
-        // Step 1: measure natural p via a huge budget.
         const natural = getCurveBuilder(curve)(input(curve, r, s, e, r * 1e6)).p;
-        // Tolerance: scales with natural since builders round to 4
-        // decimals and naturalP can be hundreds of px.
+        // Tolerance scales with natural since builders round to 4 decimals
+        // and naturalP can be hundreds of px.
         const tol = Math.max(1e-3, natural * 1e-3);
-        // Step 2: a budget exactly equal to natural — p should still
-        // equal natural (no off-by-one clamp at the boundary).
+        // Budget exactly at natural: no off-by-one clamp at the boundary.
         const atBoundary = getCurveBuilder(curve)(input(curve, r, s, e, natural)).p;
         if (Math.abs(atBoundary - natural) > tol) return false;
-        // Step 3: budget just below natural — must clamp to budget.
+        // Budget just below natural: must clamp to the budget.
         const justBelow = getCurveBuilder(curve)(input(curve, r, s, e, natural - 1)).p;
         if (Math.abs(justBelow - (natural - 1)) > Math.max(tol, 1e-3)) return false;
-        // Step 4: budget far above natural — p must equal natural.
+        // Budget far above natural: p is unaffected.
         const farAbove = getCurveBuilder(curve)(input(curve, r, s, e, natural * 2)).p;
         if (Math.abs(farAbove - natural) > tol) return false;
         return true;

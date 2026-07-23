@@ -6,9 +6,8 @@ function setRef<T>(ref: Ref<T> | undefined | null, value: T | null): void | (() 
 }
 
 /**
- * Compose multiple refs into a single callback ref. Forwards the node to
- * each provided ref, supporting both callback refs and ref objects.
- * Preserves React 19 callback-ref cleanups.
+ * Compose refs (callback or object) into one callback ref, preserving
+ * React 19 callback-ref cleanups.
  */
 export function composeRefs<T>(
   ...refs: Array<Ref<T> | undefined | null>

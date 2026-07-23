@@ -74,8 +74,6 @@ function removeShadowEntry(entry: ShadowEntry): void {
  * stacking context.
  */
 export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
-  // Save the prior inline value so destroy() can restore it — setting
-  // `isolation: isolate` unconditionally would otherwise leak.
   const savedIsolation = anchor.style.isolation;
   anchor.style.isolation = "isolate";
 
@@ -96,6 +94,8 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
 
   const pool: ShadowEntry[] = [];
 
+  const getPath = createPathCache();
+
   return {
     update(options, shadow, width, height) {
       const arr = Array.isArray(shadow) ? shadow : [shadow];
@@ -109,7 +109,7 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
       while (pool.length < arr.length) pool.push(createShadowEntry(defs, svg));
       while (pool.length > arr.length) removeShadowEntry(pool.pop()!);
 
-      const getPath = createPathCache(options);
+      getPath.setOptions(options);
 
       // First entry = topmost = rendered last in SVG.
       let anyVisible = false;

@@ -8,11 +8,10 @@ import { EMPTY_BUILDER_OUTPUT } from "./types.js";
  * Figma squircle — cubic shoulder + central arc + cubic shoulder. G1
  * with the adjacent edges (curvature steps at the cubic↔arc seams).
  *
- * The four per-orient drawers are kept verbatim — byte-identical to
- * what Lisse has shipped since 0.1.0. They contain hand-placed literal
- * `0` characters in the template (e.g. `c ${a} 0 …`) that print as `0`,
- * not `0.0000`. Routing through `transformXY` would round those literals
- * and diff every downstream snapshot, despite identical visuals.
+ * The four per-orient drawers stay verbatim: their hand-placed literal
+ * `0` characters (e.g. `c ${a} 0 …`) print as `0`, not `0.0000`. Routing
+ * through `transformXY` would round those literals and diff every
+ * downstream snapshot despite identical visuals.
  */
 export const buildSquircle: CurveBuilder = ({
   cornerRadius,

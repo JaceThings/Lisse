@@ -261,11 +261,9 @@ describe("<SmoothCorners /> Vue - anchor capture", () => {
 
     unmount();
 
-    // The wrapper's original parent should not retain any leaked styles
-    // from Lisse. If the buggy cleanup path ran, it would have called
-    // releasePosition(newParent) instead of the original anchor, leaving
-    // state on the original anchor. With the fix, originalParent has no
-    // leaked inline position.
+    // Neither parent should retain leaked inline position: cleanup must
+    // release the original anchor, not whatever parentElement resolves to
+    // after the reparent.
     expect(originalParent.style.position).toBe("");
     expect(newParent.style.position).toBe("");
   });
@@ -273,17 +271,15 @@ describe("<SmoothCorners /> Vue - anchor capture", () => {
 
 describe("<SmoothCorners /> Vue - single observeResize subscription", () => {
   it("registers observeResize once per element even with an innerBorder effect", async () => {
-    // With the old implementation, mounting a SmoothCorners with effects
-    // would install two callbacks on the same element (one for clip-path,
-    // one for effects). After the fix, we expect exactly one registration
-    // per element.
+    // Effects must not install a second resize callback on the element (one
+    // for clip-path, one for effects): exactly one registration per element.
     //
     // observeResize uses a shared singleton ResizeObserver, so counting
     // ResizeObserver.observe() alone can't distinguish one-vs-two
-    // subscriptions. Instead, we hijack requestAnimationFrame + fake the
-    // observer to directly invoke the registered callbacks, then count
-    // offsetWidth reads on the inner element during a single resize flush
-    // (offsetWidth is the layout-size read inside syncAll).
+    // subscriptions. Instead, we fake the observer to directly invoke the
+    // registered callbacks, then count offsetWidth reads on the inner element
+    // during a single resize flush (offsetWidth is the layout-size read inside
+    // syncAll).
     const instances: Array<{ cb: (entries: unknown[]) => void; targets: Set<Element> }> = [];
     (globalThis as { ResizeObserver: unknown }).ResizeObserver = class {
       targets = new Set<Element>();
@@ -333,9 +329,9 @@ describe("<SmoothCorners /> Vue - single observeResize subscription", () => {
     // Flush all pending rAFs so the initial observeResize schedule runs.
     await new Promise((r) => setTimeout(r, 20));
 
-    // Trigger a synthetic resize via the shared observer. If two callbacks
-    // were registered for `inner`, we'd see two offsetWidth reads per
-    // flush. The fix collapses them into one.
+    // Trigger a synthetic resize via the shared observer. Two callbacks
+    // registered for `inner` would mean two offsetWidth reads per flush;
+    // one registration means one.
     widthReads = 0;
     const obs = instances[0];
     obs.cb([{ target: inner } as unknown]);

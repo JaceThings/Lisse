@@ -67,19 +67,15 @@ describe("smoothCorners action - reactive autoEffects", () => {
       corners: { radius: 8 },
       autoEffects: true,
     });
-    // With autoEffects: true, the inline border should have been stripped.
     expect(node.style.border).not.toBe("2px solid rgb(255, 0, 0)");
 
-    // Toggling off should restore the original inline border.
     action.update({ corners: { radius: 8 }, autoEffects: false });
     expect(node.style.border).toBe("2px solid rgb(255, 0, 0)");
 
-    // Toggling back on should strip it again.
     action.update({ corners: { radius: 8 }, autoEffects: true });
     expect(node.style.border).not.toBe("2px solid rgb(255, 0, 0)");
 
     action.destroy();
-    // Destroy restores to the original.
     expect(node.style.border).toBe("2px solid rgb(255, 0, 0)");
   });
 });
@@ -98,9 +94,6 @@ describe("smoothCorners action - anchor capture", () => {
       effects: { innerBorder: { width: 2, color: "#000", opacity: 1 } },
     });
 
-    // Detach the node from its parent before destroy. Previously this would
-    // strand the SVG overlay and skip the position release, but with the
-    // captured anchor it should still clean up correctly.
     parent.removeChild(node);
 
     expect(() => action.destroy()).not.toThrow();
@@ -119,18 +112,11 @@ describe("smoothCorners action - destroy idempotency", () => {
       effects: { innerBorder: { width: 2, color: "#000", opacity: 1 } },
     });
 
-    // First destroy: releases the anchor and clears the inline position.
     action.destroy();
     expect(anchor.style.position).toBe("");
 
-    // Second destroy: must not call releasePosition again, which would
-    // decrement the shared ref-count past zero for any other consumer
-    // of the same anchor. Observable via acquirePosition behaviour:
-    // acquiring fresh should start a new ref-count cleanly.
     expect(() => action.destroy()).not.toThrow();
 
-    // A fresh acquire now should succeed and set position:relative,
-    // confirming the anchor's ref-count state wasn't corrupted.
     expect(core.acquirePosition(anchor)).toBe(true);
     expect(anchor.style.position).toBe("relative");
     core.releasePosition(anchor);

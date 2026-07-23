@@ -55,21 +55,15 @@ describe("curve cache — basic semantics", () => {
 
 describe("curve cache — LRU eviction", () => {
   it("evicts the least-recently-touched entry when capacity is exceeded", () => {
-    // Fill the cache, then add one more.
     for (let i = 0; i < CURVE_CACHE_CAPACITY; i++) {
       getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: i + 1 });
     }
     expect(_curveCacheSize()).toBe(CURVE_CACHE_CAPACITY);
 
-    // Touch entry 0 so it becomes most-recent.
     getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 });
-
-    // Insert one new entry — should evict entry "2" (now LRU), not "1".
     getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 999 });
     expect(_curveCacheSize()).toBe(CURVE_CACHE_CAPACITY);
 
-    // Entry 1 should still be cached (re-fetching it must not allocate
-    // a fresh builder result — by reference identity).
     const refetchOne = getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 });
     const refetchOneAgain = getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 });
     expect(refetchOneAgain).toBe(refetchOne);
@@ -111,9 +105,7 @@ describe("curve cache — clearCurveCache", () => {
     const first = getCachedBuilderOutput("squircle", buildSquircle, base);
     clearCurveCache();
     const second = getCachedBuilderOutput("squircle", buildSquircle, base);
-    // Different object reference (cleared, so re-built).
     expect(second).not.toBe(first);
-    // But equal output.
     expect(second.p).toBe(first.p);
     expect(second.pathSegment("TR")).toBe(first.pathSegment("TR"));
   });

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createApp, h, ref, type App } from "vue";
+import { createApp, h, ref, nextTick, type App } from "vue";
 import {
   installHarness,
   uninstallHarness,
@@ -135,5 +135,59 @@ describe("Vue adapter — runtime harness", () => {
 
     expect(h_.observerCount()).toBe(observersAfterMount);
     expect(h_.isObserved(el)).toBe(true);
+  });
+});
+
+describe("Vue adapter — SSR border-radius fallback teardown", () => {
+  it("clears the fallback once the clip-path lands, but not before", () => {
+    mount(() => h(SmoothCorners, { as: "div", autoEffects: false, corners: { radius: 16 } }));
+    const el = getInner();
+
+    // Pre-clip: fallback present so corners look rounded.
+    expect(el.style.borderRadius).toBe("16px");
+
+    stubLayout(el);
+    h_.deliverResize(el);
+    h_.flushRaf();
+
+    expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderRadius).toBe("");
+  });
+
+  it("keeps the fallback cleared across an unrelated re-render", async () => {
+    const cls = ref("a");
+    mount(() =>
+      h(SmoothCorners, { as: "div", autoEffects: false, corners: { radius: 16 }, class: cls.value }),
+    );
+    const el = getInner();
+    stubLayout(el);
+    h_.deliverResize(el);
+    h_.flushRaf();
+    expect(el.style.borderRadius).toBe("");
+
+    // Vue re-patches every inline style key on re-render; the fallback must not
+    // come back (the component drops the binding once the clip-path is applied).
+    cls.value = "b";
+    await nextTick();
+    expect(el.getAttribute("class")).toBe("b");
+    expect(el.style.borderRadius).toBe("");
+  });
+
+  it("leaves a user-supplied border-radius untouched", () => {
+    mount(() =>
+      h(SmoothCorners, {
+        as: "div",
+        autoEffects: false,
+        corners: { radius: 16 },
+        style: { borderRadius: "4px" },
+      }),
+    );
+    const el = getInner();
+    stubLayout(el);
+    h_.deliverResize(el);
+    h_.flushRaf();
+
+    expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderRadius).toBe("4px");
   });
 });

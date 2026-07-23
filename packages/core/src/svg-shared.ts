@@ -1,7 +1,6 @@
 import type { ShadowConfig, SmoothCornerOptions, CornerConfig, GradientConfig, GradientStop } from "./types.js";
 import { generatePath } from "./generate-path.js";
 
-/** SVG namespace URI for document.createElementNS. */
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** Shared counter for unique SVG element IDs across svg-effects and drop-shadow. */
@@ -32,26 +31,65 @@ export const DEFAULT_SHADOW: ShadowConfig = {
 };
 
 /**
- * Per-dispatch path memo. Both `createDropShadow` and `createSvgEffects`
+ * Persistent path memo. Both `createDropShadow` and `createSvgEffects`
  * generate paths multiple times per `update()` for the same
  * `(width, height, options)` tuple, differing only by spread. Spread is
  * folded into the key so spread-only variants memoise independently.
- * Scoped to a single `update()`; stale entries can't leak.
+ *
+ * The cache Map and the serialized options key live on the handle: create
+ * one per effects/shadow handle and reuse it across `update()` calls.
+ * `setOptions` clears the per-size entries whenever the serialized shape
+ * changes; they're bounded by an LRU cap so a resize animation can't grow the
+ * map without limit.
  */
-export function createPathCache(
-  options: SmoothCornerOptions,
-): (w: number, h: number, opts: SmoothCornerOptions, spread: number) => string {
+export interface PathCache {
+  (w: number, h: number, opts: SmoothCornerOptions, spread: number): string;
+  /** Set the base options for the current dispatch; clears the cache when the serialized shape changes. */
+  setOptions(options: SmoothCornerOptions): void;
+  /** Internal (tests only): current number of memoised path entries. */
+  _size(): number;
+}
+
+/** Per-handle path-cache cap. One entry per unique (w, h, spread); a resize
+ *  animation sweeps many sizes, so bound it LRU-style like curves/cache.ts. */
+export const PATH_CACHE_CAPACITY = 128;
+
+export function createPathCache(options?: SmoothCornerOptions): PathCache {
   const cache = new Map<string, string>();
-  const optionsKey = JSON.stringify(options);
-  return (w, h, opts, spread) => {
-    const key = `${w}:${h}:${spread}:${optionsKey}`;
-    let cached = cache.get(key);
-    if (cached === undefined) {
-      cached = generatePath(w, h, opts);
-      cache.set(key, cached);
+  let optionsKey: string | undefined;
+
+  const setOptions = (opts: SmoothCornerOptions): void => {
+    // Always re-serialise and compare the key. Options objects are commonly
+    // mutated in place (Vue reactive props), so a reference check would miss
+    // a shape change and leak stale border/shadow paths after a clip update.
+    const key = JSON.stringify(opts);
+    if (key !== optionsKey) {
+      optionsKey = key;
+      cache.clear();
     }
-    return cached;
   };
+
+  const getPath = ((w, h, opts, spread) => {
+    const key = `${w}:${h}:${spread}`;
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+      // LRU touch: delete + re-insert moves the entry to the newest slot.
+      cache.delete(key);
+      cache.set(key, cached);
+      return cached;
+    }
+    const fresh = generatePath(w, h, opts);
+    if (cache.size >= PATH_CACHE_CAPACITY) {
+      cache.delete(cache.keys().next().value!);
+    }
+    cache.set(key, fresh);
+    return fresh;
+  }) as PathCache;
+  getPath.setOptions = setOptions;
+  getPath._size = () => cache.size;
+
+  if (options !== undefined) setOptions(options);
+  return getPath;
 }
 
 /** Adjust corner radii by a spread offset (clamped to zero). */
@@ -71,6 +109,24 @@ export function adjustOptions(options: SmoothCornerOptions, spread: number): Smo
     bottomRight: adjust(options.bottomRight),
     bottomLeft: adjust(options.bottomLeft),
   };
+}
+
+/**
+ * Best-effort CSS `border-radius` matching the per-corner radii. The SSR
+ * fallback and the box-shadow sibling both derive their rounding from this.
+ */
+export function cornerOptionsToBorderRadius(options: SmoothCornerOptions): string {
+  if ("radius" in options) return `${options.radius}px`;
+  const radiusOf = (v: CornerConfig | number | undefined): number => {
+    if (v === undefined) return 0;
+    if (typeof v === "number") return v;
+    return v.radius;
+  };
+  const tl = radiusOf(options.topLeft);
+  const tr = radiusOf(options.topRight);
+  const br = radiusOf(options.bottomRight);
+  const bl = radiusOf(options.bottomLeft);
+  return `${tl}px ${tr}px ${br}px ${bl}px`;
 }
 
 /**

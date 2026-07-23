@@ -3,16 +3,15 @@ import type { CurveType } from "../types.js";
 export type { CurveType };
 
 /**
- * Corner orientation in clockwise traversal. Each builder writes a
- * canonical (entry → exit) curve and is rotated to a corner via `orient`,
- * so the math is derived once.
+ * Corner orientation in clockwise traversal. Builders write one canonical
+ * (entry → exit) curve, rotated to each corner via `orient`.
  */
 export type Orient = "TR" | "BR" | "BL" | "TL";
 
 /**
- * `cornerRadius` and `roundingAndSmoothingBudget` are both post-distribute:
- * the radius is already clamped to the rectangle, and the budget is how
- * much of the adjacent edge this corner may consume.
+ * Both `cornerRadius` and `roundingAndSmoothingBudget` are post-distribute:
+ * the radius is already clamped to the rectangle, the budget is how much of
+ * the adjacent edge this corner may consume.
  */
 export interface CurveBuilderInput {
   cornerRadius: number;
@@ -24,10 +23,9 @@ export interface CurveBuilderInput {
 
 /**
  * `p` is the tangency distance from the sharp vertex — where the curve
- * starts along each adjacent edge. The stitcher uses it to place the
- * straight `L` between corners. `pathSegment(orient)` returns SVG
- * commands in relative form, entering at the current pen position and
- * exiting at the opposite tangency point.
+ * starts along each adjacent edge; the stitcher uses it to place the
+ * straight `L` between corners. `pathSegment(orient)` returns relative SVG
+ * commands, entering at the pen and exiting at the opposite tangency point.
  */
 export interface CurveBuilderOutput {
   p: number;
@@ -36,12 +34,8 @@ export interface CurveBuilderOutput {
 
 export type CurveBuilder = (input: CurveBuilderInput) => CurveBuilderOutput;
 
-/**
- * Shared zero-radius output. Every builder short-circuits to this when
- * the (post-budget-clamp) corner footprint is non-positive, so a single
- * constant is reused across the four builders. The closure is allocation-
- * free at call time — `pathSegment` is a static function reference.
- */
+/** Shared zero-radius output for a non-positive corner footprint. The
+ *  `pathSegment` is a static reference, so reuse stays allocation-free. */
 export const EMPTY_BUILDER_OUTPUT: CurveBuilderOutput = {
   p: 0,
   pathSegment: () => "",

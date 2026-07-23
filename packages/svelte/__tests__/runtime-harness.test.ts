@@ -63,7 +63,6 @@ describe("Svelte adapter — runtime harness", () => {
     const dBefore = node.style.clipPath;
 
     action.update({ corners: { radius: 32 }, autoEffects: false });
-    // update() calls apply() synchronously inside the action.
     const dAfter = node.style.clipPath;
 
     expect(dBefore).not.toBe("");

@@ -28,7 +28,6 @@ describe("distributeAndNormalize", () => {
       height: 100,
     });
 
-    // Each corner should be clamped to at most 50 on a 100x100 square
     expect(result.topLeft.radius).toBeLessThanOrEqual(50);
     expect(result.topRight.radius).toBeLessThanOrEqual(50);
     expect(result.bottomLeft.radius).toBeLessThanOrEqual(50);
@@ -59,9 +58,7 @@ describe("distributeAndNormalize", () => {
       height: 100,
     });
 
-    // The large corner should get proportionally more space
     expect(result.topLeft.radius).toBeGreaterThan(result.topRight.radius);
-    // But not exceed the budget
     expect(
       result.topLeft.radius + result.topRight.radius
     ).toBeLessThanOrEqual(100);

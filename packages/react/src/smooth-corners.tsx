@@ -15,26 +15,20 @@ import {
 import { useSmoothCorners } from "./use-smooth-corners.js";
 import { Slot } from "./slot.js";
 import { composeRefs } from "./compose-refs.js";
-import { hasEffects } from "@lisse/core";
+import { hasEffects, cornerOptionsToBorderRadius } from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@lisse/core";
 
 /**
  * How to render the `shadow` prop chain.
  *
- * - `"svg"`: path-based filter that matches the squircle silhouette
- *   exactly. Subject to a Safari `<filter>` rasterisation bug; the core
- *   ships a user-space filter-region workaround (see `computeFilterPad`
- *   in `drop-shadow.ts`) but residual artefacts can still surface.
- * - `"box-shadow"`: native CSS `box-shadow` on a sibling div. Immune to
- *   the WebKit bug, but the silhouette is a rounded rectangle, not a
- *   squircle. Border, clip-path, and content stay squircle-shaped.
+ * - `"svg"`: path-based filter that traces the squircle silhouette exactly,
+ *   but is subject to a Safari `<filter>` rasterisation bug.
+ * - `"box-shadow"`: native CSS `box-shadow` on a sibling div, immune to the
+ *   WebKit bug but with a rounded-rectangle (not squircle) silhouette.
+ *   Border, clip-path, and content stay squircle-shaped.
  *
- * Pick `"box-shadow"` when Safari fidelity matters more than the shadow
- * tracing the squircle outline.
- *
- * Auto-extracted CSS `box-shadow` on the consumer element is routed
- * through the sibling div automatically; the explicit `shadow` prop
- * takes precedence over the extracted chain.
+ * An auto-extracted CSS `box-shadow` is routed through the sibling div too;
+ * the explicit `shadow` prop takes precedence over the extracted chain.
  */
 export type ShadowStrategy = "svg" | "box-shadow";
 
@@ -75,31 +69,36 @@ export type SmoothCornersProps<E extends ElementType = "div"> = SmoothCornersOwn
   as?: E;
 } & Omit<ComponentPropsWithoutRef<E>, ReservedKeys>;
 
-/**
- * Build a CSS `box-shadow` chain from one or more shadows. First entry
- * renders topmost (CSS-spec order). Invisible (opacity <= 0) entries are
- * dropped so the string stays minimal.
- */
+/** CSS `box-shadow` chain; first entry renders topmost. Invisible entries are dropped. */
 function buildBoxShadowChain(shadows: ShadowConfig | ShadowConfig[]): string {
   const arr = Array.isArray(shadows) ? shadows : [shadows];
   const parts: string[] = [];
   for (const s of arr) {
     if (s.opacity <= 0) continue;
     const { offsetX, offsetY, blur, spread, color, opacity } = s;
+    const geometry = `${offsetX}px ${offsetY}px ${blur}px ${spread}px`;
     const rgb = hexToRgbChannels(color);
-    parts.push(
-      `${offsetX}px ${offsetY}px ${blur}px ${spread}px rgba(${rgb.r},${rgb.g},${rgb.b},${opacity})`,
-    );
+    // Non-hex colors (oklch/lab/color()…) can't be split into channels —
+    // parseInt would yield `rgba(NaN,…)`, which CSS treats as invalid and
+    // drops the entire box-shadow declaration. Extraction embeds alpha in the
+    // string with opacity 1 (verbatim is exact); API-supplied opacity < 1 is
+    // applied via color-mix to match the SVG strategy's fill-opacity.
+    const paint = rgb
+      ? `rgba(${rgb.r},${rgb.g},${rgb.b},${opacity})`
+      : opacity < 1
+        ? `color-mix(in srgb, ${color} ${opacity * 100}%, transparent)`
+        : color;
+    parts.push(`${geometry} ${paint}`);
   }
   return parts.join(", ");
 }
 
-/**
- * Parse a 3- or 6-digit hex string into rgb channels. Core's `hexToRgb`
- * returns a formatted `rgb(...)` string; here we need the channels
- * separately to compose `rgba(r,g,b,opacity)` for box-shadow.
- */
-function hexToRgbChannels(hex: string): { r: number; g: number; b: number } {
+// Core's exported hexToRgb returns a formatted `rgb(...)` string; box-shadow
+// needs the raw channels to compose `rgba(r,g,b,opacity)`. Returns null for
+// anything that isn't a 3- or 6-digit hex, so the caller can fall back to the
+// original color string.
+function hexToRgbChannels(hex: string): { r: number; g: number; b: number } | null {
+  if (!/^#?[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(hex)) return null;
   const h = hex.replace("#", "");
   const expanded = h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h;
   return {
@@ -107,25 +106,6 @@ function hexToRgbChannels(hex: string): { r: number; g: number; b: number } {
     g: parseInt(expanded.substring(2, 4), 16),
     b: parseInt(expanded.substring(4, 6), 16),
   };
-}
-
-/**
- * Best-effort `border-radius` for the box-shadow sibling div. The shadow
- * won't trace the squircle silhouette either way (see ShadowStrategy) but
- * this at least mimics the per-corner shape.
- */
-function cornerOptionsToBorderRadius(options: SmoothCornerOptions): string {
-  if ("radius" in options) return `${options.radius}px`;
-  const radiusOf = (v: typeof options.topLeft): number => {
-    if (v === undefined) return 0;
-    if (typeof v === "number") return v;
-    return v.radius;
-  };
-  const tl = radiusOf(options.topLeft);
-  const tr = radiusOf(options.topRight);
-  const br = radiusOf(options.bottomRight);
-  const bl = radiusOf(options.bottomLeft);
-  return `${tl}px ${tr}px ${br}px ${bl}px`;
 }
 
 function SmoothCornersImpl<E extends ElementType = "div">(
@@ -158,6 +138,30 @@ function SmoothCornersImpl<E extends ElementType = "div">(
 
   const options: SmoothCornerOptions = corners ?? { radius: 0 };
   const useBoxShadow = shadowStrategy === "box-shadow";
+
+  // SSR/first-paint fallback: emit an inline `border-radius` derived from the
+  // corner radius so server markup (and the client's initial, pre-mount render)
+  // shows rounded corners instead of square ones before the clip-path lands.
+  // Rendered identically on server and client → hydration-safe. After mount the
+  // clip-path (set imperatively in useSmoothCorners) takes over the silhouette.
+  // A user-supplied `style.borderRadius` always wins.
+  //
+  // The fallback value is frozen at first render: it only matters before the
+  // clip-path lands (SSR + first client paint), and the clip-path governs the
+  // silhouette for every subsequent frame. Re-deriving it each render would
+  // rewrite `style.borderRadius` on the DOM on every commit — a wasted style
+  // recalc that, because the element also carries a large imperatively-set
+  // clip-path string, is disproportionately expensive to churn.
+  const fallbackRadiusRef = useRef<string | null>(null);
+  if (fallbackRadiusRef.current === null) {
+    fallbackRadiusRef.current = cornerOptionsToBorderRadius(options);
+  }
+  const userStyle = (rest as { style?: CSSProperties }).style;
+  const userSuppliedRadius = userStyle?.borderRadius !== undefined;
+  const innerStyle: CSSProperties = {
+    borderRadius: fallbackRadiusRef.current,
+    ...userStyle,
+  };
 
   // Box-shadow strategy: suppress the `shadow` prop on its way to the SVG
   // layer — the CSS sibling div below renders the chain instead.
@@ -195,13 +199,16 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     autoEffects,
     skipShadowHandle: useBoxShadow,
     onExtractedShadow: useBoxShadow ? onExtractedShadow : undefined,
+    // Hand the SSR fallback to the hook so it can clear it from the DOM once
+    // the clip-path lands; a user-supplied border-radius is left untouched.
+    fallbackBorderRadius: userSuppliedRadius ? undefined : (fallbackRadiusRef.current ?? undefined),
   };
 
   useSmoothCorners(internalRef, options, effectsOptions);
 
   const inner = asChild
-    ? createElement(Slot, { ...rest, ref: setInnerRef }, children)
-    : createElement(Component, { ...rest, ref: setInnerRef }, children);
+    ? createElement(Slot, { ...rest, style: innerStyle, ref: setInnerRef }, children)
+    : createElement(Component, { ...rest, style: innerStyle, ref: setInnerRef }, children);
 
   if (!needsWrapper) return inner;
 

@@ -4,17 +4,14 @@ import { EMPTY_BUILDER_OUTPUT } from "./types.js";
 import { transformX, transformY } from "./orient.js";
 
 /**
- * Plain quarter-circle corner via native SVG `a`. G1 with the adjacent
- * edges: tangent matches but curvature jumps from 0 to 1/R at the seam.
- * This is the CSS `border-radius` curve and the smoothing → 0 fallback.
- *
- * Ignores `smoothing` and `exponent`. `p` is clamped to the budget so
- * the adjacent straight `L` segments can't overlap.
+ * Plain quarter-circle corner via native SVG `a` — the CSS `border-radius`
+ * curve and the smoothing → 0 fallback. G1 with the adjacent edges.
  */
 export const buildArc: CurveBuilder = ({
   cornerRadius,
   roundingAndSmoothingBudget,
 }) => {
+  // Clamp to the budget so the adjacent straight `L` segments can't overlap.
   const p = Math.min(cornerRadius, roundingAndSmoothingBudget);
   if (p <= 0) return EMPTY_BUILDER_OUTPUT;
   return {

@@ -7,7 +7,7 @@ The core package provides a `/path` subpath export that excludes all DOM-depende
 import { generatePath } from "@lisse/core/path";
 ```
 
-The `/path` export includes `generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `getSVGPathFromPathParams`, `toRadians`, `rounded`, `nextUid`, `hexToRgb`, `SVG_NS`, and `DEFAULT_SHADOW`. It excludes `createSvgEffects`, `createDropShadow`, and `observeResize` — anything that touches the DOM.
+The `/path` export includes `generatePath`, `generateClipPath`, `getPathParamsForCorner`, `distributeAndNormalize`, `getCurveBuilder`, `buildArc`, `buildSquircle`, `buildSuperellipse`, `buildClothoid`, `CURVE_TYPES`, `DEFAULT_SHADOW`, and the smoothing/curve defaults (`APPLE_SMOOTHING`, `FIGMA_SMOOTHING`, `DEFAULT_SMOOTHING`, `DEFAULT_PRESERVE_SMOOTHING`, `DEFAULT_CURVE`, `DEFAULT_EXPONENT`). It excludes `createSvgEffects`, `createDropShadow`, and `observeResize` — anything that touches the DOM.
 
 ## React / Vue SSR
 
