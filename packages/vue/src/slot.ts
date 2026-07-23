@@ -25,17 +25,10 @@ function isElementVNode(vnode: VNode): boolean {
 
 type AnyFn = (...args: unknown[]) => unknown;
 
-/**
- * After cloneVNode has merged parent attrs onto the child vnode, walk
- * the merged props and collapse any `on*` listener pair into a single
- * handler that skips the parent (index 1) when the child (index 0) has
- * called `event.preventDefault()`. Matches the React `Slot` contract.
- *
- * Vue's built-in `mergeProps` concatenates duplicate listeners into
- * `[childHandler, parentHandler]` arrays in that order, so we can
- * identify the pair by shape without tracking which side each handler
- * came from.
- */
+// cloneVNode's mergeProps concatenates duplicate `on*` listeners into
+// `[childHandler, parentHandler]` in that order, so a two-element array
+// identifies the pair by shape. Collapse it into one handler where the
+// parent is skipped if the child called preventDefault (React Slot contract).
 function gateListeners(props: Record<string, unknown>): void {
   for (const key of Object.keys(props)) {
     if (!/^on[A-Z]/.test(key)) continue;
@@ -51,22 +44,11 @@ function gateListeners(props: Record<string, unknown>): void {
   }
 }
 
-/**
- * Minimal Radix-style Slot for Vue. Clones the single default slot child
- * vnode, merging the Slot's attrs onto it. Implemented as a functional
- * component so the parent's `ref` is forwarded to the cloned child
- * element automatically.
- *
- * Event handlers compose with the same semantics as the React `Slot`:
- * child handler runs first, parent handler runs next unless the child
- * called `event.preventDefault()`.
- *
- * Fragments in the slot content are flattened recursively so a
- * `<template>` wrapping exactly one element is accepted. Comment and
- * text vnodes are rejected because they cannot carry attrs or refs.
- *
- * Used internally to back the `asChild` prop on <SmoothCorners />.
- */
+// Radix-style Slot backing the `asChild` prop: clones the single element
+// child, merging the Slot's attrs onto it. A functional component so the
+// parent's ref forwards to the clone automatically. Fragments are flattened
+// so a <template> wrapping one element is accepted; comment/text vnodes are
+// rejected because they cannot carry attrs or refs.
 export const Slot: FunctionalComponent<Record<string, unknown>, Record<string, never>, { default: () => VNode[] }> = (
   _props,
   { attrs, slots },
