@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhatRouteImport } from './routes/what'
 import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as MathRouteImport } from './routes/math'
+import { Route as FirefoxRouteImport } from './routes/firefox'
 import { Route as CurvesTestRouteImport } from './routes/curves-test'
 import { Route as ChromeRouteImport } from './routes/chrome'
 import { Route as SplatRouteImport } from './routes/$'
@@ -30,6 +31,11 @@ const PlaygroundRoute = PlaygroundRouteImport.update({
 const MathRoute = MathRouteImport.update({
   id: '/math',
   path: '/math',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FirefoxRoute = FirefoxRouteImport.update({
+  id: '/firefox',
+  path: '/firefox',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CurvesTestRoute = CurvesTestRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/chrome': typeof ChromeRoute
   '/curves-test': typeof CurvesTestRoute
+  '/firefox': typeof FirefoxRoute
   '/math': typeof MathRoute
   '/playground': typeof PlaygroundRoute
   '/what': typeof WhatRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/$': typeof SplatRoute
   '/chrome': typeof ChromeRoute
   '/curves-test': typeof CurvesTestRoute
+  '/firefox': typeof FirefoxRoute
   '/math': typeof MathRoute
   '/playground': typeof PlaygroundRoute
   '/what': typeof WhatRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/chrome': typeof ChromeRoute
   '/curves-test': typeof CurvesTestRoute
+  '/firefox': typeof FirefoxRoute
   '/math': typeof MathRoute
   '/playground': typeof PlaygroundRoute
   '/what': typeof WhatRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/chrome'
     | '/curves-test'
+    | '/firefox'
     | '/math'
     | '/playground'
     | '/what'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/chrome'
     | '/curves-test'
+    | '/firefox'
     | '/math'
     | '/playground'
     | '/what'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/chrome'
     | '/curves-test'
+    | '/firefox'
     | '/math'
     | '/playground'
     | '/what'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   ChromeRoute: typeof ChromeRoute
   CurvesTestRoute: typeof CurvesTestRoute
+  FirefoxRoute: typeof FirefoxRoute
   MathRoute: typeof MathRoute
   PlaygroundRoute: typeof PlaygroundRoute
   WhatRoute: typeof WhatRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/math'
       fullPath: '/math'
       preLoaderRoute: typeof MathRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/firefox': {
+      id: '/firefox'
+      path: '/firefox'
+      fullPath: '/firefox'
+      preLoaderRoute: typeof FirefoxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/curves-test': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   ChromeRoute: ChromeRoute,
   CurvesTestRoute: CurvesTestRoute,
+  FirefoxRoute: FirefoxRoute,
   MathRoute: MathRoute,
   PlaygroundRoute: PlaygroundRoute,
   WhatRoute: WhatRoute,
