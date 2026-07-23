@@ -8,6 +8,10 @@
     "smoke": "node esm-smoke.mjs && node cjs-smoke.cjs && node subpath-smoke.mjs && node ssr-smoke.mjs"
   },
   "dependencies": {
+    "@lisse/core": "file:vendor/lisse-core-0.5.2.tgz",
+    "@lisse/react": "file:vendor/lisse-react-0.5.2.tgz",
+    "@lisse/svelte": "file:vendor/lisse-svelte-0.5.2.tgz",
+    "@lisse/vue": "file:vendor/lisse-vue-0.5.2.tgz",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   }
