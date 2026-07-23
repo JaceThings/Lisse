@@ -1,12 +1,19 @@
-# `@lisse/react` benchmarks
+# `@lisse` benchmarks
 
-Micro-benchmarks for the React adapter's hot paths. The suite measures
-**JS-only cost** under varying instance counts and effect configurations.
-Results are consumed by the wiki's `Performance.md` page.
+Micro-benchmarks for the whole workspace's hot paths — the `core`
+path/effects engine, the React, Vue, and Svelte adapters, and the SSR
+render path. The suite measures **JS-only cost** under varying instance
+counts and effect configurations. Results are summarised in
+[`docs/performance.md`](../docs/performance.md).
 
 ## What this measures
 
-Each bench case drives one of three hot paths:
+The suite spans several files: `core.bench.ts` (the DOM-free path and
+effects engine), the three adapter benches
+(`use-smooth-corners.bench.ts` for React,
+`use-smooth-corners-vue.bench.ts`, `use-smooth-corners-svelte.bench.ts`),
+and `ssr.bench.ts` (server render). The adapter benches share a common
+grid, each driving one of three hot paths:
 
 - **Resize**: deliver a `ResizeObserver` callback to every mounted
   element and wait for every per-element sync to finish.
@@ -94,9 +101,9 @@ a modern laptop; no dimensions were reduced.
 
 ## Results (2026-07-09, Node v26.4.0 on macOS Darwin 25.5.0)
 
-See the wiki `Performance` page for narrative analysis and rules of
-thumb. The tables below are the raw per-case means in milliseconds. All
-cases sampled below ±2.6% rme; none needed a re-run.
+See [`docs/performance.md`](../docs/performance.md) for narrative
+analysis and rules of thumb. The tables below are the raw per-case means
+in milliseconds. All cases sampled below ±2.6% rme; none needed a re-run.
 
 ### Mount: initial render + first sync
 
