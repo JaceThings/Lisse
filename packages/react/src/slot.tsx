@@ -4,6 +4,7 @@ import {
   forwardRef,
   Fragment,
   isValidElement,
+  useMemo,
   type ComponentPropsWithoutRef,
   type ElementType,
   type ForwardedRef,
@@ -25,9 +26,7 @@ function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
       if (typeof parentValue === "function") {
         merged[key] = (...args: unknown[]) => {
           (childValue as (...a: unknown[]) => unknown)(...args);
-          // Skip the parent handler when the child has called
-          // `event.preventDefault()`. Matches Radix's Slot semantics and
-          // gives the child a way to opt out of the composed behaviour.
+          // Child's event.preventDefault() opts out of the composed parent handler.
           const first = args[0] as { defaultPrevented?: boolean } | undefined;
           if (first && first.defaultPrevented) return;
           (parentValue as (...a: unknown[]) => unknown)(...args);
@@ -47,17 +46,13 @@ function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
 }
 
 /**
- * Element-specific props shape for `Slot`. Use to opt into attributes of a
- * particular element type when merging onto it:
+ * Element-specific props shape for `Slot`. The generic parameter only
+ * tightens what TypeScript accepts at the call site; the runtime forwards
+ * every prop to the cloned child regardless of type.
  *
  * ```tsx
  * <Slot<"a"> href="/x"><a>link</a></Slot>
- * <Slot<"button"> type="submit"><button>submit</button></Slot>
  * ```
- *
- * The runtime forwards every prop to the cloned child regardless of type.
- * The generic parameter only tightens what TypeScript accepts at the call
- * site; there is no runtime difference.
  */
 export type SlotPropsFor<E extends ElementType> = Omit<
   ComponentPropsWithoutRef<E>,
@@ -103,17 +98,23 @@ function SlotImpl<E extends ElementType = ElementType>(
     (childProps as { ref?: Ref<HTMLElement> }).ref ??
     (childElement as unknown as { ref?: Ref<HTMLElement> }).ref;
   const merged = mergeProps(rest as AnyProps, childProps);
+  // Memoize so an unrelated parent re-render doesn't hand the child a fresh
+  // callback ref, which React would detach then re-attach.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const composedRef = useMemo(
+    () => composeRefs(forwardedRef, existingRef),
+    [forwardedRef, existingRef],
+  );
   return cloneElement(childElement, {
     ...merged,
-    ref: composeRefs(forwardedRef, existingRef),
+    ref: composedRef,
   } as AnyProps);
 }
 
 /**
- * Minimal Radix-style Slot: clones its single child element, merging the
- * Slot's own props onto the child and composing event handlers and refs.
- *
- * Used internally to back the `asChild` prop on <SmoothCorners />.
+ * Clones its single child element, merging the Slot's own props onto the
+ * child and composing event handlers and refs. Backs the `asChild` prop on
+ * <SmoothCorners />.
  */
 export const Slot = forwardRef(SlotImpl) as <E extends ElementType = ElementType>(
   props: SlotPropsFor<E> & { ref?: Ref<HTMLElement> },

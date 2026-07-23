@@ -52,7 +52,6 @@ describe("React adapter — runtime harness", () => {
     const el = getInner();
     stubLayout(el);
 
-    // Three resize deliveries while no rAF flush has run yet.
     act(() => {
       h.deliverResize(el, 200, 100);
       h.deliverResize(el, 250, 120);
@@ -68,7 +67,6 @@ describe("React adapter — runtime harness", () => {
       h.flushRaf();
     });
 
-    // After flush, no rAF tasks remain and the clip-path has been set.
     expect(h.pendingRafCount()).toBe(0);
     expect(el.style.clipPath).not.toBe("");
   });
@@ -185,5 +183,130 @@ describe("React adapter — runtime harness", () => {
     // observe-resize.ts uses a shared singleton.
     expect(h.observerCount()).toBe(observersAfterMount);
     expect(h.isObserved(el)).toBe(true);
+  });
+});
+
+describe("React adapter — SSR border-radius fallback teardown", () => {
+  it("clears the fallback once the clip-path lands, but not before", () => {
+    act(() => {
+      root.render(<SmoothCorners as="div" autoEffects={false} corners={{ radius: 16 }} />);
+    });
+    const el = getInner();
+
+    // Before the clip-path lands (zero-size element), the SSR fallback stays so
+    // corners still look rounded pre-clip.
+    expect(el.style.borderRadius).toBe("16px");
+    expect(el.style.clipPath).toBe("");
+
+    stubLayout(el);
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+
+    // Clip-path is the silhouette now; the intersecting fallback must be gone.
+    expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderRadius).toBe("");
+  });
+
+  it("leaves a user-supplied border-radius untouched", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          as="div"
+          autoEffects={false}
+          corners={{ radius: 16 }}
+          style={{ borderRadius: 4 }}
+        />,
+      );
+    });
+    const el = getInner();
+    stubLayout(el);
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+
+    expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderRadius).toBe("4px");
+  });
+
+  it("restores the fallback on unmount", () => {
+    act(() => {
+      root.render(<SmoothCorners as="div" autoEffects={false} corners={{ radius: 16 }} />);
+    });
+    const el = getInner();
+    stubLayout(el);
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+    expect(el.style.borderRadius).toBe("");
+
+    act(() => {
+      root.unmount();
+    });
+    // The detached element carries the fallback again (remount safety).
+    expect(el.style.borderRadius).toBe("16px");
+  });
+});
+
+describe("React adapter — shadowStrategy toggle re-renders the SVG shadow", () => {
+  it("renders the SVG drop-shadow after flipping box-shadow -> svg and back", () => {
+    const shadow = { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 };
+    function App({ strategy }: { strategy: "svg" | "box-shadow" }) {
+      return (
+        <SmoothCorners
+          as="div"
+          autoEffects={false}
+          corners={{ radius: 12 }}
+          shadowStrategy={strategy}
+          shadow={shadow}
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => {
+      root.render(<App strategy="svg" />);
+    });
+    const el = getInner();
+    const wrapper = el.parentElement as HTMLElement;
+    stubLayout(el);
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+
+    const dropShadowD = (): string | null => {
+      const svg = Array.from(wrapper.querySelectorAll("svg")).find(
+        (s) => (s as SVGElement).style.zIndex === "-1",
+      ) as SVGElement | undefined;
+      return svg?.querySelector("path")?.getAttribute("d") ?? null;
+    };
+
+    expect(dropShadowD()).toBeTruthy();
+
+    // Flip to CSS box-shadow: SVG drop-shadow handle is torn down.
+    act(() => {
+      root.render(<App strategy="box-shadow" />);
+    });
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+
+    // Flip back to SVG: the fresh handle must actually render (get a `d`),
+    // not sit empty behind the unchanged-key guard.
+    act(() => {
+      root.render(<App strategy="svg" />);
+    });
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+
+    expect(dropShadowD()).toBeTruthy();
   });
 });

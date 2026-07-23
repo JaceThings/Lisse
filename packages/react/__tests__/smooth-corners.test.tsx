@@ -113,15 +113,12 @@ describe("useSmoothCorners - clip-path save/restore", () => {
       localRoot.render(<Tester />);
     });
 
-    // While mounted, the hook attaches the data attributes.
     expect(el.getAttribute("data-slot")).toBe("smooth-corners");
 
     act(() => {
       localRoot.unmount();
     });
 
-    // After unmount, the hook's cleanup has run: the original clip-path
-    // is restored and the data attributes are gone.
     expect(el.style.clipPath).toBe("circle(10px)");
     expect(el.getAttribute("data-slot")).toBeNull();
     expect(el.getAttribute("data-state")).toBeNull();
@@ -241,13 +238,9 @@ describe("<SmoothCorners /> - asChild", () => {
     });
     const button = container.querySelector("button");
     expect(button).not.toBeNull();
-    // No wrapper div should have been added.
     expect(button?.parentElement).toBe(container);
-    // Class names merged (parent first, child second).
     expect(button?.className).toBe("outer inner");
-    // data attribute forwarded.
     expect(button?.getAttribute("data-test")).toBe("ok");
-    // Event handler composed onto child.
     button?.click();
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
@@ -394,7 +387,6 @@ describe("<Slot /> - child ref composition", () => {
 
     const button = container.querySelector("button");
     expect(button).not.toBeNull();
-    // Both refs resolve to the same rendered DOM element.
     expect(outerRef.current).toBe(button);
     expect(childRef.current).toBe(button);
   });
@@ -563,6 +555,38 @@ describe("<SmoothCorners /> - shadowStrategy='box-shadow'", () => {
     expect(sibling!.style.position).toBe("absolute");
     expect(sibling!.style.pointerEvents).toBe("none");
     expect(sibling!.style.zIndex).toBe("-1");
+  });
+
+  it("emits non-hex shadow colors verbatim so the declaration stays valid", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 16 }}
+          shadowStrategy="box-shadow"
+          shadow={[
+            // Non-hex color (alpha already embedded) — must pass through as-is.
+            { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "oklch(0.6 0.15 250 / 0.3)", opacity: 0.3 },
+            // Sibling hex layer must still render as rgba and survive.
+            { offsetX: 0, offsetY: 1, blur: 2, spread: -1, color: "#ff0000", opacity: 0.5 },
+          ]}
+        >
+          x
+        </SmoothCorners>,
+      );
+    });
+
+    const sibling = container.querySelector(
+      "[data-slot='smooth-corners-box-shadow']",
+    ) as HTMLElement | null;
+    expect(sibling).not.toBeNull();
+    const chain = sibling!.style.boxShadow;
+    // The whole declaration is valid: no fabricated NaN channels.
+    expect(chain).not.toContain("NaN");
+    // oklch color survives verbatim.
+    expect(chain).toContain("oklch(0.6 0.15 250 / 0.3)");
+    // The hex sibling layer still becomes rgba and survives.
+    expect(chain).toContain("rgba(255,0,0,0.5)");
   });
 
   it("creates no drop-shadow SVG when shadowStrategy='box-shadow'", () => {
