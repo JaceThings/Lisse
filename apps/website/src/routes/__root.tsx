@@ -39,8 +39,6 @@ import { What } from "../pages/What.tsx";
 import { Playground } from "../pages/Playground.tsx";
 import { MathPage } from "../pages/Math.tsx";
 import { CurvesTest } from "../pages/CurvesTest.tsx";
-import { ChromeRedirect } from "./chrome.tsx";
-import { FirefoxRedirect } from "./firefox.tsx";
 
 const FADE_MS = 250;
 const FOOTER_SLIDE_MS = 350;
@@ -157,8 +155,6 @@ const PAGES: Record<string, ComponentType> = {
   "/what": What,
   "/playground": Playground,
   "/math": MathPage,
-  "/chrome": ChromeRedirect,
-  "/firefox": FirefoxRedirect,
   // Dev-only harness; the route redirects to home in production.
   ...(import.meta.env.DEV ? { "/curves-test": CurvesTest } : {}),
 };
