@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Lisse" width="128" />
+<img src="../../assets/logo.png" alt="Lisse" width="128" />
 
 <h1>Lisse</h1>
 
@@ -9,12 +9,12 @@ Squircles do Figma pixel-perfect + três outras curvas de canto.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![bundle](https://deno.bundlejs.com/badge?q=%40lisse%2Fcore&label=bundle)](https://bundlejs.com/?q=%40lisse%2Fcore)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
 **[Demo ao vivo →](https://corne.rs)**
 
-[English](./README.md) · [简体中文](./README.zh-Hans.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · **Português (BR)** · [Русский](./README.ru.md) · [Deutsch](./README.de.md)
+[English](../../README.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Deutsch](./README.de.md) · [简体中文](./README.zh-Hans.md) · **Português (BR)** · [Русский](./README.ru.md)
 
 </div>
 
@@ -53,7 +53,7 @@ Para Vue, Svelte ou o núcleo agnóstico de framework, veja os [pacotes](#pacote
 | `superellipse` | `\|x/R\|^n + \|y/R\|^n = 1`. G2 com arestas para `n > 2`. |
 | `clothoid` | Mescla com espiral de Euler da aresta reta ao arco central. G2 em toda parte. |
 
-Referência matemática: [`docs/curves.md`](docs/curves.md).
+Referência matemática: [`docs/curves.md`](../curves.md).
 
 ## Pacotes
 
@@ -70,30 +70,30 @@ Referência matemática: [`docs/curves.md`](docs/curves.md).
 - Bordas interna / externa / central com variantes de estilo (solid, dashed, dotted, double, groove, ridge)
 - Sombras projetadas e sombras internas, com bordas em gradiente via a API
 - Auto-efeitos: `border` e `box-shadow` do CSS são convertidos em equivalentes SVG na montagem
-- ~1.5 µs por chamada de `generatePath()`; 500 cantos recalculados em <1 ms ([detalhes](docs/performance.md))
+- ~1.5 µs por chamada de `generatePath()`; 500 cantos recalculados em <1 ms ([detalhes](../performance.md))
 - Zero dependências em runtime; exportação dupla ESM + CJS; subcaminho `/path` seguro para SSR
 
 ## Documentação
 
-- [Referência da API](docs/api.md): tabela completa de exportações
-- [Migração](MIGRATION.md): atualizando entre versões
-- [SSR](docs/ssr.md): renderização no servidor e runtimes de edge
-- [Curvas](docs/curves.md): referência matemática para cada tipo de curva
-- [Suporte de navegadores](docs/browser-support.md): matriz de compatibilidade
-- [Hooks de estilização](docs/styling.md): atributos `data-slot` / `data-state`
-- [Efeitos](docs/effects.md): bordas, sombras, gradientes, auto-efeitos
-- [Performance](docs/performance.md): benchmarks e arquitetura de cache
-- [Internals](docs/internals.md): como funcionam bordas, sombras e o tratamento de redimensionamento
-- [Pegadinhas](docs/gotchas.md): peculiaridades do `clip-path` como contornos de foco, overflow, barras de rolagem
-- [Configuração](docs/configuration.md): config por canto, qual API usar, uso com frameworks
+- [Referência da API](../api.md): tabela completa de exportações
+- [Migração](../MIGRATION.md): atualizando entre versões
+- [SSR](../ssr.md): renderização no servidor e runtimes de edge
+- [Curvas](../curves.md): referência matemática para cada tipo de curva
+- [Suporte de navegadores](../browser-support.md): matriz de compatibilidade
+- [Hooks de estilização](../styling.md): atributos `data-slot` / `data-state`
+- [Efeitos](../effects.md): bordas, sombras, gradientes, auto-efeitos
+- [Performance](../performance.md): benchmarks e arquitetura de cache
+- [Internals](../internals.md): como funcionam bordas, sombras e o tratamento de redimensionamento
+- [Pegadinhas](../gotchas.md): peculiaridades do `clip-path` como contornos de foco, overflow, barras de rolagem
+- [Configuração](../configuration.md): config por canto, qual API usar, uso com frameworks
 
 ## Contribuindo
 
-Issues e PRs são bem-vindos. A documentação para contribuidores (processo de release, estratégia de testes, benchmarks) fica em [`docs/`](./docs/).
+Issues e PRs são bem-vindos. A documentação para contribuidores (processo de release, estratégia de testes, benchmarks) fica em [`docs/`](../).
 
 ## Licença
 
-[MIT](./LICENSE)
+[MIT](../../LICENSE)
 
 ---
 

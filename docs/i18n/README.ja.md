@@ -14,7 +14,7 @@ React、Vue、Svelte 向けのなめらかな角の SVG プリミティブ。
 
 **[Live demo →](https://corne.rs)**
 
-[English](../../README.md) · **日本語** · [한국어](./README.ko.md) · [Deutsch](./README.de.md)
+[English](../../README.md) · **日本語** · [한국어](./README.ko.md) · [Deutsch](./README.de.md) · [简体中文](./README.zh-Hans.md) · [Português (BR)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
 </div>
 
