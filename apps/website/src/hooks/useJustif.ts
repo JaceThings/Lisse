@@ -41,5 +41,5 @@ export function useJustif(ref: RefObject<HTMLElement | null>) {
       live = false;
       controller?.destroy();
     };
-  }, [ref, locale]);
+  }, [locale]);
 }
