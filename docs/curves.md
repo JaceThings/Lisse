@@ -1,7 +1,7 @@
 # G2 corner curves: research notes
 
 > Working notes for adding curvature-continuous corner alternatives to
-> the math demo page (`/math`) and, later, to Lisse itself. The current
+> Lisse. The current
 > library ships the Figma squircle, which is **G1 only**. Four candidate
 > G2 constructions, with the math derived and a shipping recommendation.
 
@@ -18,7 +18,7 @@ Continuity at the seam where two curve segments meet:
 
 `Cn` (parametric) is strictly stronger than `Gn` (geometric): Cn requires the parametric derivatives to match exactly; Gn only matches geometric properties (direction, curvature value) up to a scalar. UI corner rounding only cares about Gn.
 
-Lisse today: the cubic Bézier shoulders meet the central arc with matching position and tangent but a step in curvature. Shoulder curvature is 0 at P0 (the cubic is G2-flat with the straight edge — stronger than the "G1" label suggests), climbs to κ_b at P3, then the arc jumps to κ = 1/R. The sign of the step depends on smoothing: at low smoothing (≲ 0.5) κ_b < 1/R, so the comb steps *up* into the arc; at higher smoothing the cubic overshoots and the comb steps *down*. Either way the curvature is discontinuous at P3/P4 — visible on the curvature comb at `/math`.
+Lisse today: the cubic Bézier shoulders meet the central arc with matching position and tangent but a step in curvature. Shoulder curvature is 0 at P0 (the cubic is G2-flat with the straight edge — stronger than the "G1" label suggests), climbs to κ_b at P3, then the arc jumps to κ = 1/R. The sign of the step depends on smoothing: at low smoothing (≲ 0.5) κ_b < 1/R, so the comb steps *up* into the arc; at higher smoothing the cubic overshoots and the comb steps *down*. Either way the curvature is discontinuous at P3/P4 — visible on a curvature comb.
 
 ## 2. Why G2 (and why not G3)
 
@@ -188,7 +188,7 @@ Source: Rosenfeld, "My Quest for the Apple Icon Shape"; Swanson, "Unleashing Gen
 
 ## 5. Recommendation
 
-**Math demo page (`/math`)**: expose all four as a curve-type selector. The pedagogically useful comparison is the curvature comb. Order:
+**If the four are ever compared side by side** (the `/math` demo page did this until it was removed): expose them as a curve-type selector. The pedagogically useful comparison is the curvature comb. Order:
 
 1. **Arc** (G1 with hard jump) — baseline
 2. **Squircle** (G1, current Lisse — smaller jump)

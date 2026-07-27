@@ -65,7 +65,7 @@
 
   Per-corner mixing works: `{ topLeft: { radius: 40, curve: "clothoid" }, topRight: { radius: 40, curve: "arc" }, ... }`. Drop shadows, inner shadows, and borders track the requested curve — no per-effect changes required.
 
-  Math reference: [docs/curves.md](https://github.com/JaceThings/Lisse/blob/main/docs/curves.md). Interactive demo: [corne.rs/math](https://corne.rs/math).
+  Math reference: [docs/curves.md](https://github.com/JaceThings/Lisse/blob/main/docs/curves.md). Try the curves in the [playground](https://corne.rs/playground).
 
   **Note for downstream snapshot tests:** the rendered geometry is unchanged for `curve: 'squircle'` (the default) — same curve segments, same vertices. Two cosmetic format changes in this release affect every path string and will surface in snapshot diffs:
 
