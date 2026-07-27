@@ -21,6 +21,11 @@ export interface EngineSettings {
 
 /** Stop scanning once this many elements are styled — keeps big pages sane. */
 const MAX_STYLED = 1500;
+/**
+ * The marker every Lisse framework binding stamps on the elements it manages.
+ * Its presence means the page ships Lisse itself.
+ */
+const LISSE_MARKER = '[data-slot="smooth-corners"]';
 /** Replaced elements are a single box even at display:inline. */
 const REPLACED_TAGS = new Set(["IMG", "VIDEO", "CANVAS", "IFRAME", "EMBED", "OBJECT"]);
 /** rAF slice: reads+writes for a frame, then yield if work remains. */
@@ -165,6 +170,8 @@ export function createEngine(initial: EngineSettings) {
   const observedRoots = new WeakSet<ShadowRoot>();
   let rafHandle: number | undefined;
   let mo: MutationObserver | undefined;
+  /** Latched once the page is found to ship Lisse; never unset. */
+  let stoodDown = false;
 
   const MO_OPTS: MutationObserverInit = {
     subtree: true,
@@ -347,12 +354,43 @@ export function createEngine(initial: EngineSettings) {
     rafHandle = requestAnimationFrame(flush);
   }
 
+  /**
+   * Whether the page ships Lisse itself, in which case we hand the whole page
+   * back to it. The site has already chosen its corner geometry — and its
+   * bindings mount SVG overlays for borders and shadows into *ancestor* boxes,
+   * which our clip-path amputates. That's the clipping artefact this guards
+   * against, and it's why the bail is page-wide rather than per-element: the
+   * damage lands on elements that carry no marker of their own. Same principle
+   * as the `corner-shape` bail in planFor, one scope up.
+   *
+   * Probed per flush rather than once at startup: at document_start the page is
+   * empty, and the bindings only mark elements once their framework mounts.
+   * Latched, so the cost is one bail-early selector per frame that had work,
+   * and nothing at all afterwards.
+   * ponytail: light DOM only — a site using Lisse exclusively inside shadow
+   * roots goes undetected; probe observedRoots too if that ever shows up.
+   */
+  function siteShipsLisse(): boolean {
+    if (stoodDown) return true;
+    if (!document.querySelector(LISSE_MARKER)) return false;
+    stoodDown = true;
+    // Full undo, not disableAll(): this is permanent, so the records and their
+    // resize observers go too.
+    for (const el of [...applied.keys()]) undo(el);
+    mo?.disconnect();
+    document.removeEventListener("transitionend", onTransition, true);
+    document.removeEventListener("animationend", onTransition, true);
+    document.removeEventListener("focusin", onFocusChange, true);
+    document.removeEventListener("focusout", onFocusChange, true);
+    return true;
+  }
+
   // rAF runs before paint, so elements styled in the frame they arrive never
   // flash square. ALL reads run before ANY write — write-then-read across
   // chunks would force a layout recomputation per chunk.
   function flush() {
     rafHandle = undefined;
-    if (!settings.enabled) {
+    if (!settings.enabled || siteShipsLisse()) {
       queue.clear();
       return;
     }
