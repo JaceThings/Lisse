@@ -7,7 +7,8 @@
     "de",
     "ko",
     "zh-Hans",
-    "pt-BR"
+    "pt-BR",
+    "ru"
   ],
   "modules": [
     "https://cdn.jsdelivr.net/npm/@inlang/plugin-message-format@4.4.0/dist/index.js",
