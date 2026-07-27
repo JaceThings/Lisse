@@ -79,9 +79,9 @@ function runSync(s: State, refs: SyncRefs, size?: { width: number; height: numbe
   if (hasEffects(merged))
     ensureHandles(s, merged, refs.wrapperRefRef.current, refs.skipShadowHandleRef.current);
 
-  // Resize ticks thread the observer entry's border-box size; the initial
-  // mount and the every-commit sync below pass none and read it here (the
-  // latter deliberately, for WebKit mid-animation correctness).
+  // Resize ticks thread the size the observer measured for this flush; the
+  // initial mount and the every-commit sync below pass none and read it here
+  // (the latter deliberately, for WebKit mid-animation correctness).
   const { width, height } = size ?? getLayoutSize(s.el);
   if (width <= 0 || height <= 0) return;
 

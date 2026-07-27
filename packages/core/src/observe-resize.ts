@@ -7,11 +7,9 @@ interface Size {
 }
 
 /**
- * Resize callback. Receives the element's border-box size when the flush
- * could resolve one (from the `ResizeObserverEntry` or a measured fallback);
- * callers may ignore it and re-measure, or use it to skip a forced
- * `getComputedStyle`. Extra parameters are ignored by `() => void` callbacks,
- * so this stays backward-compatible.
+ * Resize callback. Receives the element's border-box size as measured at the
+ * start of this flush; callers may ignore it and re-measure. Extra parameters
+ * are ignored by `() => void` callbacks, so this stays backward-compatible.
  */
 type Callback = (size?: Size) => void;
 
@@ -19,31 +17,6 @@ let observer: ResizeObserver | null = null;
 let rafId: number | undefined;
 const callbackMap = new Map<Element, Set<Callback>>();
 const pendingElements = new Set<Element>();
-// Border-box size captured from the most recent RO entry for a pending
-// element, consumed on the next flush. Lets callbacks skip the forced
-// `getComputedStyle` in `getLayoutSize` on RO ticks.
-const pendingSizes = new Map<Element, Size>();
-
-/**
- * Extract a border-box size from an entry, in CSS pixels and independent of
- * transforms — exactly what `getLayoutSize` reports, so no padding/border
- * compensation is needed (border-box is border-box regardless of box-sizing).
- *
- * The spec exposes `borderBoxSize` as an array; some engines expose a bare
- * `ResizeObserverSize`. We handle both; engines that omit it entirely
- * fall through to the measured path. Sizes map from the inline/block axes of
- * the default horizontal-tb writing mode Lisse targets.
- */
-function entrySize(entry: ResizeObserverEntry): Size | undefined {
-  const bb = entry.borderBoxSize as
-    | ReadonlyArray<ResizeObserverSize>
-    | ResizeObserverSize
-    | undefined;
-  if (!bb) return undefined;
-  const box = Array.isArray(bb) ? bb[0] : (bb as ResizeObserverSize);
-  if (!box) return undefined;
-  return { width: box.inlineSize, height: box.blockSize };
-}
 
 function flush() {
   rafId = undefined;
@@ -52,16 +25,18 @@ function flush() {
 
   // READ PASS: resolve every element's size before any callback runs, so a
   // later callback's write can't invalidate an earlier callback's style read.
-  // RO-provided sizes cost nothing; the rest fall back to a measured read
-  // here, still ahead of every write.
-  const sizes = new Map<Element, Size | undefined>();
+  // Batched like this it costs one style recalc for the whole flush.
+  //
+  // Measured here rather than taken from the `ResizeObserverEntry`: the entry's
+  // `borderBoxSize` was captured when the RO fired, which is the frame *before*
+  // this flush. Anything that resizes the element in between — a spring
+  // committing a tween frame, most visibly — makes that size stale, and a
+  // consumer clipping to a stale-larger box gets its corners cut off by the
+  // element's own edge. A live read is never staler than the entry, so the
+  // saved `getComputedStyle` wasn't worth the frame of skew.
+  const sizes = new Map<Element, Size>();
   for (const el of elements) {
-    let size = pendingSizes.get(el);
-    pendingSizes.delete(el);
-    if (!size && callbackMap.has(el)) {
-      size = getLayoutSize(el as HTMLElement);
-    }
-    sizes.set(el, size);
+    if (callbackMap.has(el)) sizes.set(el, getLayoutSize(el as HTMLElement));
   }
 
   // WRITE PASS: invoke callbacks with the pre-read size.
@@ -80,11 +55,7 @@ function flush() {
 function getObserver(): ResizeObserver {
   if (!observer) {
     observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        pendingElements.add(entry.target);
-        const size = entrySize(entry);
-        if (size) pendingSizes.set(entry.target, size);
-      }
+      for (const entry of entries) pendingElements.add(entry.target);
       if (rafId === undefined) {
         rafId = requestAnimationFrame(flush);
       }
@@ -126,7 +97,6 @@ export function observeResize(el: Element, callback: Callback): () => void {
     set!.delete(callback);
     if (set!.size === 0) {
       callbackMap.delete(el);
-      pendingSizes.delete(el);
       obs.unobserve(el);
     }
     if (callbackMap.size === 0) {
@@ -135,7 +105,6 @@ export function observeResize(el: Element, callback: Callback): () => void {
         rafId = undefined;
       }
       pendingElements.clear();
-      pendingSizes.clear();
       observer?.disconnect();
       observer = null;
     }

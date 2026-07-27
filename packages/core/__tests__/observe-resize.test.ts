@@ -55,16 +55,10 @@ function triggerResize(...elements: Element[]) {
   roCallback(entries, {} as ResizeObserver);
 }
 
-// Resize with a border-box size on the entry. `boxForm` chooses the spec
-// array shape or the bare-object shape some engines emit.
-function triggerResizeSized(
-  el: Element,
-  width: number,
-  height: number,
-  boxForm: "array" | "singleton" = "array",
-) {
-  const box = { inlineSize: width, blockSize: height } as ResizeObserverSize;
-  const borderBoxSize = boxForm === "array" ? [box] : box;
+// Resize with a border-box size on the entry. The flush ignores it and
+// measures live, so this exists to prove the entry's size can't leak through.
+function triggerResizeSized(el: Element, width: number, height: number) {
+  const borderBoxSize = [{ inlineSize: width, blockSize: height } as ResizeObserverSize];
   roCallback(
     [{ target: el, borderBoxSize } as unknown as ResizeObserverEntry],
     {} as ResizeObserver,
@@ -203,38 +197,47 @@ describe("observeResize", () => {
     expect(rafCallbacks.size).toBe(0);
   });
 
-  it("threads the entry's border-box size and reads no computed style on that tick", () => {
+  it("reports the element's border-box size on a resize tick", () => {
     const el = document.createElement("div");
     const cb = vi.fn();
     observeResize(el, cb);
     flushRaf();
     cb.mockClear();
 
-    const gcs = vi.spyOn(window, "getComputedStyle");
+    vi.spyOn(window, "getComputedStyle").mockReturnValue(
+      { width: "200px", height: "100px", boxSizing: "border-box" } as CSSStyleDeclaration,
+    );
     triggerResizeSized(el, 200, 100);
     flushRaf();
 
-    expect(gcs).not.toHaveBeenCalled();
     expect(cb).toHaveBeenCalledOnce();
     expect(cb).toHaveBeenCalledWith({ width: 200, height: 100 });
   });
 
-  it("accepts the bare (non-array) borderBoxSize form some engines emit", () => {
+  // The regression that produced chopped capsule corners mid-morph: the RO
+  // fires in frame N, the flush runs in frame N+1, and by then a spring has
+  // committed a new size. A size captured from the entry is a frame stale —
+  // during a shrink it describes a *larger* box, so the clip-path it produces
+  // gets cut off by the element's own edge.
+  it("measures at flush time, not from a size captured a frame earlier", () => {
     const el = document.createElement("div");
     const cb = vi.fn();
     observeResize(el, cb);
     flushRaf();
     cb.mockClear();
 
-    const gcs = vi.spyOn(window, "getComputedStyle");
-    triggerResizeSized(el, 320, 240, "singleton");
+    // Frame N: the RO reports the pre-morph horizontal capsule.
+    triggerResizeSized(el, 210, 84);
+    // Frame N+1, before the flush: the spring commits the vertical target.
+    vi.spyOn(window, "getComputedStyle").mockReturnValue(
+      { width: "84px", height: "210px", boxSizing: "border-box" } as CSSStyleDeclaration,
+    );
     flushRaf();
 
-    expect(gcs).not.toHaveBeenCalled();
-    expect(cb).toHaveBeenCalledWith({ width: 320, height: 240 });
+    expect(cb).toHaveBeenCalledWith({ width: 84, height: 210 });
   });
 
-  it("falls back to a measured read when the entry has no borderBoxSize", () => {
+  it("falls back to offset* when computed style has no resolved size", () => {
     const el = document.createElement("div");
     Object.defineProperty(el, "offsetWidth", { value: 150, configurable: true });
     Object.defineProperty(el, "offsetHeight", { value: 60, configurable: true });

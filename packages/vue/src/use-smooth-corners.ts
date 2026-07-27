@@ -109,8 +109,8 @@ export function useSmoothCorners(
     return !!effectsHandle;
   }
 
-  // Resize ticks pass the observer entry's border-box size; watcher-driven
-  // syncs pass none and fall back to a measured read.
+  // Resize ticks pass the size the observer measured for this flush;
+  // watcher-driven syncs pass none and fall back to a measured read.
   function syncAll(size?: { width: number; height: number }) {
     const el = unref(target);
     if (!el) return;
