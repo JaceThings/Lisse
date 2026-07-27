@@ -14,7 +14,7 @@ React, Vue, Svelte용 부드러운 모서리 SVG 프리미티브.
 
 **[라이브 데모 →](https://corne.rs)**
 
-[English](../../README.md) · [日本語](./README.ja.md) · **한국어** · [Deutsch](./README.de.md)
+[English](../../README.md) · [日本語](./README.ja.md) · **한국어** · [Deutsch](./README.de.md) · [简体中文](./README.zh-Hans.md) · [Português (BR)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
 </div>
 

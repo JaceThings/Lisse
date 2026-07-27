@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Lisse" width="128" />
+<img src="../../assets/logo.png" alt="Lisse" width="128" />
 
 <h1>Lisse</h1>
 
@@ -9,12 +9,12 @@
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
 [![bundle](https://deno.bundlejs.com/badge?q=%40lisse%2Fcore&label=bundle)](https://bundlejs.com/?q=%40lisse%2Fcore)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
 **[在线演示 →](https://corne.rs)**
 
-[English](./README.md) · **简体中文** · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Português (BR)](./README.pt-BR.md) · [Русский](./README.ru.md) · [Deutsch](./README.de.md)
+[English](../../README.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Deutsch](./README.de.md) · **简体中文** · [Português (BR)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
 </div>
 
@@ -53,7 +53,7 @@ function Card() {
 | `superellipse` | `\|x/R\|^n + \|y/R\|^n = 1`。当 `n > 2` 时带边缘的 G2。 |
 | `clothoid` | 从直边到中央圆弧的欧拉螺线（Euler-spiral）混合。处处 G2。 |
 
-数学参考：[`docs/curves.md`](docs/curves.md)。
+数学参考：[`docs/curves.md`](../curves.md)。
 
 ## 软件包
 
@@ -70,30 +70,30 @@ function Card() {
 - 内 / 外 / 居中边框，含多种样式变体（实线、虚线、点线、双线、凹槽、凸脊）
 - 投影与内阴影，并可通过 API 实现渐变边框
 - 自动效果：挂载时将 CSS `border` 和 `box-shadow` 转换为等效的 SVG
-- 每次 `generatePath()` 调用约 1.5 µs；500 个边角的重算在 <1 ms 内完成（[详情](docs/performance.md)）
+- 每次 `generatePath()` 调用约 1.5 µs；500 个边角的重算在 <1 ms 内完成（[详情](../performance.md)）
 - 零运行时依赖；ESM + CJS 双重导出；SSR 安全的 `/path` 子路径
 
 ## 文档
 
-- [API 参考](docs/api.md)：完整的导出表
-- [迁移](MIGRATION.md)：在版本之间升级
-- [SSR](docs/ssr.md)：服务端渲染与边缘运行时
-- [曲线](docs/curves.md)：每种曲线类型的数学参考
-- [浏览器支持](docs/browser-support.md)：兼容性矩阵
-- [样式钩子](docs/styling.md)：`data-slot` / `data-state` 属性
-- [效果](docs/effects.md)：边框、阴影、渐变、自动效果
-- [性能](docs/performance.md)：基准测试与缓存架构
-- [内部实现](docs/internals.md)：边框、阴影与尺寸变化处理的工作原理
-- [陷阱](docs/gotchas.md)：`clip-path` 的怪癖，例如焦点轮廓、溢出、滚动条
-- [配置](docs/configuration.md)：逐角配置、该用哪个 API、框架用法
+- [API 参考](../api.md)：完整的导出表
+- [迁移](../MIGRATION.md)：在版本之间升级
+- [SSR](../ssr.md)：服务端渲染与边缘运行时
+- [曲线](../curves.md)：每种曲线类型的数学参考
+- [浏览器支持](../browser-support.md)：兼容性矩阵
+- [样式钩子](../styling.md)：`data-slot` / `data-state` 属性
+- [效果](../effects.md)：边框、阴影、渐变、自动效果
+- [性能](../performance.md)：基准测试与缓存架构
+- [内部实现](../internals.md)：边框、阴影与尺寸变化处理的工作原理
+- [陷阱](../gotchas.md)：`clip-path` 的怪癖，例如焦点轮廓、溢出、滚动条
+- [配置](../configuration.md)：逐角配置、该用哪个 API、框架用法
 
 ## 贡献
 
-欢迎提交 Issue 和 PR。贡献者文档（发布流程、测试策略、基准测试）见于 [`docs/`](./docs/)。
+欢迎提交 Issue 和 PR。贡献者文档（发布流程、测试策略、基准测试）见于 [`docs/`](../)。
 
 ## 许可证
 
-[MIT](./LICENSE)
+[MIT](../../LICENSE)
 
 ---
 
