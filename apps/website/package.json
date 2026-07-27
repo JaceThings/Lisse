@@ -31,6 +31,7 @@
     "@tanstack/react-start": "^1.168.16",
     "agentation": "^3.0.2",
     "framer-motion": "^12.38.0",
+    "justif": "^0.6.4",
     "matter-js": "^0.20.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
