@@ -21,7 +21,7 @@ type RouteMeta = { title: () => string; description: () => string };
 
 // Per-route SEO copy. Keyed by IndexableRoute so this and the sitemap can't
 // drift from site.ts — a missing or stray key is a compile error. Unlisted
-// paths (/math, /curves-test) get no meta; they canonicalise to home.
+// paths (/curves-test) get no meta; they canonicalise to home.
 const ROUTE_MESSAGES: Record<IndexableRoute, RouteMeta> = {
   "/": {
     title: () => m.meta_home_title(),

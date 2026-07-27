@@ -6,8 +6,8 @@
 /** Production origin, no trailing slash. */
 export const SITE_ORIGIN = "https://corne.rs";
 
-/** Indexable routes (de-localized). /math and /curves-test are excluded — no
- *  SEO meta, they canonicalise to home. Source for route-meta and the sitemap. */
+/** Indexable routes (de-localized). /curves-test is excluded — no SEO meta, it
+ *  canonicalises to home. Source for route-meta and the sitemap. */
 export const INDEXABLE_ROUTES = ["/", "/what", "/playground"] as const;
 export type IndexableRoute = (typeof INDEXABLE_ROUTES)[number];
 
