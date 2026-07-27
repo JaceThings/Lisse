@@ -69,3 +69,40 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm knip
+
+  changeset:
+    # apps/extension is `private: true` and ships as a zip to the Chrome and
+    # Firefox stores, so a missing changeset is invisible here in a way it
+    # isn't for the npm packages: nothing publishes, no version moves, and the
+    # stores keep serving the old build. #108 and #111 both landed this way and
+    # sat unshipped for two weeks. Label a PR `no-changeset` when a change to
+    # this source genuinely needs no release (comments, tests, refactors).
+    if: github.event_name == 'pull_request' && github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require a changeset for extension source changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+
+          case ",$LABELS," in
+            *,no-changeset,*) echo "no-changeset label set - skipping."; exit 0 ;;
+          esac
+
+          changed=$(gh pr diff "$PR_NUMBER" --name-only)
+          if ! printf '%s\n' "$changed" | grep -qE '^apps/extension/(src/|build\.ts$)'; then
+            echo "No extension source changes."
+            exit 0
+          fi
+
+          if grep -rqF '"@lisse/extension"' .changeset 2>/dev/null; then
+            echo "Changeset bumping @lisse/extension found."
+            exit 0
+          fi
+
+          echo "::error::apps/extension source changed with no changeset bumping @lisse/extension. The stores would keep serving the old build. Run 'pnpm changeset' (patch is usually right), or add the 'no-changeset' label if this needs no release."
+          exit 1
