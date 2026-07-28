@@ -40,8 +40,15 @@ function measureByRects(anchor: HTMLElement, target: HTMLElement): OverlayOffset
  * which is anchor-relative only while the anchor is the target's `offsetParent`;
  * rects cover the anchor sitting higher, which needs a caller-supplied ref.
  *
+ * That branch is decided once and cached: `offsetParent` is layout-dependent, and
+ * re-reading it here costs 18,000 layouts against 119, since each call has just
+ * dirtied layout by writing the previous overlay's position.
+ *
  * ponytail: `offset*` is integer-rounded, so a fractional position can land up
- * to 1px out; exactness costs a forced layout per element per frame.
+ * to 1px out; exactness costs a forced layout per element per frame. The cached
+ * branch likewise misses a positioned ancestor inserted between anchor and
+ * target after mount — re-check in the flush's read pass, where layout is
+ * already clean, if that ever comes up.
  */
 export function createOverlayPlacer(anchor: HTMLElement, target: HTMLElement) {
   let offsetParentIsAnchor: boolean | undefined;
