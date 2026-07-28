@@ -3,7 +3,7 @@ export { getPathParamsForCorner } from "./corner-params.js";
 export { distributeAndNormalize } from "./distribute.js";
 export { createSvgEffects, type SvgEffectsHandle } from "./svg-effects.js";
 export { createDropShadow, type DropShadowHandle } from "./drop-shadow.js";
-export { observeResize } from "./observe-resize.js";
+export { observeResize, requestMeasure, type Measured } from "./observe-resize.js";
 export { getLayoutSize } from "./layout-size.js";
 export {
   APPLE_SMOOTHING,
@@ -14,7 +14,7 @@ export {
 } from "./generate-path.js";
 export { DEFAULT_EXPONENT, CURVE_TYPES, getCurveBuilder, buildArc, buildSquircle, buildSuperellipse, buildClothoid } from "./curves/index.js";
 export { clearCurveCache } from "./curves/cache.js";
-export { DEFAULT_SHADOW, cornerOptionsToBorderRadius } from "./svg-shared.js";
+export { DEFAULT_SHADOW, cornerOptionsToBorderRadius, type OverlayOffset } from "./svg-shared.js";
 export {
   extractAndStripEffects,
   restoreStyles,

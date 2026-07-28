@@ -1,5 +1,5 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, getLayoutSize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
-import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, requestMeasure, getLayoutSize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig, Measured, OverlayOffset } from "@lisse/core";
 
 export interface SmoothCornersAction {
   update: (config: SmoothCornersConfig) => void;
@@ -48,6 +48,7 @@ export function smoothCorners(
   let extractedResult: ReturnType<typeof extractAndStripEffects> | undefined;
   let attachedAnchor: HTMLElement | null = null;
   let didAcquire = false;
+  let unobserveAnchor: (() => void) | undefined;
 
   function setAutoExtraction(enable: boolean): void {
     if (enable && !extractedResult) {
@@ -69,18 +70,23 @@ export function smoothCorners(
     if (!hasEffects(merged)) return;
 
     if (!attachedAnchor) {
+      // The parent, never the node: `clip-path` clips its own subtree, so an
+      // overlay nested there could never paint an outer border.
       const anchor = node.parentElement;
       if (!anchor) return;
       attachedAnchor = anchor;
       didAcquire = acquirePosition(anchor);
+      // An anchor can move the node without resizing it. Runs in the write
+      // pass, so measure nothing — re-queue instead.
+      unobserveAnchor = observeResize(anchor, () => requestMeasure(node));
     }
 
     if (!effectsHandle) {
-      effectsHandle = createSvgEffects(attachedAnchor);
+      effectsHandle = createSvgEffects(attachedAnchor, node);
     }
     // Border-only configs skip the shadow handle to avoid its isolation:isolate mutation.
     if (!shadowHandle && merged.shadow) {
-      shadowHandle = createDropShadow(attachedAnchor);
+      shadowHandle = createDropShadow(attachedAnchor, node);
     }
   }
 
@@ -97,28 +103,42 @@ export function smoothCorners(
   let lastWidth = 0;
   let lastHeight = 0;
   let lastSyncKey: string | null = null;
+  let lastOffsetX = 0;
+  let lastOffsetY = 0;
 
   // size comes from the resize observer's border-box entry; initial attach
   // and update() omit it and fall back to a measured read.
-  function apply(size?: { width: number; height: number }) {
-    const { width, height } = size ?? getLayoutSize(node);
+  function apply(measured?: Measured) {
+    const { width, height } = measured ?? getLayoutSize(node);
     if (width <= 0 || height <= 0) return;
 
+    // In the guard because an anchor can move the node without resizing it;
+    // threaded from the read pass so it never becomes a write-pass layout read.
+    const anchored = attachedAnchor !== null;
+    const offsetX = anchored ? (measured?.offsetLeft ?? node.offsetLeft) : 0;
+    const offsetY = anchored ? (measured?.offsetTop ?? node.offsetTop) : 0;
+
     const key = currentSyncKey;
-    if (width === lastWidth && height === lastHeight && key === lastSyncKey) return;
+    if (
+      width === lastWidth && height === lastHeight && key === lastSyncKey &&
+      offsetX === lastOffsetX && offsetY === lastOffsetY
+    ) return;
     lastWidth = width;
     lastHeight = height;
     lastSyncKey = key;
+    lastOffsetX = offsetX;
+    lastOffsetY = offsetY;
 
     node.style.clipPath = generateClipPath(width, height, currentOptions);
     node.setAttribute("data-state", "ready");
 
     const merged = getMergedEffects();
+    const offset: OverlayOffset = { x: offsetX, y: offsetY };
     if (effectsHandle) {
-      effectsHandle.update(currentOptions, merged, width, height);
+      effectsHandle.update(currentOptions, merged, width, height, offset);
     }
     if (shadowHandle) {
-      shadowHandle.update(currentOptions, merged.shadow ?? DEFAULT_SHADOW, width, height);
+      shadowHandle.update(currentOptions, merged.shadow ?? DEFAULT_SHADOW, width, height, offset);
     }
   }
 
@@ -143,6 +163,8 @@ export function smoothCorners(
     },
     destroy() {
       unobserve();
+      unobserveAnchor?.();
+      unobserveAnchor = undefined;
       node.style.clipPath = savedClipPath;
       node.removeAttribute("data-slot");
       node.removeAttribute("data-state");

@@ -6,3 +6,6 @@ coverage/
 *.tgz
 assets/audit/
 research/
+# Browser-smoke capture output — CI uploads these to Argos instead of committing them.
+tests/browser-smoke/screenshots/
+tests/browser-smoke/__screenshots__/

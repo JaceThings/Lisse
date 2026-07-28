@@ -1,17 +1,23 @@
 import { getLayoutSize } from "./layout-size.js";
 
-/** Border-box size in CSS pixels, matching `getLayoutSize`'s contract. */
-interface Size {
+/**
+ * Border-box size per `getLayoutSize`, plus the element's offset within its
+ * `offsetParent`. The offset rides along so consumers never read it in the write
+ * pass, where it would force a relayout per element.
+ */
+export interface Measured {
   width: number;
   height: number;
+  offsetLeft: number;
+  offsetTop: number;
 }
 
 /**
- * Resize callback. Receives the element's border-box size as measured at the
- * start of this flush; callers may ignore it and re-measure. Extra parameters
- * are ignored by `() => void` callbacks, so this stays backward-compatible.
+ * Receives what was measured at the start of this flush; callers may ignore it
+ * and re-measure. Extra parameters are ignored by `() => void` callbacks, so
+ * this stays backward-compatible.
  */
-type Callback = (size?: Size) => void;
+type Callback = (measured?: Measured) => void;
 
 let observer: ResizeObserver | null = null;
 let rafId: number | undefined;
@@ -34,9 +40,15 @@ function flush() {
   // consumer clipping to a stale-larger box gets its corners cut off by the
   // element's own edge. A live read is never staler than the entry, so the
   // saved `getComputedStyle` wasn't worth the frame of skew.
-  const sizes = new Map<Element, Size>();
+  const sizes = new Map<Element, Measured>();
   for (const el of elements) {
-    if (callbackMap.has(el)) sizes.set(el, getLayoutSize(el as HTMLElement));
+    if (!callbackMap.has(el)) continue;
+    const node = el as HTMLElement;
+    sizes.set(el, {
+      ...getLayoutSize(node),
+      offsetLeft: node.offsetLeft,
+      offsetTop: node.offsetTop,
+    });
   }
 
   // WRITE PASS: invoke callbacks with the pre-read size.
@@ -62,6 +74,19 @@ function getObserver(): ResizeObserver {
     });
   }
   return observer;
+}
+
+/**
+ * Queue `el` for the next batched flush without reading layout. For work driven
+ * by something other than `el`'s own resize, where measuring inline would land
+ * in the write pass. Costs one frame. No-op if `el` isn't observed.
+ */
+export function requestMeasure(el: Element): void {
+  if (!callbackMap.has(el)) return;
+  pendingElements.add(el);
+  if (rafId === undefined) {
+    rafId = requestAnimationFrame(flush);
+  }
 }
 
 /**

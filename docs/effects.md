@@ -205,6 +205,43 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 
 > `middleBorder` and `outerBorder` have no CSS equivalent and are only available as explicit props.
 
+## Where the overlay is mounted
+
+Effects render into an SVG overlay that is **never** a child of the clipped
+element: `clip-path` clips an element's entire subtree, so an `outerBorder` —
+which paints outside the squircle — would be cut away. The overlay is instead
+appended to an anchor and absolutely positioned over your element.
+
+The anchor is the element's parent by default, so outer effects work on an
+element that is itself the layout target, with no wrapper in the way:
+
+```tsx
+// The <button> stays the direct grid item and keyboard-focus target.
+const ref = useRef<HTMLButtonElement>(null);
+useSmoothCorners(ref, { radius: 18 }, {
+  effects: { outerBorder: { width: 3, color: "#3b82f6", opacity: 1 } },
+});
+```
+
+Several elements may share one parent — each overlay is positioned over its own
+element. Things worth knowing:
+
+| | Effect |
+|---|---|
+| A `static` anchor | Gets `position: relative` (ref-counted, restored on unmount). |
+| An anchor with `overflow: hidden`/`auto` | Clips outer effects at its edges, like any other child. Anchor to an ancestor outside the scroll container, or add padding. |
+| `:last-child` on the anchor | Will match the overlay. Overlays are appended last, so `:first-child` and `:nth-child(n)` for your own elements are unaffected. |
+| Pointing the wrapper option at the clipped element itself | Ignored — the parent is used instead, because a nested overlay could not paint an outer border. |
+
+The overlay follows the element whenever the element or the anchor resizes. In
+React it additionally re-checks on every commit, so a state change that only
+realigns the container is caught too; the Vue composable and the Svelte action
+re-check on a config change, not on an unrelated parent re-render.
+
+A move driven by none of those — pure CSS realignment with no size change and no
+update, e.g. a `:hover` rule flipping the container's `justify-content` — has
+nothing to observe and stays put until the next resize or update.
+
 ### Limitations
 
 | CSS feature | What happens |
@@ -219,7 +256,7 @@ Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffec
 - **`double` border minimum width**: requires `border-width >= 3px` because the double style needs space for two lines and a gap. Below 3px, the border falls back to solid.
 - **`outline`**: not extracted because CSS outlines don't follow `border-radius` in all browsers, and the squircle shape would make standard outlines look incorrect.
 - **CSS transitions**: stripped properties (`border`, `box-shadow`) will not animate because they are removed from the element and replaced with SVG. Use `autoEffects: false` and drive explicit effect props instead.
-- **Wrapper div (React/Vue)**: the `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. Use the hook/composable/action approach for full layout control.
+- **Wrapper div (React/Vue)**: the `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. Use the hook/composable/action approach for full layout control — it adds no wrapper, and outer effects work there too (see below).
 - **`border-image`**: not detected because CSS `border-image` syntax is complex (angle units, colour spaces, slice semantics). Use gradient borders via the explicit `BorderConfig.color` API instead.
 - **`!important` rules**: cannot be overridden because the library strips effects via inline styles, and `!important` stylesheet rules take precedence over inline styles. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
 - **Per-side borders**: only the top border is read during auto-extraction because `getComputedStyle` returns per-side values (`borderTopWidth`, `borderTopColor`, etc.) and the SVG overlay renders a single uniform border around the entire squircle. If you need different colours per side, use explicit effect props.

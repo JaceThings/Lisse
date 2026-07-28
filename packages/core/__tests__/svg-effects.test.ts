@@ -55,7 +55,8 @@ describe("createSvgEffects", () => {
     createSvgEffects(anchor);
     const svg = anchor.querySelector("svg")!;
     expect(svg.style.position).toBe("absolute");
-    expect(svg.style.inset).toBe("0");
+    expect(svg.style.left).toBe("0px");
+    expect(svg.style.top).toBe("0px");
     expect(svg.style.pointerEvents).toBe("none");
     expect(svg.style.zIndex).toBe("1");
   });
@@ -202,8 +203,10 @@ describe("createSvgEffects", () => {
     };
     expect(() => handle.update(opts, effects, 0, 0)).not.toThrow();
 
+    // Still the creation-time zero: update() bailed before sizing anything.
     const svg = anchor.querySelector("svg")!;
-    expect(svg.getAttribute("width")).toBeNull();
+    expect(svg.getAttribute("width")).toBe("0");
+    expect(svg.getAttribute("viewBox")).toBeNull();
   });
 
   it("update() sets SVG width/height/viewBox", () => {
