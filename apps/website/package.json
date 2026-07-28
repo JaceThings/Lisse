@@ -5,9 +5,9 @@
   "type": "module",
   "description": "corne.rs landing site for the Lisse squircle library",
   "scripts": {
-    "predev": "tsx scripts/build-llms-full.ts && tsx scripts/build-sitemap.ts",
+    "predev": "pnpm run paraglide && tsx scripts/build-llms-full.ts && tsx scripts/build-sitemap.ts",
     "dev": "vite dev",
-    "prebuild": "tsx scripts/build-llms-full.ts && tsx scripts/write-version.ts && tsx scripts/build-sitemap.ts",
+    "prebuild": "pnpm run paraglide && tsx scripts/build-llms-full.ts && tsx scripts/write-version.ts && tsx scripts/build-sitemap.ts",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "preview": "node .output/server/index.mjs",

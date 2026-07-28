@@ -55,9 +55,12 @@ export default defineConfig({
   },
   plugins: [
     // Paraglide BEFORE Start: it compiles project.inlang -> src/paraglide on
-    // build/dev start, so the generated runtime/messages exist before Start
-    // transforms the graph. URL-first strategy keeps the locale in the path
-    // (distinct Cloudflare cache keys, no Set-Cookie on cacheable HTML).
+    // build/dev start and rebuilds on message edits, but its first compile lands
+    // too late for Nitro's SSR dev worker, which loads src/server.ts (importing
+    // ./paraglide/server.js) before it finishes — hence the paraglide step in
+    // predev/prebuild, which this then keeps warm. URL-first strategy keeps the
+    // locale in the path (distinct Cloudflare cache keys, no Set-Cookie on
+    // cacheable HTML).
     paraglideVitePlugin({
       project: "./project.inlang",
       outdir: "./src/paraglide",
