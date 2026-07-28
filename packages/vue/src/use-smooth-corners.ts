@@ -12,6 +12,7 @@ import {
   createSvgEffects,
   createDropShadow,
   observeResize,
+  requestMeasure,
   getLayoutSize,
   DEFAULT_SHADOW,
   extractAndStripEffects,
@@ -21,7 +22,7 @@ import {
   hasEffects,
   mergeEffects,
 } from "@lisse/core";
-import type { SmoothCornerOptions, EffectsConfig } from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig, Measured, OverlayOffset } from "@lisse/core";
 
 export interface UseEffectsOptions {
   wrapper?: Ref<HTMLElement | null>;
@@ -70,6 +71,7 @@ export function useSmoothCorners(
   // even if the target is reparented before unmount.
   let attachedAnchor: HTMLElement | null = null;
   let didAcquire = false;
+  let unobserveAnchor: (() => void) | undefined;
 
   // Change guard: syncAll bails when width, height, and the serialized
   // options/effects key are all unchanged, so no-op reactive/resize ticks
@@ -79,6 +81,8 @@ export function useSmoothCorners(
   let lastWidth = 0;
   let lastHeight = 0;
   let lastSyncKey: string | null = null;
+  let lastOffsetX = 0;
+  let lastOffsetY = 0;
   // Whether we've cleared the SSR border-radius fallback for the current setup.
   let clearedFallbackRadius = false;
 
@@ -95,33 +99,48 @@ export function useSmoothCorners(
   // position. Drop-shadow nodes are created only when a shadow config exists.
   function ensureHandles(el: HTMLElement, merged: EffectsConfig): boolean {
     if (!attachedAnchor) {
-      const anchor = unrefOr(effectsOptions?.wrapper, null) ?? el.parentElement;
+      // A ref aimed at the element itself is ignored: `clip-path` clips its own
+      // subtree, so an overlay nested there could never paint an outer border.
+      const supplied = unrefOr(effectsOptions?.wrapper, null);
+      const wrapper = supplied && supplied !== el ? supplied : null;
+      const anchor = wrapper ?? el.parentElement;
       if (!anchor) return false;
       attachedAnchor = anchor;
       didAcquire = acquirePosition(anchor);
+      // An anchor can move the element without resizing it. Runs in the write
+      // pass, so measure nothing — re-queue instead.
+      unobserveAnchor = observeResize(anchor, () => requestMeasure(el));
     }
     if (!effectsHandle) {
-      effectsHandle = createSvgEffects(attachedAnchor);
+      effectsHandle = createSvgEffects(attachedAnchor, el);
     }
     if (!shadowHandle && merged.shadow) {
-      shadowHandle = createDropShadow(attachedAnchor);
+      shadowHandle = createDropShadow(attachedAnchor, el);
     }
     return !!effectsHandle;
   }
 
-  // Resize ticks pass the size the observer measured for this flush;
-  // watcher-driven syncs pass none and fall back to a measured read.
-  function syncAll(size?: { width: number; height: number }) {
+  function syncAll(measured?: Measured) {
     const el = unref(target);
     if (!el) return;
-    const { width, height } = size ?? getLayoutSize(el);
+    const { width, height } = measured ?? getLayoutSize(el);
     if (width <= 0 || height <= 0) return;
 
+    // In the guard because an anchor can move the element without resizing it;
+    // threaded from the read pass so it never becomes a write-pass layout read.
+    const offsetX = effectsHandle ? (measured?.offsetLeft ?? el.offsetLeft) : 0;
+    const offsetY = effectsHandle ? (measured?.offsetTop ?? el.offsetTop) : 0;
+
     const key = syncKey.value;
-    if (width === lastWidth && height === lastHeight && key === lastSyncKey) return;
+    if (
+      width === lastWidth && height === lastHeight && key === lastSyncKey &&
+      offsetX === lastOffsetX && offsetY === lastOffsetY
+    ) return;
     lastWidth = width;
     lastHeight = height;
     lastSyncKey = key;
+    lastOffsetX = offsetX;
+    lastOffsetY = offsetY;
 
     el.style.clipPath = generateClipPath(width, height, unref(options));
     el.setAttribute("data-state", "ready");
@@ -139,8 +158,9 @@ export function useSmoothCorners(
 
     const merged = mergeEffects(extractedResult, unrefOr(effectsOptions?.effects, undefined));
     if (hasEffects(merged)) ensureHandles(el, merged);
+    const offset: OverlayOffset = { x: offsetX, y: offsetY };
     if (effectsHandle) {
-      effectsHandle.update(unref(options), merged, width, height);
+      effectsHandle.update(unref(options), merged, width, height, offset);
     }
     if (shadowHandle) {
       shadowHandle.update(
@@ -148,6 +168,7 @@ export function useSmoothCorners(
         merged.shadow ?? DEFAULT_SHADOW,
         width,
         height,
+        offset,
       );
     }
   }
@@ -179,6 +200,8 @@ export function useSmoothCorners(
   function cleanup() {
     unobserve?.();
     unobserve = undefined;
+    unobserveAnchor?.();
+    unobserveAnchor = undefined;
 
     effectsHandle?.destroy();
     effectsHandle = undefined;
@@ -201,6 +224,8 @@ export function useSmoothCorners(
     lastWidth = 0;
     lastHeight = 0;
     lastSyncKey = null;
+    lastOffsetX = 0;
+    lastOffsetY = 0;
 
     clearedFallbackRadius = false;
     // We deliberately do NOT restore the SSR border-radius fallback here, nor

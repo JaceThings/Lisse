@@ -1,11 +1,76 @@
 import type { ShadowConfig, SmoothCornerOptions, CornerConfig, GradientConfig, GradientStop } from "./types.js";
 import { generatePath } from "./generate-path.js";
+import { getLayoutSize } from "./layout-size.js";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** Shared counter for unique SVG element IDs across svg-effects and drop-shadow. */
 let uid = 0;
 export function nextUid(): number { return ++uid; }
+
+/** Target's border box relative to its anchor's padding box, in CSS px. */
+export interface OverlayOffset {
+  x: number;
+  y: number;
+}
+
+/**
+ * Screen-space rect delta converted back to the anchor's own CSS px: un-scaled
+ * by any ancestor transform, shifted from border edge to padding edge, and
+ * corrected for scroll. Rotation or skew would need a DOMMatrix decomposition.
+ */
+function measureByRects(anchor: HTMLElement, target: HTMLElement): OverlayOffset {
+  const anchorRect = anchor.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const layout = getLayoutSize(anchor);
+  const scaleX = layout.width > 0 && anchorRect.width > 0 ? anchorRect.width / layout.width : 1;
+  const scaleY = layout.height > 0 && anchorRect.height > 0 ? anchorRect.height / layout.height : 1;
+  const style = getComputedStyle(anchor);
+  return {
+    x: (targetRect.left - anchorRect.left) / scaleX - (parseFloat(style.borderLeftWidth) || 0) + anchor.scrollLeft,
+    y: (targetRect.top - anchorRect.top) / scaleY - (parseFloat(style.borderTopWidth) || 0) + anchor.scrollTop,
+  };
+}
+
+/**
+ * Positions one overlay `<svg>` over `target` inside `anchor`, reading no
+ * layout: `update()` runs in the resize flush's write pass, where one
+ * `getBoundingClientRect` forces a relayout per element (119 -> 36,000 across
+ * 300). Callers thread in `offsetLeft`/`offsetTop` from the batched read pass,
+ * which is anchor-relative only while the anchor is the target's `offsetParent`;
+ * rects cover the anchor sitting higher, which needs a caller-supplied ref.
+ *
+ * That branch is decided once and cached: `offsetParent` is layout-dependent, and
+ * re-reading it here costs 18,000 layouts against 119, since each call has just
+ * dirtied layout by writing the previous overlay's position.
+ *
+ * ponytail: `offset*` is integer-rounded, so a fractional position can land up
+ * to 1px out; exactness costs a forced layout per element per frame. The cached
+ * branch likewise misses a positioned ancestor inserted between anchor and
+ * target after mount — re-check in the flush's read pass, where layout is
+ * already clean, if that ever comes up.
+ */
+export function createOverlayPlacer(anchor: HTMLElement, target: HTMLElement) {
+  let offsetParentIsAnchor: boolean | undefined;
+
+  return function place(svg: SVGElement, width: number, height: number, offset?: OverlayOffset): void {
+    svg.setAttribute("width", String(width));
+    svg.setAttribute("height", String(height));
+
+    if (target === anchor) {
+      svg.style.left = svg.style.top = "0px";
+      return;
+    }
+
+    offsetParentIsAnchor ??= target.offsetParent === anchor;
+    const { x, y } = offsetParentIsAnchor
+      ? offset ?? { x: target.offsetLeft, y: target.offsetTop }
+      : measureByRects(anchor, target);
+
+    svg.style.left = `${x}px`;
+    svg.style.top = `${y}px`;
+  };
+}
 
 /** Expand 3-char hex (`"#f00"` → `"#ff0000"`); 6-char passes through. */
 function expandHex(hex: string): string {

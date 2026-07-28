@@ -114,38 +114,64 @@ useSmoothCorners(el, options);
 
 ### With Effects
 
-When using effects with the composable, provide a wrapper ref for the SVG overlay:
+Effects work on the element itself — no wrapper required. The SVG overlay is
+mounted on the element's parent and positioned over the element:
 
 ```vue
 <script setup>
 import { ref } from "vue";
 import { useSmoothCorners } from "@lisse/vue";
 
-const wrapper = ref(null);
 const el = ref(null);
 
 useSmoothCorners(el, { radius: 24, smoothing: 0.6 }, {
-  wrapper,
   effects: {
     innerBorder: { width: 1, color: "#ffffff", opacity: 0.2 },
+    outerBorder: { width: 2, color: "#3b82f6", opacity: 1 },
     shadow: { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 },
   },
 });
 </script>
 
 <template>
-  <div ref="wrapper" style="position: relative">
-    <div ref="el" style="background: #3b82f6; padding: 32px; color: #fff">
-      Card with effects
-    </div>
+  <div ref="el" style="background: #3b82f6; padding: 32px; color: #fff">
+    Card with effects
   </div>
 </template>
 ```
+
+This is the pattern to use when your element must stay the direct layout and
+keyboard-focus target — a grid or flex item, or a `<button>` that owns its own
+focus ring.
+
+> **Don't point `wrapper` at the clipped element itself.** `clip-path` clips an
+> element's entire subtree, so an overlay nested inside it can never paint an
+> `outerBorder`. The composable ignores such a ref and anchors to the parent.
+
+### Anchoring
+
+The overlay is appended to an anchor element and absolutely positioned over your
+element. The anchor is the element's parent by default; pass `wrapper` to choose
+a different ancestor.
+
+| | Effect |
+|---|---|
+| Anchor is `position: static` | The composable sets `position: relative` on it (ref-counted, restored on unmount). |
+| Many elements share one parent | Fine — each overlay is positioned over its own element. |
+| Anchor has `overflow: hidden`/`auto` | Outer effects are clipped at the anchor's edges, like any other child. Pass a `wrapper` pointing at an ancestor outside the scroll container, or add padding. |
+| Sibling selectors | The overlay is a real child of the anchor, so `:last-child` on the parent will match it. Overlays are appended last, so `:first-child` and `:nth-child(n)` are unaffected. |
+
+The overlay re-positions when your element resizes and when the anchor resizes.
+It does not re-check on an unrelated parent re-render — the composable watches
+the corner/effects config and the target ref, not every reactive tick — so a
+move driven by neither a resize nor a config change stays put until the next
+one.
 
 ### `UseEffectsOptions`
 
 ```ts
 interface UseEffectsOptions {
+  /** Ancestor to mount the SVG overlay on. Default: the element's parent. */
   wrapper?: Ref<HTMLElement | null>;
   effects?: MaybeRef<EffectsConfig>;
   autoEffects?: MaybeRef<boolean>; // Default: true
@@ -297,11 +323,9 @@ With the composable:
 import { ref } from "vue";
 import { useSmoothCorners } from "@lisse/vue";
 
-const wrapper = ref(null);
 const el = ref(null);
 
 useSmoothCorners(el, { radius: 24, smoothing: 0.6 }, {
-  wrapper,
   effects: {
     shadow: [
       { offsetX: 0, offsetY: 2, blur: 4, spread: 0, color: "#000000", opacity: 0.1 },
@@ -312,10 +336,8 @@ useSmoothCorners(el, { radius: 24, smoothing: 0.6 }, {
 </script>
 
 <template>
-  <div ref="wrapper" style="position: relative">
-    <div ref="el" style="background: #fff; padding: 32px">
-      Layered shadows via composable
-    </div>
+  <div ref="el" style="background: #fff; padding: 32px">
+    Layered shadows via composable
   </div>
 </template>
 ```

@@ -62,6 +62,19 @@ describe("createDropShadow", () => {
     expect(anchor.style.isolation).toBe("");
   });
 
+  it("ref-counts isolation across handles sharing one anchor", () => {
+    anchor.style.isolation = "auto";
+    const a = createDropShadow(anchor, document.createElement("div"));
+    const b = createDropShadow(anchor, document.createElement("div"));
+    expect(anchor.style.isolation).toBe("isolate");
+
+    a.destroy();
+    expect(anchor.style.isolation).toBe("isolate"); // b still needs it
+
+    b.destroy();
+    expect(anchor.style.isolation).toBe("auto");
+  });
+
   it("SVG has correct z-index:-1 positioning", () => {
     createDropShadow(anchor);
     const svg = anchor.querySelector("svg")!;
@@ -70,16 +83,17 @@ describe("createDropShadow", () => {
     expect(svg.style.pointerEvents).toBe("none");
   });
 
-  it("SVG carries width/height='100%' so it doesn't fall back to the 300x150 intrinsic default", () => {
-    // Without explicit width/height attributes the SVG renders at its
-    // 300×150 replaced-element default, overflowing narrow anchors
-    // (e.g. ~110 px toggle pills on mobile) and forcing horizontal
-    // scroll. CSS `inset: 0` is not enough to override the intrinsic
-    // size on an SVG.
-    createDropShadow(anchor);
+  it("SVG always carries explicit width/height, never the 300x150 intrinsic default", () => {
+    // CSS positioning can't override an SVG's intrinsic size, so the attributes
+    // are written at creation and resized to the target's box on update.
+    const handle = createDropShadow(anchor);
     const svg = anchor.querySelector("svg")!;
-    expect(svg.getAttribute("width")).toBe("100%");
-    expect(svg.getAttribute("height")).toBe("100%");
+    expect(svg.getAttribute("width")).toBe("0");
+    expect(svg.getAttribute("height")).toBe("0");
+
+    handle.update(opts, { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000", opacity: 1 }, 200, 100);
+    expect(svg.getAttribute("width")).toBe("200");
+    expect(svg.getAttribute("height")).toBe("100");
   });
 
   it("update() with visible shadow — path has correct fill, fill-opacity, transform", () => {

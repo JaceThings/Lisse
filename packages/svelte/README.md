@@ -89,12 +89,52 @@ The action takes a single `SmoothCornersConfig` parameter: `{ corners, effects?,
   corners: { radius: 24, smoothing: 0.6 },
   effects: {
     innerBorder: { width: 1, color: "#ffffff", opacity: 0.2 },
+    outerBorder: { width: 2, color: "#3b82f6", opacity: 1 },
     shadow: { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 },
   },
 }}>
   Content
 </div>
 ```
+
+Outer effects work on the element itself, so it can stay the direct layout and
+keyboard-focus target — a grid or flex item, or a `<button>` that owns its own
+focus ring:
+
+```svelte
+<div style="display: grid; grid-template-columns: repeat(3, 72px); gap: 12px">
+  {#each emoji as e}
+    <!-- Each button remains its own grid item; nothing is wrapped around it. -->
+    <button
+      use:smoothCorners={{
+        corners: { radius: 18, smoothing: 0.6 },
+        autoEffects: false,
+        effects: { outerBorder: { width: 3, color: "#3b82f6", opacity: focused === e ? 1 : 0 } },
+      }}
+      on:focus={() => (focused = e)}
+      on:blur={() => (focused = null)}
+    >{e}</button>
+  {/each}
+</div>
+```
+
+#### Anchoring
+
+The overlay is appended to the element's parent and absolutely positioned over
+the element — it can never be a child of the element itself, because `clip-path`
+clips its entire subtree and would cut an outer border away.
+
+| | Effect |
+|---|---|
+| A `position: static` parent | Gets `position: relative` (ref-counted, restored on destroy). |
+| Many elements share one parent | Fine — each overlay is positioned over its own element. |
+| Parent has `overflow: hidden`/`auto` | Outer effects are clipped at its edges, like any other child. Add padding, or move the element out of the scroll container. |
+| Sibling selectors | The overlay is a real child of the parent, so `:last-child` will match it. Overlays are appended last, so `:first-child` and `:nth-child(n)` are unaffected. |
+
+The overlay re-positions when the element resizes, when the parent resizes, and
+on any action update that moves the element. A move driven by none of those —
+pure CSS realignment with no size change and no action update — has nothing to
+observe and stays put until the next resize or update.
 
 ### Reactive Updates
 

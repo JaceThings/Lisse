@@ -211,7 +211,10 @@ describe("observeResize", () => {
     flushRaf();
 
     expect(cb).toHaveBeenCalledOnce();
-    expect(cb).toHaveBeenCalledWith({ width: 200, height: 100 });
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ width: 200, height: 100 }));
+    expect(cb).toHaveBeenCalledWith(
+      expect.objectContaining({ offsetLeft: expect.any(Number), offsetTop: expect.any(Number) }),
+    );
   });
 
   // The regression that produced chopped capsule corners mid-morph: the RO
@@ -234,7 +237,7 @@ describe("observeResize", () => {
     );
     flushRaf();
 
-    expect(cb).toHaveBeenCalledWith({ width: 84, height: 210 });
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ width: 84, height: 210 }));
   });
 
   it("falls back to offset* when computed style has no resolved size", () => {
@@ -253,7 +256,7 @@ describe("observeResize", () => {
     flushRaf();
 
     expect(gcs).toHaveBeenCalledWith(el);
-    expect(cb).toHaveBeenCalledWith({ width: 150, height: 60 });
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ width: 150, height: 60 }));
   });
 
   it("performs all reads before any writes across multiple observed elements", () => {

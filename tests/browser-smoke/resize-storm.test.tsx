@@ -69,6 +69,32 @@ function renderMany(n: number): React.ReactNode {
   return createElement("div", null, items);
 }
 
+/**
+ * `renderMany` passes no effect props, so `hasEffects()` is false and no overlay
+ * is ever created — it cannot guard what it never runs. This one renders an
+ * outerBorder, with every element sharing one anchor.
+ */
+function renderManyWithEffects(n: number): React.ReactNode {
+  const items: React.ReactNode[] = [];
+  for (let i = 0; i < n; i++) {
+    items.push(
+      createElement(
+        SmoothCorners,
+        {
+          key: i,
+          as: "div",
+          corners: { radius: 12, smoothing: 0.6 },
+          autoEffects: false,
+          outerBorder: { width: 2, color: "#3b82f6", opacity: 1 },
+          style: { width: "100%", height: "40px", background: "#ddd" },
+        } as React.ComponentProps<typeof SmoothCorners>,
+        null,
+      ),
+    );
+  }
+  return createElement("div", null, items);
+}
+
 /** Trigger a real ResizeObserver storm by mutating the container's
  *  width over `durationMs`. window.dispatchEvent('resize') won't fire
  *  ResizeObserver — only actual size changes do. */
@@ -94,6 +120,39 @@ const FRAME_BUDGET_MS = 200;
 const FRAME_BUDGET_THROTTLED_MS = 600;
 
 describe("Browser smoke — resize storm at scale", () => {
+  // Layout count, not frame time: reading the overlay's offset in the resize
+  // flush's write pass forces a relayout per element (119 -> 36,000 across 300),
+  // but the median frame gap stays in single digits throughout and a fast dev
+  // machine absorbs the rest. Chromium-only — CDP is where the counter lives.
+  it.runIf(server.browser === "chromium")(
+    "overlay placement keeps layouts O(resize ticks), not O(ticks x elements)",
+    async () => {
+      const N = 200;
+      const TICKS = 30;
+      const session = cdp();
+      await session.send("Performance.enable");
+      const layoutCount = async () => {
+        const { metrics } = await session.send("Performance.getMetrics");
+        return metrics.find((m: { name: string }) => m.name === "LayoutCount")!.value;
+      };
+
+      root.render(renderManyWithEffects(N));
+      await new Promise((r) => setTimeout(r, 400));
+
+      const before = await layoutCount();
+      for (let i = 0; i < TICKS; i++) {
+        container.style.width = `${600 + (i % 10) * 20}px`;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      }
+      const layouts = (await layoutCount()) - before;
+
+      // Batched: a couple per tick regardless of N. Per-element forced layout
+      // would put this near TICKS * N (~6000).
+      expect(layouts).toBeLessThan(TICKS * 10);
+    },
+    30_000,
+  );
+
   it("500 SmoothCorners + size storm stays within budget", async () => {
     root.render(renderMany(500));
     await new Promise((r) => setTimeout(r, 200));

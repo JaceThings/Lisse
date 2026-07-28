@@ -81,38 +81,91 @@ function Card() {
 
 ### With Effects
 
-When using effects with the hook, you need to provide a wrapper ref for the SVG overlay:
+Effects work on the element itself — no wrapper required. The SVG overlay is
+mounted on the element's parent and positioned over the element:
 
 ```tsx
 import { useRef } from "react";
 import { useSmoothCorners } from "@lisse/react";
 
 function Card() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useSmoothCorners(ref, { radius: 24, smoothing: 0.6 }, {
-    wrapperRef,
     effects: {
       innerBorder: { width: 1, color: "#ffffff", opacity: 0.2 },
+      outerBorder: { width: 2, color: "#3b82f6", opacity: 1 },
       shadow: { offsetX: 0, offsetY: 8, blur: 24, spread: 0, color: "#000000", opacity: 0.2 },
     },
   });
 
   return (
-    <div ref={wrapperRef} style={{ position: "relative" }}>
-      <div ref={ref} style={{ background: "#3b82f6", padding: 32, color: "#fff" }}>
-        Card with effects
-      </div>
+    <div ref={ref} style={{ background: "#3b82f6", padding: 32, color: "#fff" }}>
+      Card with effects
     </div>
   );
 }
 ```
 
+This is the pattern to use when your element must stay the direct layout and
+keyboard-focus target — a grid or flex item, or a `<button>` that owns its own
+focus ring:
+
+```tsx
+function EmojiButton({ label }: { label: string }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [focused, setFocused] = useState(false);
+
+  // The <button> stays the direct grid item; nothing is wrapped around it.
+  useSmoothCorners(ref, { radius: 18, smoothing: 0.6 }, {
+    autoEffects: false,
+    effects: { outerBorder: { width: 3, color: "#3b82f6", opacity: focused ? 1 : 0 } },
+  });
+
+  return (
+    <button
+      ref={ref}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{ width: 72, height: 72, border: "none" }}
+    >
+      {label}
+    </button>
+  );
+}
+```
+
+> **Don't point `wrapperRef` at the clipped element itself.** `clip-path` clips
+> an element's entire subtree, so an overlay nested inside it can never paint an
+> `outerBorder`. The hook ignores such a ref and anchors to the parent instead.
+
+`wrapperRef` is only needed when the parent isn't a usable anchor — see
+[Anchoring](#anchoring) below.
+
+### Anchoring
+
+The overlay is appended to an anchor element and absolutely positioned over your
+element. The anchor is the element's parent by default; pass `wrapperRef` to
+choose a different ancestor.
+
+| | Effect |
+|---|---|
+| Anchor is `position: static` | The hook sets `position: relative` on it (ref-counted, restored on unmount). |
+| Many elements share one parent | Fine — each overlay is positioned over its own element. |
+| Anchor has `overflow: hidden`/`auto` | Outer effects are clipped at the anchor's edges, like any other child. Pass a `wrapperRef` pointing at an ancestor outside the scroll container, or add padding. |
+| Sibling selectors | The overlay is a real child of the anchor, so `:last-child` on the parent will match it. `:first-child` and `:nth-child(n)` for your own elements are unaffected — overlays are appended last. |
+
+The overlay re-positions when your element resizes, when the anchor resizes, and
+on any re-render that moves the element. A move driven by neither — pure CSS
+realignment with no re-render and no size change anywhere, such as a `:hover`
+rule on the container flipping `justify-content` — has no signal to observe and
+will leave the overlay behind until the next resize or render.
+
 ### `UseEffectsOptions`
 
 ```ts
 interface UseEffectsOptions {
+  /** Ancestor to mount the SVG overlay on. Default: the element's parent. */
   wrapperRef?: React.RefObject<HTMLElement | null>;
   effects?: EffectsConfig;
   autoEffects?: boolean; // Default: true
@@ -471,11 +524,9 @@ import { useRef } from "react";
 import { useSmoothCorners } from "@lisse/react";
 
 function ElevatedCard() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useSmoothCorners(ref, { radius: 24, smoothing: 0.6 }, {
-    wrapperRef,
     effects: {
       shadow: [
         { offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: "#000000", opacity: 0.12 },
@@ -485,10 +536,8 @@ function ElevatedCard() {
   });
 
   return (
-    <div ref={wrapperRef} style={{ position: "relative" }}>
-      <div ref={ref} style={{ background: "#fff", padding: 32 }}>
-        Layered shadow
-      </div>
+    <div ref={ref} style={{ background: "#fff", padding: 32 }}>
+      Layered shadow
     </div>
   );
 }

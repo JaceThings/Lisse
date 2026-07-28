@@ -35,3 +35,30 @@ export function releasePosition(anchor: HTMLElement): void {
     refCounts.set(anchor, count - 1);
   }
 }
+
+const isolationCounts = new WeakMap<HTMLElement, number>();
+const savedIsolation = new WeakMap<HTMLElement, string>();
+
+/**
+ * Stacking context for the `z-index:-1` drop-shadow SVG. Ref-counted because a
+ * whole grid routinely shares one anchor: saving per handle meant the second
+ * captured the first's `isolate` and restored it on teardown.
+ */
+export function acquireIsolation(anchor: HTMLElement): void {
+  const count = isolationCounts.get(anchor) ?? 0;
+  if (count === 0) savedIsolation.set(anchor, anchor.style.isolation);
+  isolationCounts.set(anchor, count + 1);
+  anchor.style.isolation = "isolate";
+}
+
+export function releaseIsolation(anchor: HTMLElement): void {
+  const count = isolationCounts.get(anchor);
+  if (count === undefined) return;
+  if (count <= 1) {
+    isolationCounts.delete(anchor);
+    anchor.style.isolation = savedIsolation.get(anchor) ?? "";
+    savedIsolation.delete(anchor);
+  } else {
+    isolationCounts.set(anchor, count - 1);
+  }
+}

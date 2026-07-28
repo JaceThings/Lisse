@@ -1,8 +1,10 @@
 import type { SmoothCornerOptions, ShadowConfig } from "./types.js";
-import { SVG_NS, nextUid, hexToRgb, adjustOptions, createPathCache } from "./svg-shared.js";
+import type { OverlayOffset } from "./svg-shared.js";
+import { SVG_NS, nextUid, hexToRgb, adjustOptions, createPathCache, createOverlayPlacer } from "./svg-shared.js";
+import { acquireIsolation, releaseIsolation } from "./position-ref-count.js";
 
 export interface DropShadowHandle {
-  update(options: SmoothCornerOptions, shadow: ShadowConfig | ShadowConfig[], width: number, height: number): void;
+  update(options: SmoothCornerOptions, shadow: ShadowConfig | ShadowConfig[], width: number, height: number, offset?: OverlayOffset): void;
   destroy(): void;
 }
 
@@ -67,24 +69,21 @@ function removeShadowEntry(entry: ShadowEntry): void {
 }
 
 /**
- * Path-based drop shadows behind the anchor. Uses spread-adjusted squircle
- * paths so the shadow follows the smooth-corner silhouette at any spread.
- * Accepts a single ShadowConfig or an array; first entry renders topmost.
- * The SVG sits at z-index:-1 inside the anchor's `isolation:isolate`
- * stacking context.
+ * Path-based drop shadows behind `target`, the clipped element, rendered into
+ * `anchor`. Uses spread-adjusted squircle paths so the shadow follows the
+ * smooth-corner silhouette at any spread. Accepts a single ShadowConfig or an
+ * array; first entry renders topmost. The SVG sits at z-index:-1 inside the
+ * anchor's `isolation:isolate` stacking context.
  */
-export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
-  const savedIsolation = anchor.style.isolation;
-  anchor.style.isolation = "isolate";
+export function createDropShadow(anchor: HTMLElement, target: HTMLElement = anchor): DropShadowHandle {
+  acquireIsolation(anchor);
 
   const svg = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
-  svg.style.cssText = "position:absolute;inset:0;overflow:visible;pointer-events:none;z-index:-1";
-  // SVG is a replaced element; without explicit width/height attributes
-  // it falls back to the 300×150 intrinsic default, which overflows
-  // narrower anchors (e.g. ~110 px toggle pills on mobile) and forces
-  // horizontal scroll. `100%` stretches the canvas to fill the anchor.
-  svg.setAttribute("width", "100%");
-  svg.setAttribute("height", "100%");
+  svg.style.cssText = "position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:-1";
+  // Without these an SVG falls back to its 300×150 intrinsic size, overflowing
+  // narrow anchors (~110px mobile toggle pills) and forcing horizontal scroll.
+  svg.setAttribute("width", "0");
+  svg.setAttribute("height", "0");
   svg.setAttribute("aria-hidden", "true");
 
   const defs = document.createElementNS(SVG_NS, "defs");
@@ -95,9 +94,10 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
   const pool: ShadowEntry[] = [];
 
   const getPath = createPathCache();
+  const place = createOverlayPlacer(anchor, target);
 
   return {
-    update(options, shadow, width, height) {
+    update(options, shadow, width, height, offset) {
       const arr = Array.isArray(shadow) ? shadow : [shadow];
 
       const hasVisible = width > 0 && height > 0 && arr.some((s) => s.opacity > 0);
@@ -105,6 +105,8 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
         svg.style.display = "none";
         return;
       }
+
+      place(svg, width, height, offset);
 
       while (pool.length < arr.length) pool.push(createShadowEntry(defs, svg));
       while (pool.length > arr.length) removeShadowEntry(pool.pop()!);
@@ -156,7 +158,7 @@ export function createDropShadow(anchor: HTMLElement): DropShadowHandle {
     },
     destroy() {
       svg.remove();
-      anchor.style.isolation = savedIsolation;
+      releaseIsolation(anchor);
     },
   };
 }

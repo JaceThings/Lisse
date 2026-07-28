@@ -1,8 +1,9 @@
 import type { SmoothCornerOptions, EffectsConfig, BorderConfig, ShadowConfig, GradientConfig } from "./types.js";
-import { SVG_NS, nextUid, hexToRgb, darkenHex, adjustOptions, isGradient, createGradientDef, updateGradientDef, darkenGradient, createPathCache } from "./svg-shared.js";
+import type { OverlayOffset } from "./svg-shared.js";
+import { SVG_NS, nextUid, hexToRgb, darkenHex, adjustOptions, isGradient, createGradientDef, updateGradientDef, darkenGradient, createPathCache, createOverlayPlacer } from "./svg-shared.js";
 
 export interface SvgEffectsHandle {
-  update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number): void;
+  update(options: SmoothCornerOptions, effects: EffectsConfig, width: number, height: number, offset?: OverlayOffset): void;
   destroy(): void;
 }
 
@@ -228,22 +229,29 @@ function removeInnerShadowEntry(entry: InnerShadowEntry): void {
 }
 
 /**
- * SVG overlay for inner/outer/middle borders and inner shadows.
- * Appended to `anchor`; clip-path, mask and filter elements update in sync
- * with the smooth-corner path on each `update()` call.
+ * SVG overlay for inner/outer/middle borders and inner shadows. Appended to
+ * `anchor` and positioned over `target`, the clipped element — which must never
+ * be an ancestor of the overlay, since `clip-path` clips its whole subtree and
+ * would cut an outer border away. Clip-path, mask and filter elements update in
+ * sync with the smooth-corner path on each `update()`.
  */
-export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
+export function createSvgEffects(anchor: HTMLElement, target: HTMLElement = anchor): SvgEffectsHandle {
   const id = nextUid();
   const clipId = `sc-clip-${id}`;
   const maskId = `sc-mask-${id}`;
 
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.style.position = "absolute";
-  svg.style.inset = "0";
+  svg.style.left = "0px";
+  svg.style.top = "0px";
   svg.style.pointerEvents = "none";
   svg.style.overflow = "visible";
   svg.style.zIndex = "1";
   svg.setAttribute("aria-hidden", "true");
+  // Without these an SVG falls back to its 300×150 intrinsic size and overflows
+  // the anchor until the first update() lands.
+  svg.setAttribute("width", "0");
+  svg.setAttribute("height", "0");
 
   const defs = document.createElementNS(SVG_NS, "defs");
 
@@ -327,13 +335,13 @@ export function createSvgEffects(anchor: HTMLElement): SvgEffectsHandle {
   };
 
   const getPath = createPathCache();
+  const place = createOverlayPlacer(anchor, target);
 
   return {
-    update(options, effects, width, height) {
+    update(options, effects, width, height, offset) {
       if (width <= 0 || height <= 0) return;
 
-      svg.setAttribute("width", String(width));
-      svg.setAttribute("height", String(height));
+      place(svg, width, height, offset);
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
       getPath.setOptions(options);

@@ -4,6 +4,7 @@ import {
   createSvgEffects,
   createDropShadow,
   observeResize,
+  requestMeasure,
   getLayoutSize,
   DEFAULT_SHADOW,
   extractAndStripEffects,
@@ -13,7 +14,7 @@ import {
   hasEffects,
   mergeEffects,
 } from "@lisse/core";
-import type { SmoothCornerOptions, EffectsConfig, ShadowConfig } from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig, ShadowConfig, Measured, OverlayOffset } from "@lisse/core";
 
 /**
  * `useLayoutEffect` on the client, `useEffect` during SSR — mutate the DOM
@@ -28,10 +29,11 @@ function syncEffects(
   effectsHandle: ReturnType<typeof createSvgEffects>,
   shadowHandle: ReturnType<typeof createDropShadow> | undefined,
   width: number, height: number,
+  offset: OverlayOffset,
 ): void {
-  effectsHandle.update(options, merged, width, height);
+  effectsHandle.update(options, merged, width, height, offset);
   // shadowHandle is lazy — border-only consumers never mount the drop-shadow SVG.
-  shadowHandle?.update(options, merged.shadow ?? DEFAULT_SHADOW, width, height);
+  shadowHandle?.update(options, merged.shadow ?? DEFAULT_SHADOW, width, height, offset);
 }
 
 interface State {
@@ -42,12 +44,15 @@ interface State {
   shadowHandle: ReturnType<typeof createDropShadow> | undefined;
   anchor: HTMLElement | null;
   didAcquire: boolean;
+  unobserveAnchor: (() => void) | undefined;
   // Last-synced snapshot. runSync bails when nothing changed, which keeps
   // the every-commit re-clip at one computed-style read per render. `null`
   // key = invalidated (effects state mutated outside the render keys).
   lastWidth: number;
   lastHeight: number;
   lastSyncKey: string | null;
+  lastOffsetX: number;
+  lastOffsetY: number;
   // SSR border-radius fallback the wrapper wrote (undefined when the user
   // supplied their own border-radius). CSS intersects border-radius with the
   // clip-path, and the rounded rect is a strict subset of the squircle, so the
@@ -74,7 +79,7 @@ interface SyncRefs {
  * handles are created on first sight of effects, reused thereafter, and a
  * zero-size element bails out (the next resize tick picks it up).
  */
-function runSync(s: State, refs: SyncRefs, size?: { width: number; height: number }): void {
+function runSync(s: State, refs: SyncRefs, measured?: Measured): void {
   const merged = mergeEffects(s.extracted, refs.effectsPropRef.current);
   if (hasEffects(merged))
     ensureHandles(s, merged, refs.wrapperRefRef.current, refs.skipShadowHandleRef.current);
@@ -82,14 +87,25 @@ function runSync(s: State, refs: SyncRefs, size?: { width: number; height: numbe
   // Resize ticks thread the size the observer measured for this flush; the
   // initial mount and the every-commit sync below pass none and read it here
   // (the latter deliberately, for WebKit mid-animation correctness).
-  const { width, height } = size ?? getLayoutSize(s.el);
+  const { width, height } = measured ?? getLayoutSize(s.el);
   if (width <= 0 || height <= 0) return;
 
+  // In the guard because an anchor can move the element without resizing it;
+  // threaded from the read pass so it never becomes a write-pass layout read.
+  const anchored = s.effectsHandle !== undefined;
+  const offsetX = anchored ? (measured?.offsetLeft ?? s.el.offsetLeft) : 0;
+  const offsetY = anchored ? (measured?.offsetTop ?? s.el.offsetTop) : 0;
+
   const key = refs.syncKeyRef.current;
-  if (width === s.lastWidth && height === s.lastHeight && key === s.lastSyncKey) return;
+  if (
+    width === s.lastWidth && height === s.lastHeight && key === s.lastSyncKey &&
+    offsetX === s.lastOffsetX && offsetY === s.lastOffsetY
+  ) return;
   s.lastWidth = width;
   s.lastHeight = height;
   s.lastSyncKey = key;
+  s.lastOffsetX = offsetX;
+  s.lastOffsetY = offsetY;
 
   s.el.style.clipPath = generateClipPath(width, height, refs.optionsRef.current);
   s.el.setAttribute("data-state", "ready");
@@ -103,7 +119,7 @@ function runSync(s: State, refs: SyncRefs, size?: { width: number; height: numbe
   }
 
   if (s.effectsHandle) {
-    syncEffects(refs.optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height);
+    syncEffects(refs.optionsRef.current, merged, s.effectsHandle, s.shadowHandle, width, height, { x: offsetX, y: offsetY });
   }
 }
 
@@ -120,16 +136,23 @@ function ensureHandles(
   skipShadowHandle: boolean,
 ): void {
   if (!s.anchor) {
-    const anchor = wrapperRef?.current ?? s.el.parentElement;
+    // A ref aimed at the element itself is ignored: `clip-path` clips its own
+    // subtree, so an overlay nested there could never paint an outer border.
+    const supplied = wrapperRef?.current;
+    const wrapper = supplied && supplied !== s.el ? supplied : null;
+    const anchor = wrapper ?? s.el.parentElement;
     if (!anchor) return;
     s.anchor = anchor;
     s.didAcquire = acquirePosition(anchor);
+    // An anchor can move the element without resizing it. The callback runs in
+    // the write pass, so it measures nothing and re-queues instead.
+    s.unobserveAnchor = observeResize(anchor, () => requestMeasure(s.el));
   }
   if (!s.effectsHandle) {
-    s.effectsHandle = createSvgEffects(s.anchor);
+    s.effectsHandle = createSvgEffects(s.anchor, s.el);
   }
   if (!s.shadowHandle && merged.shadow && !skipShadowHandle) {
-    s.shadowHandle = createDropShadow(s.anchor);
+    s.shadowHandle = createDropShadow(s.anchor, s.el);
   }
 }
 
@@ -260,9 +283,12 @@ export function useSmoothCorners(
       shadowHandle: undefined,
       anchor: null,
       didAcquire: false,
+      unobserveAnchor: undefined,
       lastWidth: 0,
       lastHeight: 0,
       lastSyncKey: null,
+      lastOffsetX: 0,
+      lastOffsetY: 0,
       fallbackBorderRadius: fallbackBorderRadiusRef.current,
       clearedFallbackRadius: false,
     };
@@ -280,6 +306,7 @@ export function useSmoothCorners(
 
     return () => {
       unobserve();
+      s.unobserveAnchor?.();
       s.effectsHandle?.destroy();
       s.shadowHandle?.destroy();
       if (s.extracted) restoreStyles(el, s.extracted.savedStyles);
