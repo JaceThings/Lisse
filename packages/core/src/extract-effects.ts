@@ -1,4 +1,9 @@
-import type { BorderConfig, BorderStyle, ShadowConfig, EffectsConfig } from "./types.js";
+import type {
+  BorderConfig,
+  BorderStyle,
+  ShadowConfig,
+  EffectsConfig,
+} from "./types.js";
 
 export interface ExtractedEffects {
   effects: EffectsConfig;
@@ -17,16 +22,37 @@ export interface ExtractedEffects {
  * Accepts legacy comma form `rgb(255, 0, 0)` and CSS Color L4 space form
  * `rgb(255 0 0 / 0.5)`. Returns undefined for unrecognised input.
  */
-export function parseColor(raw: string): { hex: string; opacity: number } | undefined {
+export function parseColor(
+  raw: string,
+): { hex: string; opacity: number } | undefined {
   const match = raw.match(
     /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/,
   );
+  const oklchMatch = raw.match(
+    /^oklch\(\s*[^/)]*?(?:\s*\/\s*([\d.]+%?))?\s*\)$/i,
+  );
+
+  if (oklchMatch) {
+    const alpha = oklchMatch[1];
+
+    return {
+      hex: raw,
+      opacity:
+        alpha === undefined
+          ? 1
+          : alpha.endsWith("%")
+            ? Number.parseFloat(alpha) / 100
+            : Number(alpha),
+    };
+  }
+
   if (!match) return undefined;
   const r = Number(match[1]);
   const g = Number(match[2]);
   const b = Number(match[3]);
   const a = match[4] !== undefined ? Number(match[4]) : 1;
-  const hex = "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  const hex =
+    "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
   return { hex, opacity: a };
 }
 
@@ -61,7 +87,11 @@ export function parseBorder(
   // "solid" is the default and stays implicit; only non-solid supported
   // styles are carried through. Anything else (inset/outset/…) is dropped.
   const nonSolid: Record<string, BorderStyle> = {
-    dashed: "dashed", dotted: "dotted", double: "double", groove: "groove", ridge: "ridge",
+    dashed: "dashed",
+    dotted: "dotted",
+    double: "double",
+    groove: "groove",
+    ridge: "ridge",
   };
   const borderStyle = nonSolid[style];
 
@@ -127,7 +157,10 @@ export function parseBoxShadow(raw: string): {
     }
 
     const rest = cleaned.replace(colorMatch[0], "").trim();
-    const values = rest.split(/\s+/).map(parseFloat).filter((v) => !isNaN(v));
+    const values = rest
+      .split(/\s+/)
+      .map(parseFloat)
+      .filter((v) => !isNaN(v));
     if (values.length < 2) continue;
 
     const config: ShadowConfig = {
@@ -200,10 +233,10 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
     boxSizing === "content-box" &&
     (borderTopW > 0 || borderRightW > 0 || borderBottomW > 0 || borderLeftW > 0)
   ) {
-    el.style.paddingTop = (paddingTop + borderTopW) + "px";
-    el.style.paddingRight = (paddingRight + borderRightW) + "px";
-    el.style.paddingBottom = (paddingBottom + borderBottomW) + "px";
-    el.style.paddingLeft = (paddingLeft + borderLeftW) + "px";
+    el.style.paddingTop = paddingTop + borderTopW + "px";
+    el.style.paddingRight = paddingRight + borderRightW + "px";
+    el.style.paddingBottom = paddingBottom + borderBottomW + "px";
+    el.style.paddingLeft = paddingLeft + borderLeftW + "px";
   }
 
   const effects: EffectsConfig = {};
