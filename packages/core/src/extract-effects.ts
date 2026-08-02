@@ -11,23 +11,129 @@ export interface ExtractedEffects {
     paddingLeft: string;
   };
 }
+function oklabToHex(L: number, a: number, b: number): string {
+  // OKLab → LMS
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+
+  const l = l_ ** 3;
+  const m = m_ ** 3;
+  const s = s_ ** 3;
+
+  // LMS → linear sRGB
+  let r = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  let g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  let bl = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+
+  const gamma = (x: number) =>
+    x <= 0.0031308
+      ? 12.92 * x
+      : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+
+  const clamp = (x: number) =>
+    Math.max(0, Math.min(255, Math.round(gamma(Math.max(0, x)) * 255)));
+
+  return (
+    "#" +
+    [clamp(r), clamp(g), clamp(bl)]
+      .map((v) => v.toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
+function oklchToHex(L: number, C: number, H: number): string {
+  const h = (H * Math.PI) / 180;
+  return oklabToHex(
+    L,
+    C * Math.cos(h),
+    C * Math.sin(h),
+  );
+}
+
 
 /**
  * Parse an rgb/rgba color (as returned by getComputedStyle) to hex + opacity.
  * Accepts legacy comma form `rgb(255, 0, 0)` and CSS Color L4 space form
  * `rgb(255 0 0 / 0.5)`. Returns undefined for unrecognised input.
  */
-export function parseColor(raw: string): { hex: string; opacity: number } | undefined {
-  const match = raw.match(
-    /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/,
+export function parseColor(raw: string, shouldParseComplexColors?: boolean): { hex: string; opacity: number } | undefined {
+  // rgb()/rgba()
+  const rgbMatch = raw.match(
+    /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i,
   );
-  if (!match) return undefined;
-  const r = Number(match[1]);
-  const g = Number(match[2]);
-  const b = Number(match[3]);
-  const a = match[4] !== undefined ? Number(match[4]) : 1;
-  const hex = "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
-  return { hex, opacity: a };
+
+  if (rgbMatch) {
+    const r = Number(rgbMatch[1]);
+    const g = Number(rgbMatch[2]);
+    const b = Number(rgbMatch[3]);
+    const opacity = rgbMatch[4] !== undefined ? Number(rgbMatch[4]) : 1;
+
+    return {
+      hex:
+        "#" +
+        [r, g, b]
+          .map((v) => v.toString(16).padStart(2, "0"))
+          .join(""),
+      opacity,
+    };
+  }
+
+  if (!shouldParseComplexColors) return
+  // oklch()
+  const oklchMatch = raw.match(
+    /^oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:deg)?(?:\s*\/\s*([\d.]+%?))?\s*\)$/i,
+  );
+
+  if (oklchMatch) {
+    const L = oklchMatch[1].endsWith("%")
+      ? parseFloat(oklchMatch[1]) / 100
+      : parseFloat(oklchMatch[1]);
+
+    const opacity = oklchMatch[4]
+      ? oklchMatch[4].endsWith("%")
+        ? parseFloat(oklchMatch[4]) / 100
+        : parseFloat(oklchMatch[4])
+      : 1;
+
+    return {
+      hex: oklchToHex(
+        L,
+        parseFloat(oklchMatch[2]),
+        parseFloat(oklchMatch[3]),
+      ),
+      opacity,
+    };
+  }
+
+
+  // oklab()
+  const oklabMatch = raw.match(
+    /^oklab\(\s*([\d.]+%?)\s+([+-]?[\d.]+)\s+([+-]?[\d.]+)(?:\s*\/\s*([\d.]+%?))?\s*\)$/i,
+  );
+
+  if (oklabMatch) {
+    const L = oklabMatch[1].endsWith("%")
+      ? parseFloat(oklabMatch[1]) / 100
+      : parseFloat(oklabMatch[1]);
+
+    const opacity = oklabMatch[4]
+      ? oklabMatch[4].endsWith("%")
+        ? parseFloat(oklabMatch[4]) / 100
+        : parseFloat(oklabMatch[4])
+      : 1;
+
+    return {
+      hex: oklabToHex(
+        L,
+        parseFloat(oklabMatch[2]),
+        parseFloat(oklabMatch[3]),
+      ),
+      opacity,
+    };
+  }
+
+  return undefined;
 }
 
 /** The computed-style fields `parseBorder` reads. */
@@ -55,7 +161,7 @@ export function parseBorder(
   const width = parseFloat(cs.borderTopWidth);
   if (width <= 0 || isNaN(width)) return undefined;
 
-  const color = parseColor(cs.borderTopColor);
+  const color = parseColor(cs.borderTopColor, true);
   if (!color || color.opacity <= 0) return undefined;
 
   // "solid" is the default and stays implicit; only non-solid supported
