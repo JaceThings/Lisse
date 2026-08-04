@@ -30,9 +30,12 @@ export function parseColor(raw: string): { hex: string; opacity: number } | unde
   return { hex, opacity: a };
 }
 
-// `[^()]` rather than `[^)]`: an unclosed `color(` would otherwise rescan to
-// the end of the string from every position. Computed colours never nest.
-const COLOR_FN = /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^()]+\)/;
+// One level of nesting, so an authored `color-mix(…, oklch(…) 60%, …)` matches
+// whole rather than yielding its inner colour and leaving the `60%` behind to
+// be read as a shadow offset. The two branches are disjoint on their first
+// character, which is what keeps the match linear on an unclosed `color(` run.
+const COLOR_FN =
+  /(?:color-mix|light-dark|rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\((?:[^()]|\([^()]*\))+\)/;
 const TRAILING_ALPHA = /\/\s*([\d.]+%?)\s*\)$/;
 
 /**
