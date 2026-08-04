@@ -30,6 +30,24 @@ export function parseColor(raw: string): { hex: string; opacity: number } | unde
   return { hex, opacity: a };
 }
 
+// `[^()]` rather than `[^)]`: an unclosed `color(` would otherwise rescan to
+// the end of the string from every position. Computed colours never nest.
+const COLOR_FN = /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^()]+\)/;
+const TRAILING_ALPHA = /\/\s*([\d.]+%?)\s*\)$/;
+
+/**
+ * Colours `parseColor` can't decode keep their raw CSS string instead of being
+ * clipped into hex, so the browser resolves them at full gamut and the alpha
+ * embedded in the string isn't applied a second time on top of `opacity`.
+ */
+function resolvePaint(raw: string): { color: string; opacity: number } | undefined {
+  const parsed = parseColor(raw);
+  if (parsed) return parsed.opacity > 0 ? { color: parsed.hex, opacity: parsed.opacity } : undefined;
+  if (COLOR_FN.exec(raw)?.[0] !== raw) return undefined;
+  const alpha = raw.match(TRAILING_ALPHA)?.[1];
+  return alpha && parseFloat(alpha) === 0 ? undefined : { color: raw, opacity: 1 };
+}
+
 /** The computed-style fields `parseBorder` reads. */
 export type BorderStyleSource = Pick<
   CSSStyleDeclaration,
@@ -55,8 +73,8 @@ export function parseBorder(
   const width = parseFloat(cs.borderTopWidth);
   if (width <= 0 || isNaN(width)) return undefined;
 
-  const color = parseColor(cs.borderTopColor);
-  if (!color || color.opacity <= 0) return undefined;
+  const color = resolvePaint(cs.borderTopColor);
+  if (!color) return undefined;
 
   // "solid" is the default and stays implicit; only non-solid supported
   // styles are carried through. Anything else (inset/outset/…) is dropped.
@@ -67,7 +85,7 @@ export function parseBorder(
 
   return {
     width,
-    color: color.hex,
+    color: color.color,
     opacity: color.opacity,
     ...(borderStyle ? { style: borderStyle } : {}),
   };
@@ -104,27 +122,10 @@ export function parseBoxShadow(raw: string): {
     const isInset = part.includes("inset");
     const cleaned = part.replace("inset", "").trim();
 
-    const colorMatch = cleaned.match(
-      /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]+\)/,
-    );
+    const colorMatch = cleaned.match(COLOR_FN);
     if (!colorMatch) continue;
-    const parsed = parseColor(colorMatch[0]);
-    let color: string;
-    let opacity: number;
-    if (parsed) {
-      if (parsed.opacity <= 0) continue;
-      color = parsed.hex;
-      opacity = parsed.opacity;
-    } else {
-      // Wide-gamut color (oklch, lab, color()…): keep the raw CSS string —
-      // alpha stays embedded in it. Dropping the layer instead would make
-      // callers clip away paint they never accounted for (Cloudflare draws
-      // its input borders as oklch spread-only shadow rings).
-      const alpha = colorMatch[0].match(/\/\s*([\d.]+%?)\s*\)$/);
-      if (alpha && parseFloat(alpha[1]) === 0) continue;
-      color = colorMatch[0];
-      opacity = 1;
-    }
+    const paint = resolvePaint(colorMatch[0]);
+    if (!paint) continue;
 
     const rest = cleaned.replace(colorMatch[0], "").trim();
     const values = rest.split(/\s+/).map(parseFloat).filter((v) => !isNaN(v));
@@ -135,8 +136,7 @@ export function parseBoxShadow(raw: string): {
       offsetY: values[1],
       blur: values[2] ?? 0,
       spread: values[3] ?? 0,
-      color,
-      opacity,
+      ...paint,
     };
     (isInset ? innerShadows : shadows).push(config);
   }

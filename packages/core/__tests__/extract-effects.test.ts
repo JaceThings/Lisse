@@ -103,6 +103,39 @@ describe("parseBorder", () => {
     expect(parseBorder(el)).toBeUndefined();
   });
 
+  // jsdom drops `oklch(…)` declarations outright, so the computed style is
+  // supplied directly — the same shape `getComputedStyle` returns in a browser.
+  const cs = (borderTopColor: string) => ({
+    borderTopStyle: "solid",
+    borderTopWidth: "2px",
+    borderTopColor,
+  });
+
+  it("keeps a wide-gamut border color raw instead of dropping the border", () => {
+    expect(parseBorder(el, cs("oklch(0.623 0.214 259.815)"))).toEqual({
+      width: 2,
+      color: "oklch(0.623 0.214 259.815)",
+      opacity: 1,
+    });
+  });
+
+  it("leaves wide-gamut alpha embedded rather than double-applying it", () => {
+    expect(parseBorder(el, cs("oklch(0.623 0.214 259.815 / 0.5)"))).toEqual({
+      width: 2,
+      color: "oklch(0.623 0.214 259.815 / 0.5)",
+      opacity: 1,
+    });
+  });
+
+  it("returns undefined for a wide-gamut border with zero alpha", () => {
+    expect(parseBorder(el, cs("oklch(0.623 0.214 259.815 / 0)"))).toBeUndefined();
+  });
+
+  it("returns undefined for a border color that isn't a color", () => {
+    expect(parseBorder(el, cs("currentColor"))).toBeUndefined();
+    expect(parseBorder(el, cs("oklch(0.5 0.1 200) extra"))).toBeUndefined();
+  });
+
   it("extracts dashed border style", () => {
     el.style.border = "2px dashed rgb(255, 0, 0)";
     const result = parseBorder(el);
@@ -210,6 +243,14 @@ describe("parseBoxShadow", () => {
 
   it("drops wide-gamut layers with zero alpha", () => {
     expect(parseBoxShadow("oklch(0.32 0 0 / 0) 0px 0px 4px 0px")).toEqual({});
+  });
+
+  it("rejects a ReDoS attack string in linear time", () => {
+    // Allowing `(` inside the colour-function argument run made this ~2s.
+    const attack = "color(".repeat(32_000);
+    const start = performance.now();
+    expect(parseBoxShadow(attack)).toEqual({});
+    expect(performance.now() - start).toBeLessThan(50);
   });
 
   it("returns all outer and all inset shadows from multiple shadows", () => {

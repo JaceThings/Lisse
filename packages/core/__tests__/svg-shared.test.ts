@@ -72,6 +72,13 @@ describe("darkenHex", () => {
   it("preserves zeros in other channels", () => {
     expect(darkenHex("#00ff00")).toBe("#00aa00");
   });
+
+  it("falls back to color-mix for wide-gamut input", () => {
+    // Reading channels off a non-hex string yielded NaN, painting it black.
+    expect(darkenHex("oklch(0.623 0.214 259.815)")).toBe(
+      "color-mix(in oklab, oklch(0.623 0.214 259.815), black 33%)",
+    );
+  });
 });
 
 describe("darkenGradient", () => {
