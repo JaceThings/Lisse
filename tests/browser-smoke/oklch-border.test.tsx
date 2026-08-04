@@ -37,7 +37,7 @@ afterEach(() => {
   container.remove();
 });
 
-function Box({ color }: { color: string }) {
+function Box({ color, style = "solid" }: { color: string; style?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useSmoothCorners(ref as React.RefObject<HTMLElement | null>, { radius: 14, smoothing: 0.6 });
   return createElement("div", {
@@ -45,7 +45,7 @@ function Box({ color }: { color: string }) {
     style: {
       width: SIZE,
       height: SIZE,
-      border: `${BORDER}px solid ${color}`,
+      border: `${BORDER}px ${style} ${color}`,
       boxSizing: "border-box",
       background: "#ffffff",
     },
@@ -129,6 +129,80 @@ describe("Browser smoke — wide-gamut border color", () => {
     // instead of being replaced by the SVG ring, and clip-path then eats
     // whatever falls outside the squircle.
     expect(box.style.border).toBe("0px");
+  }, 30_000);
+
+  // Every colour space `getComputedStyle` can hand back without collapsing it
+  // to rgb() first. color-mix() and light-dark() aren't here because engines
+  // resolve those during computation, so they arrive as oklab()/oklch().
+  const FORMATS: [string, string][] = [
+    ["oklch", "oklch(0.628 0.2577 29.23)"],
+    ["oklch with alpha", "oklch(0.628 0.2577 29.23 / 0.6)"],
+    ["oklab", "oklab(0.628 0.225 0.126)"],
+    ["lab", "lab(52 40 59)"],
+    ["lch", "lch(52 72 40)"],
+    ["display-p3", "color(display-p3 1 0 0)"],
+    ["srgb", "color(srgb 0.5 0 0.5)"],
+    ["tailwind opacity modifier", "color-mix(in oklab, oklch(0.628 0.2577 29.23) 60%, transparent)"],
+  ];
+
+  it.each(FORMATS)("paints a full ring for %s", async (_label, color) => {
+    root.render(createElement(Box, { color }));
+    await new Promise((r) => setTimeout(r, 200));
+
+    const box = container.querySelector("div[style]") as HTMLElement;
+    expect(box.style.border).toBe("0px");
+
+    const shot = await page.screenshot({ base64: true, element: container });
+    const at = await sampler(
+      typeof shot === "string" ? shot : shot.base64,
+      container.getBoundingClientRect(),
+    );
+    const r = box.getBoundingClientRect();
+
+    // Colour-agnostic: anything meaningfully off the white backdrop is paint.
+    const isPaint = (p: { r: number; g: number; b: number }) =>
+      255 - p.r + (255 - p.g) + (255 - p.b) > 60;
+    const run = (probe: (k: number) => { r: number; g: number; b: number }) =>
+      Array.from({ length: 17 }, (_, k) => probe(k)).filter(isPaint).length;
+
+    const straight = run((k) => at(r.left + k, r.top + r.height / 2));
+    const corner = run((k) => at(r.left + k, r.top + k));
+
+    expect(straight).toBeGreaterThanOrEqual(BORDER - 1);
+    expect(
+      corner >= straight / 2,
+      `corner band (${corner}px) should hold up against the straight edge (${straight}px)`,
+    ).toBe(true);
+  }, 30_000);
+
+  it("shades a groove border instead of flattening it to black", async () => {
+    root.render(createElement(Box, { color: RED, style: "groove" }));
+    await new Promise((r) => setTimeout(r, 200));
+
+    const box = container.querySelector("div[style]") as HTMLElement;
+    const shot = await page.screenshot({
+      base64: true,
+      element: container,
+      path: "screenshots/oklch-border-groove.png",
+    });
+    const at = await sampler(
+      typeof shot === "string" ? shot : shot.base64,
+      container.getBoundingClientRect(),
+    );
+
+    const r = box.getBoundingClientRect();
+    const band = Array.from({ length: BORDER }, (_, k) => at(r.left + k, r.top + r.height / 2));
+    const lum = band.map((p) => 0.2126 * p.r + 0.7152 * p.g + 0.0722 * p.b);
+
+    // Reading channels off a wide-gamut string used to yield NaN and paint the
+    // darkened half pure black. Two tones, neither of them black.
+    expect(Math.max(...lum) - Math.min(...lum)).toBeGreaterThan(15);
+    for (const p of band) {
+      expect(
+        p.r + p.g + p.b > 40,
+        `groove band should not go black, got rgb(${p.r},${p.g},${p.b})`,
+      ).toBe(true);
+    }
   }, 30_000);
 
   it("applies embedded alpha once, not twice", async () => {
