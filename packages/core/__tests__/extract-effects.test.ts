@@ -245,6 +245,16 @@ describe("parseBoxShadow", () => {
     expect(parseBoxShadow("oklch(0.32 0 0 / 0) 0px 0px 4px 0px")).toEqual({});
   });
 
+  it("keeps a nested colour function whole", () => {
+    // Matching the inner colour instead would leave the wrapper's `60%` to be
+    // read as offsetX, shifting every geometry value along by one.
+    const color = "color-mix(in oklab, oklch(0.628 0.2577 29.23) 60%, transparent)";
+    expect(parseBoxShadow(`${color} 2px 4px 6px 0px`)).toEqual({
+      shadow: [{ offsetX: 2, offsetY: 4, blur: 6, spread: 0, color, opacity: 1 }],
+      innerShadow: undefined,
+    });
+  });
+
   it("rejects a ReDoS attack string in linear time", () => {
     // Allowing `(` inside the colour-function argument run made this ~2s.
     const attack = "color(".repeat(32_000);
