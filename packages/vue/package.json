@@ -1,6 +1,6 @@
 {
   "name": "@lisse/vue",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Vue composable and component for smooth-cornered (squircle) elements",
   "license": "MIT",
   "type": "module",
