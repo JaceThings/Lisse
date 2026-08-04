@@ -206,6 +206,8 @@ const border = parseBorder(element);
 // { width: 2, color: "#ff0000", opacity: 1 } or undefined
 ```
 
+Colors outside sRGB — `oklch()`, `lab()`, `color()`, as Tailwind v4 emits — are carried through as their raw CSS string rather than clipped to hex, so the stroke keeps the gamut the browser paints the element with. Alpha stays embedded in that string and `opacity` is `1`.
+
 **Returns:** `BorderConfig | undefined`.
 
 ### `parseBoxShadow(raw)`

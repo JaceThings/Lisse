@@ -103,6 +103,38 @@ describe("parseBorder", () => {
     expect(parseBorder(el)).toBeUndefined();
   });
 
+  // jsdom drops `oklch(…)` declarations outright, so the computed style is
+  // supplied directly — the same shape `getComputedStyle` returns in a browser.
+  const wideGamutCs = (color: string) => ({
+    borderTopStyle: "solid",
+    borderTopWidth: "2px",
+    borderTopColor: color,
+  });
+
+  it("keeps a wide-gamut border color raw instead of dropping the border", () => {
+    const result = parseBorder(el, wideGamutCs("oklch(0.623 0.214 259.815)"));
+    expect(result).toEqual({
+      width: 2,
+      color: "oklch(0.623 0.214 259.815)",
+      opacity: 1,
+    });
+  });
+
+  it("leaves wide-gamut alpha embedded rather than double-applying it", () => {
+    const result = parseBorder(el, wideGamutCs("oklch(0.623 0.214 259.815 / 0.5)"));
+    expect(result!.color).toBe("oklch(0.623 0.214 259.815 / 0.5)");
+    expect(result!.opacity).toBe(1);
+  });
+
+  it("returns undefined for a wide-gamut border with zero alpha", () => {
+    expect(parseBorder(el, wideGamutCs("oklch(0.623 0.214 259.815 / 0)"))).toBeUndefined();
+  });
+
+  it("returns undefined for a border color that isn't a color", () => {
+    expect(parseBorder(el, wideGamutCs("currentColor"))).toBeUndefined();
+    expect(parseBorder(el, wideGamutCs("oklch(0.5 0.1 200) extra"))).toBeUndefined();
+  });
+
   it("extracts dashed border style", () => {
     el.style.border = "2px dashed rgb(255, 0, 0)";
     const result = parseBorder(el);

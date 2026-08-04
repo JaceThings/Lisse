@@ -30,6 +30,30 @@ export function parseColor(raw: string): { hex: string; opacity: number } | unde
   return { hex, opacity: a };
 }
 
+/** Colour functions `getComputedStyle` can hand back that aren't rgb(). */
+const COLOR_FN = /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]+\)/;
+
+/**
+ * Resolve a computed colour to the paint + opacity pair the configs carry.
+ *
+ * `parseColor` only decodes rgb()/rgba(). Anything wider — oklch, lab,
+ * color() — comes back undefined, and Tailwind v4 emits every colour that
+ * way. Rather than drop the paint, keep the raw CSS string: alpha stays
+ * embedded in it, so opacity is 1 and the browser resolves the colour at
+ * full gamut instead of us clipping it into sRGB. Returns undefined when the
+ * colour is fully transparent or isn't a colour at all.
+ */
+function resolvePaint(raw: string): { color: string; opacity: number } | undefined {
+  const parsed = parseColor(raw);
+  if (parsed) {
+    return parsed.opacity > 0 ? { color: parsed.hex, opacity: parsed.opacity } : undefined;
+  }
+  if (COLOR_FN.exec(raw)?.[0] !== raw) return undefined;
+  const alpha = raw.match(/\/\s*([\d.]+%?)\s*\)$/);
+  if (alpha && parseFloat(alpha[1]) === 0) return undefined;
+  return { color: raw, opacity: 1 };
+}
+
 /** The computed-style fields `parseBorder` reads. */
 export type BorderStyleSource = Pick<
   CSSStyleDeclaration,
@@ -55,8 +79,8 @@ export function parseBorder(
   const width = parseFloat(cs.borderTopWidth);
   if (width <= 0 || isNaN(width)) return undefined;
 
-  const color = parseColor(cs.borderTopColor);
-  if (!color || color.opacity <= 0) return undefined;
+  const color = resolvePaint(cs.borderTopColor);
+  if (!color) return undefined;
 
   // "solid" is the default and stays implicit; only non-solid supported
   // styles are carried through. Anything else (inset/outset/…) is dropped.
@@ -67,7 +91,7 @@ export function parseBorder(
 
   return {
     width,
-    color: color.hex,
+    color: color.color,
     opacity: color.opacity,
     ...(borderStyle ? { style: borderStyle } : {}),
   };
@@ -104,27 +128,14 @@ export function parseBoxShadow(raw: string): {
     const isInset = part.includes("inset");
     const cleaned = part.replace("inset", "").trim();
 
-    const colorMatch = cleaned.match(
-      /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]+\)/,
-    );
+    const colorMatch = cleaned.match(COLOR_FN);
     if (!colorMatch) continue;
-    const parsed = parseColor(colorMatch[0]);
-    let color: string;
-    let opacity: number;
-    if (parsed) {
-      if (parsed.opacity <= 0) continue;
-      color = parsed.hex;
-      opacity = parsed.opacity;
-    } else {
-      // Wide-gamut color (oklch, lab, color()…): keep the raw CSS string —
-      // alpha stays embedded in it. Dropping the layer instead would make
-      // callers clip away paint they never accounted for (Cloudflare draws
-      // its input borders as oklch spread-only shadow rings).
-      const alpha = colorMatch[0].match(/\/\s*([\d.]+%?)\s*\)$/);
-      if (alpha && parseFloat(alpha[1]) === 0) continue;
-      color = colorMatch[0];
-      opacity = 1;
-    }
+    // Wide-gamut layers keep their raw CSS string rather than being dropped —
+    // dropping them would make callers clip away paint they never accounted
+    // for (Cloudflare draws its input borders as oklch spread-only rings).
+    const paint = resolvePaint(colorMatch[0]);
+    if (!paint) continue;
+    const { color, opacity } = paint;
 
     const rest = cleaned.replace(colorMatch[0], "").trim();
     const values = rest.split(/\s+/).map(parseFloat).filter((v) => !isNaN(v));
