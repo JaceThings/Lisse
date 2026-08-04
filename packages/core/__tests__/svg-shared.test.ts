@@ -74,8 +74,7 @@ describe("darkenHex", () => {
   });
 
   it("falls back to color-mix for wide-gamut input", () => {
-    // Reading channels off a non-hex string used to yield NaN, which rendered
-    // the groove edge as pure black.
+    // Reading channels off a non-hex string yielded NaN, painting it black.
     expect(darkenHex("oklch(0.623 0.214 259.815)")).toBe(
       "color-mix(in oklab, oklch(0.623 0.214 259.815), black 33%)",
     );

@@ -105,15 +105,14 @@ describe("parseBorder", () => {
 
   // jsdom drops `oklch(…)` declarations outright, so the computed style is
   // supplied directly — the same shape `getComputedStyle` returns in a browser.
-  const wideGamutCs = (color: string) => ({
+  const cs = (borderTopColor: string) => ({
     borderTopStyle: "solid",
     borderTopWidth: "2px",
-    borderTopColor: color,
+    borderTopColor,
   });
 
   it("keeps a wide-gamut border color raw instead of dropping the border", () => {
-    const result = parseBorder(el, wideGamutCs("oklch(0.623 0.214 259.815)"));
-    expect(result).toEqual({
+    expect(parseBorder(el, cs("oklch(0.623 0.214 259.815)"))).toEqual({
       width: 2,
       color: "oklch(0.623 0.214 259.815)",
       opacity: 1,
@@ -121,18 +120,20 @@ describe("parseBorder", () => {
   });
 
   it("leaves wide-gamut alpha embedded rather than double-applying it", () => {
-    const result = parseBorder(el, wideGamutCs("oklch(0.623 0.214 259.815 / 0.5)"));
-    expect(result!.color).toBe("oklch(0.623 0.214 259.815 / 0.5)");
-    expect(result!.opacity).toBe(1);
+    expect(parseBorder(el, cs("oklch(0.623 0.214 259.815 / 0.5)"))).toEqual({
+      width: 2,
+      color: "oklch(0.623 0.214 259.815 / 0.5)",
+      opacity: 1,
+    });
   });
 
   it("returns undefined for a wide-gamut border with zero alpha", () => {
-    expect(parseBorder(el, wideGamutCs("oklch(0.623 0.214 259.815 / 0)"))).toBeUndefined();
+    expect(parseBorder(el, cs("oklch(0.623 0.214 259.815 / 0)"))).toBeUndefined();
   });
 
   it("returns undefined for a border color that isn't a color", () => {
-    expect(parseBorder(el, wideGamutCs("currentColor"))).toBeUndefined();
-    expect(parseBorder(el, wideGamutCs("oklch(0.5 0.1 200) extra"))).toBeUndefined();
+    expect(parseBorder(el, cs("currentColor"))).toBeUndefined();
+    expect(parseBorder(el, cs("oklch(0.5 0.1 200) extra"))).toBeUndefined();
   });
 
   it("extracts dashed border style", () => {
@@ -245,9 +246,7 @@ describe("parseBoxShadow", () => {
   });
 
   it("rejects a ReDoS attack string in linear time", () => {
-    // The colour-function matcher used to allow `(` inside its argument run,
-    // so an unclosed `color(` rescanned to the end of the string from every
-    // position: 192KB took ~2s.
+    // Allowing `(` inside the colour-function argument run made this ~2s.
     const attack = "color(".repeat(32_000);
     const start = performance.now();
     expect(parseBoxShadow(attack)).toEqual({});
