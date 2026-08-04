@@ -30,8 +30,15 @@ export function parseColor(raw: string): { hex: string; opacity: number } | unde
   return { hex, opacity: a };
 }
 
-/** Colour functions `getComputedStyle` can hand back that aren't rgb(). */
-const COLOR_FN = /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]+\)/;
+/**
+ * Colour functions `getComputedStyle` can hand back that aren't rgb().
+ *
+ * The argument class excludes `(` as well as `)`: allowing it let a run of
+ * `color(` with no closing paren rescan to the end of the string from every
+ * position, which is quadratic. Computed colours never nest — engines resolve
+ * `color-mix()`, `light-dark()` and relative syntax before serialising.
+ */
+const COLOR_FN = /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^()]+\)/;
 
 /**
  * Resolve a computed colour to the paint + opacity pair the configs carry.

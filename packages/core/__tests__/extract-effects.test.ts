@@ -244,6 +244,16 @@ describe("parseBoxShadow", () => {
     expect(parseBoxShadow("oklch(0.32 0 0 / 0) 0px 0px 4px 0px")).toEqual({});
   });
 
+  it("rejects a ReDoS attack string in linear time", () => {
+    // The colour-function matcher used to allow `(` inside its argument run,
+    // so an unclosed `color(` rescanned to the end of the string from every
+    // position: 192KB took ~2s.
+    const attack = "color(".repeat(32_000);
+    const start = performance.now();
+    expect(parseBoxShadow(attack)).toEqual({});
+    expect(performance.now() - start).toBeLessThan(50);
+  });
+
   it("returns all outer and all inset shadows from multiple shadows", () => {
     const result = parseBoxShadow(
       "rgb(255, 0, 0) 1px 2px 3px 0px, rgb(0, 255, 0) 4px 5px 6px 0px, rgba(0, 0, 255, 0.5) 7px 8px 9px 0px inset, rgba(128, 128, 128, 0.3) 10px 11px 12px 0px inset",
