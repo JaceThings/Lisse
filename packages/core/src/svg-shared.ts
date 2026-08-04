@@ -79,13 +79,12 @@ function expandHex(hex: string): string {
   return "#" + h;
 }
 
-/**
- * Convert a hex color (3 or 6 digit) to an `rgb(...)` CSS string.
- * Non-hex input (oklch, lab, color()…) is already a valid CSS color —
- * passed through untouched.
- */
+/** Non-hex colors (oklch, lab, color()…) are already valid CSS and pass through. */
+const HEX = /^#?[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
+
+/** Convert a hex color (3 or 6 digit) to an `rgb(...)` CSS string. */
 export function hexToRgb(hex: string): string {
-  if (!/^#?[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(hex)) return hex;
+  if (!HEX.test(hex)) return hex;
   const h = expandHex(hex).replace("#", "");
   return `rgb(${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)})`;
 }
@@ -197,15 +196,9 @@ export function cornerOptionsToBorderRadius(options: SmoothCornerOptions): strin
 /**
  * Darken each RGB channel by 2/3 — Firefox's groove/ridge algorithm.
  * Pure black maps to #4c4c4c so the darkened edge stays visible.
- *
- * Non-hex input (oklch, lab, color()…) can't be read channel-wise, so it
- * falls back to `color-mix`, which darkens by the same third without
- * leaving the colour's own space.
  */
 export function darkenHex(hex: string): string {
-  if (!/^#?[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(hex)) {
-    return `color-mix(in oklab, ${hex}, black 33%)`;
-  }
+  if (!HEX.test(hex)) return `color-mix(in oklab, ${hex}, black 33%)`;
   const h = expandHex(hex).replace("#", "");
   const r = parseInt(h.substring(0, 2), 16);
   const g = parseInt(h.substring(2, 4), 16);

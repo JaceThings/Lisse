@@ -30,35 +30,22 @@ export function parseColor(raw: string): { hex: string; opacity: number } | unde
   return { hex, opacity: a };
 }
 
-/**
- * Colour functions `getComputedStyle` can hand back that aren't rgb().
- *
- * The argument class excludes `(` as well as `)`: allowing it let a run of
- * `color(` with no closing paren rescan to the end of the string from every
- * position, which is quadratic. Computed colours never nest — engines resolve
- * `color-mix()`, `light-dark()` and relative syntax before serialising.
- */
+// `[^()]` rather than `[^)]`: an unclosed `color(` would otherwise rescan to
+// the end of the string from every position. Computed colours never nest.
 const COLOR_FN = /(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^()]+\)/;
+const TRAILING_ALPHA = /\/\s*([\d.]+%?)\s*\)$/;
 
 /**
- * Resolve a computed colour to the paint + opacity pair the configs carry.
- *
- * `parseColor` only decodes rgb()/rgba(). Anything wider — oklch, lab,
- * color() — comes back undefined, and Tailwind v4 emits every colour that
- * way. Rather than drop the paint, keep the raw CSS string: alpha stays
- * embedded in it, so opacity is 1 and the browser resolves the colour at
- * full gamut instead of us clipping it into sRGB. Returns undefined when the
- * colour is fully transparent or isn't a colour at all.
+ * Colours `parseColor` can't decode keep their raw CSS string instead of being
+ * clipped into hex, so the browser resolves them at full gamut and the alpha
+ * embedded in the string isn't applied a second time on top of `opacity`.
  */
 function resolvePaint(raw: string): { color: string; opacity: number } | undefined {
   const parsed = parseColor(raw);
-  if (parsed) {
-    return parsed.opacity > 0 ? { color: parsed.hex, opacity: parsed.opacity } : undefined;
-  }
+  if (parsed) return parsed.opacity > 0 ? { color: parsed.hex, opacity: parsed.opacity } : undefined;
   if (COLOR_FN.exec(raw)?.[0] !== raw) return undefined;
-  const alpha = raw.match(/\/\s*([\d.]+%?)\s*\)$/);
-  if (alpha && parseFloat(alpha[1]) === 0) return undefined;
-  return { color: raw, opacity: 1 };
+  const alpha = raw.match(TRAILING_ALPHA)?.[1];
+  return alpha && parseFloat(alpha) === 0 ? undefined : { color: raw, opacity: 1 };
 }
 
 /** The computed-style fields `parseBorder` reads. */
@@ -137,12 +124,8 @@ export function parseBoxShadow(raw: string): {
 
     const colorMatch = cleaned.match(COLOR_FN);
     if (!colorMatch) continue;
-    // Wide-gamut layers keep their raw CSS string rather than being dropped —
-    // dropping them would make callers clip away paint they never accounted
-    // for (Cloudflare draws its input borders as oklch spread-only rings).
     const paint = resolvePaint(colorMatch[0]);
     if (!paint) continue;
-    const { color, opacity } = paint;
 
     const rest = cleaned.replace(colorMatch[0], "").trim();
     const values = rest.split(/\s+/).map(parseFloat).filter((v) => !isNaN(v));
@@ -153,8 +136,7 @@ export function parseBoxShadow(raw: string): {
       offsetY: values[1],
       blur: values[2] ?? 0,
       spread: values[3] ?? 0,
-      color,
-      opacity,
+      ...paint,
     };
     (isInset ? innerShadows : shadows).push(config);
   }
