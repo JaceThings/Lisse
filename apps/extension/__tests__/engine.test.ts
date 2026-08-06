@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { createEngine } from "../src/engine.js";
 
-/** Wait for the engine's rAF-driven flush (a few frames covers re-queues). */
+/** A few frames, so re-queued work lands too. */
 async function settle(frames = 3): Promise<void> {
   for (let i = 0; i < frames; i++) {
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -9,9 +9,8 @@ async function settle(frames = 3): Promise<void> {
 }
 
 /**
- * A plain candidate: big enough, rounded, and actually paints something.
- * `outline`/`box-shadow` are set explicitly because happy-dom computes them as
- * `""` rather than `none`, which the engine reads as a visible outline.
+ * `outline`/`box-shadow` are explicit because happy-dom computes them as `""`
+ * rather than `none`, which the engine reads as a visible outline.
  */
 function candidate(): HTMLElement {
   const el = document.createElement("div");
@@ -25,14 +24,23 @@ function candidate(): HTMLElement {
   return el;
 }
 
+/** Engines observe `document`, so a leaked one keeps styling the next test. */
+const engines: ReturnType<typeof createEngine>[] = [];
+function engine(): ReturnType<typeof createEngine> {
+  const e = createEngine({ enabled: true });
+  engines.push(e);
+  return e;
+}
+
 afterEach(() => {
+  for (const e of engines.splice(0)) e.setEnabled(false);
   document.body.innerHTML = "";
 });
 
 describe("engine — Lisse-owned pages", () => {
   it("smooths a normal page", async () => {
     const el = candidate();
-    createEngine({ enabled: true });
+    engine();
     await settle();
     expect(el.style.clipPath).toMatch(/^path\("/);
   });
@@ -41,14 +49,14 @@ describe("engine — Lisse-owned pages", () => {
     const el = candidate();
     const own = candidate();
     own.setAttribute("data-slot", "smooth-corners");
-    createEngine({ enabled: true });
+    engine();
     await settle();
     expect(el.style.clipPath).toBe("");
   });
 
   it("restores what it already wrote when Lisse mounts late", async () => {
     const el = candidate();
-    createEngine({ enabled: true });
+    engine();
     await settle();
     expect(el.style.clipPath).toMatch(/^path\("/);
 
@@ -61,12 +69,52 @@ describe("engine — Lisse-owned pages", () => {
   it("stays stood down across a disable/enable toggle", async () => {
     const el = candidate();
     candidate().setAttribute("data-slot", "smooth-corners");
-    const engine = createEngine({ enabled: true });
+    const e = engine();
     await settle();
 
-    engine.setEnabled(false);
-    engine.setEnabled(true);
+    e.setEnabled(false);
+    e.setEnabled(true);
     await settle();
     expect(el.style.clipPath).toBe("");
+  });
+});
+
+describe("engine — the site's filter", () => {
+  it("does not replay an entrance blur it happened to sample", async () => {
+    const el = candidate();
+    el.style.filter = "blur(8px)";
+    engine();
+    await settle();
+
+    // Entrance animation ends and a later transition resizes the box.
+    el.style.filter = "";
+    el.style.height = "90px";
+    await settle();
+    expect(el.style.filter).toBe("");
+  });
+
+  it("leaves a filter the site sets after we land alone", async () => {
+    const el = candidate();
+    engine();
+    await settle();
+
+    el.style.filter = "blur(4px)";
+    el.style.height = "90px";
+    await settle();
+    expect(el.style.filter).toBe("blur(4px)");
+  });
+
+  it("composes its shadow filter over the site's, then hands it back", async () => {
+    const el = candidate();
+    el.style.boxShadow = "rgb(0, 0, 0) 0px 2px 4px 0px";
+    engine();
+    await settle();
+    expect(el.style.filter).toMatch(/^drop-shadow\(/);
+    // One layer, not our own readback composed over itself each re-plan.
+    expect(el.style.filter).not.toMatch(/\) drop-shadow/);
+
+    el.style.boxShadow = "none";
+    await settle();
+    expect(el.style.filter).toBe("");
   });
 });
