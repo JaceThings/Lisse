@@ -19,21 +19,14 @@ export interface EngineSettings {
   smoothing?: number;
 }
 
-/** Stop scanning once this many elements are styled — keeps big pages sane. */
 const MAX_STYLED = 1500;
-/**
- * The marker every Lisse framework binding stamps on the elements it manages.
- * Its presence means the page ships Lisse itself.
- */
+/** Stamped by every Lisse framework binding, so its presence means the page ships Lisse. */
 const LISSE_MARKER = '[data-slot="smooth-corners"]';
 /** Replaced elements are a single box even at display:inline. */
 const REPLACED_TAGS = new Set(["IMG", "VIDEO", "CANVAS", "IFRAME", "EMBED", "OBJECT"]);
-/** rAF slice: reads+writes for a frame, then yield if work remains. */
 const FRAME_BUDGET_MS = 6;
-/** Elements read/written per read-then-write chunk within a slice. */
 const CHUNK = 32;
 
-/** Four site-original border colours, reused on re-plan (our writes hide them). */
 interface BorderColors {
   top: string;
   right: string;
@@ -41,7 +34,13 @@ interface BorderColors {
   left: string;
 }
 
-/** Original inline values, restored verbatim on undo/disable. */
+/** Site-original computed values: our own writes corrupt the readback, so a re-plan reuses these. */
+interface SiteStyles {
+  filter: string;
+  borderColors: BorderColors;
+  bg: BackgroundInput;
+}
+
 interface OriginalStyles {
   clipPath: string;
   filter: string;
@@ -54,14 +53,11 @@ interface OriginalStyles {
 }
 
 interface Applied extends OriginalStyles {
-  // Site-original computed values, reused on re-plan: our own inline writes
-  // corrupt the readback (transparent border, our data-URI background layer).
-  siteFilter: string;
-  siteBorderColors: BorderColors;
-  siteBg: BackgroundInput;
+  site: SiteStyles;
   // What we last wrote, pre-serialisation — readback normalises values.
+  // A null filter means the site owns the property and we never wrote one.
   lastClip: string;
-  lastFilter: string;
+  lastFilter: string | null;
   lastBorderColor: string;
   lastBgImage: string;
   unobserve: () => void;
@@ -69,9 +65,7 @@ interface Applied extends OriginalStyles {
 
 interface PlanResult {
   plan: ReturnType<typeof computeElementPlan>;
-  siteFilter: string;
-  siteBorderColors: BorderColors;
-  siteBg: BackgroundInput;
+  site: SiteStyles;
 }
 
 function readBorder(cs: CSSStyleDeclaration, colors: BorderColors): BorderInput {
@@ -88,7 +82,6 @@ function readBorder(cs: CSSStyleDeclaration, colors: BorderColors): BorderInput 
   };
 }
 
-/** Visible outline: rendered style, non-zero width, non-transparent colour. */
 function visibleOutline(cs: CSSStyleDeclaration): boolean {
   if (cs.outlineStyle === "none" || parseFloat(cs.outlineWidth) <= 0.01) return false;
   const colour = parseColor(cs.outlineColor);
@@ -112,15 +105,13 @@ function pseudoOutside(el: HTMLElement, w: number, h: number): boolean {
   return false;
 }
 
-/** Descendants examined per candidate before assuming nothing escapes. */
 const ESCAPE_SCAN_CAP = 200;
 
 /**
  * A visible descendant sticking out of the border box gets amputated by
  * clip-path (GitHub avatar stacks: 20px avatars overflowing a 9px capsule
- * container; markdown-toolbar icons 3px above their comment form). Walks
- * descendants because escapes are often deep, capped so huge containers stay
- * cheap.
+ * container). Escapes are often deep, so this walks — capped, since huge
+ * containers must stay cheap.
  * ponytail: beyond the cap we assume no escape — widen if real sites bite.
  */
 function childrenEscapeBox(el: HTMLElement, cs: CSSStyleDeclaration): boolean {
@@ -204,28 +195,27 @@ export function createEngine(initial: EngineSettings) {
     const { tl, tr, br, bl } = read.radii;
     if (Math.max(tl, tr, br, bl) < MIN_RADIUS) return null;
 
-    const record = applied.get(el);
-    // Filter, border colour, and background readback are all polluted once we
-    // write our own values, so on re-plan we reuse the originals from the record.
-    const siteFilter = record ? record.siteFilter : cs.filter;
-    const siteBorderColors: BorderColors = record ? record.siteBorderColors : {
-      top: cs.borderTopColor,
-      right: cs.borderRightColor,
-      bottom: cs.borderBottomColor,
-      left: cs.borderLeftColor,
-    };
-    const siteBg: BackgroundInput = record ? record.siteBg : {
-      image: cs.backgroundImage,
-      origin: cs.backgroundOrigin,
-      clip: cs.backgroundClip,
-      repeat: cs.backgroundRepeat,
-      size: cs.backgroundSize,
+    const site: SiteStyles = applied.get(el)?.site ?? {
+      filter: cs.filter,
+      borderColors: {
+        top: cs.borderTopColor,
+        right: cs.borderRightColor,
+        bottom: cs.borderBottomColor,
+        left: cs.borderLeftColor,
+      },
+      bg: {
+        image: cs.backgroundImage,
+        origin: cs.backgroundOrigin,
+        clip: cs.backgroundClip,
+        repeat: cs.backgroundRepeat,
+        size: cs.backgroundSize,
+      },
     };
 
     const bgColor = parseColor(cs.backgroundColor);
     const paintsNothing =
       (!bgColor || bgColor.opacity === 0) &&
-      (siteBg.image === "none" || siteBg.image === "") &&
+      (site.bg.image === "none" || site.bg.image === "") &&
       cs.boxShadow === "none" &&
       cs.overflowX === "visible" && cs.overflowY === "visible";
 
@@ -234,24 +224,23 @@ export function createEngine(initial: EngineSettings) {
       height: h,
       radii: read.radii,
       elliptical: read.elliptical,
-      border: readBorder(cs, siteBorderColors),
+      border: readBorder(cs, site.borderColors),
       hasBorderImage: cs.borderImageSource !== "none" && cs.borderImageSource !== "",
-      background: siteBg,
+      background: site.bg,
       paintsNothing,
       hasOutline: visibleOutline(cs),
       pseudoOutside: pseudoOutside(el, w, h),
       childOutside: childrenEscapeBox(el, cs),
       boxShadow: cs.boxShadow,
-      existingFilter: siteFilter,
+      existingFilter: site.filter,
       smoothing: settings.smoothing,
       pageLeft: rect.left + window.scrollX,
       pageTop: rect.top + window.scrollY,
       dpr: window.devicePixelRatio || 1,
     };
-    return { plan: computeElementPlan(input), siteFilter, siteBorderColors, siteBg };
+    return { plan: computeElementPlan(input), site };
   }
 
-  /** Write half of a plan (reads already done in the slice's read phase). */
   function writePlan(el: HTMLElement, result: PlanResult | null) {
     if (!result || result.plan.action !== "apply") {
       if (applied.has(el)) undo(el);
@@ -271,7 +260,11 @@ export function createEngine(initial: EngineSettings) {
     };
 
     const b = plan.border;
-    const targetFilter = plan.filter ?? orig.filter;
+    // Only a shadow plan gives us a filter. Otherwise the property is the site's:
+    // `orig.filter` is an inline snapshot from whenever we first landed on the
+    // element, routinely mid-animation, so writing it back on a later re-plan
+    // replays a stale frame over what the site is animating now.
+    const targetFilter = plan.filter ?? null;
     const targetBorderColor = b ? "transparent" : orig.borderColor;
     const targetBgImage = b ? b.backgroundImage : orig.bgImage;
 
@@ -288,10 +281,13 @@ export function createEngine(initial: EngineSettings) {
     }
 
     el.style.clipPath = plan.clipPath;
-    el.style.filter = targetFilter;
 
-    // Only touch border/background when a border layer is (or was) in play.
-    if (b || (record && record.lastBorderColor === "transparent")) {
+    // Filter and border/background follow the same rule: write while the
+    // property is ours, hand it back once when it stops being.
+    if (targetFilter !== null) el.style.filter = targetFilter;
+    else if (record && record.lastFilter !== null) el.style.filter = orig.filter;
+
+    if (b || record?.lastBorderColor === "transparent") {
       el.style.borderColor = targetBorderColor;
       el.style.backgroundImage = targetBgImage;
       el.style.backgroundOrigin = b ? b.backgroundOrigin : orig.bgOrigin;
@@ -308,9 +304,7 @@ export function createEngine(initial: EngineSettings) {
     } else {
       applied.set(el, {
         ...orig,
-        siteFilter: result.siteFilter,
-        siteBorderColors: result.siteBorderColors,
-        siteBg: result.siteBg,
+        site: result.site,
         lastClip: plan.clipPath,
         lastFilter: targetFilter,
         lastBorderColor: targetBorderColor,
@@ -322,7 +316,7 @@ export function createEngine(initial: EngineSettings) {
 
   function restore(el: HTMLElement, record: Applied) {
     el.style.clipPath = record.clipPath;
-    el.style.filter = record.filter;
+    if (record.lastFilter !== null) el.style.filter = record.filter;
     el.style.borderColor = record.borderColor;
     el.style.backgroundImage = record.bgImage;
     el.style.backgroundOrigin = record.bgOrigin;
@@ -356,17 +350,12 @@ export function createEngine(initial: EngineSettings) {
 
   /**
    * Whether the page ships Lisse itself, in which case we hand the whole page
-   * back to it. The site has already chosen its corner geometry — and its
-   * bindings mount SVG overlays for borders and shadows into *ancestor* boxes,
-   * which our clip-path amputates. That's the clipping artefact this guards
-   * against, and it's why the bail is page-wide rather than per-element: the
-   * damage lands on elements that carry no marker of their own. Same principle
-   * as the `corner-shape` bail in planFor, one scope up.
-   *
-   * Probed per flush rather than once at startup: at document_start the page is
-   * empty, and the bindings only mark elements once their framework mounts.
-   * Latched, so the cost is one bail-early selector per frame that had work,
-   * and nothing at all afterwards.
+   * back to it. Its bindings mount SVG overlays for borders and shadows into
+   * *ancestor* boxes, which our clip-path amputates — so the bail is page-wide
+   * rather than per-element, since the damage lands on elements carrying no
+   * marker of their own. Probed per flush because at document_start the page is
+   * empty and bindings only mark elements once their framework mounts; latched,
+   * so it costs one selector per frame that had work and nothing afterwards.
    * ponytail: light DOM only — a site using Lisse exclusively inside shadow
    * roots goes undetected; probe observedRoots too if that ever shows up.
    */
@@ -374,8 +363,8 @@ export function createEngine(initial: EngineSettings) {
     if (stoodDown) return true;
     if (!document.querySelector(LISSE_MARKER)) return false;
     stoodDown = true;
-    // Full undo, not disableAll(): this is permanent, so the records and their
-    // resize observers go too.
+    // Full undo, not disableAll(): permanent, so the records and their resize
+    // observers go too.
     for (const el of [...applied.keys()]) undo(el);
     mo?.disconnect();
     document.removeEventListener("transitionend", onTransition, true);
@@ -386,8 +375,8 @@ export function createEngine(initial: EngineSettings) {
   }
 
   // rAF runs before paint, so elements styled in the frame they arrive never
-  // flash square. ALL reads run before ANY write — write-then-read across
-  // chunks would force a layout recomputation per chunk.
+  // flash square. ALL reads run before ANY write — interleaving would force a
+  // layout recomputation per chunk.
   function flush() {
     rafHandle = undefined;
     if (!settings.enabled || siteShipsLisse()) {
@@ -395,7 +384,6 @@ export function createEngine(initial: EngineSettings) {
       return;
     }
     const deadline = performance.now() + FRAME_BUDGET_MS;
-    // Phase A — reads only, deadline checked every CHUNK elements.
     const ops: Array<{ el: HTMLElement; result: PlanResult | null }> = [];
     let n = 0;
     for (const el of queue) {
@@ -403,7 +391,6 @@ export function createEngine(initial: EngineSettings) {
       ops.push({ el, result: el.isConnected ? planFor(el) : null });
       if (++n % CHUNK === 0 && performance.now() >= deadline) break;
     }
-    // Phase B — writes only; no layout reads follow.
     for (const { el, result } of ops) writePlan(el, result);
     if (queue.size > 0) scheduleFlush();
   }
@@ -467,9 +454,8 @@ export function createEngine(initial: EngineSettings) {
     }
   }
 
-  // A child's own change can invalidate an ancestor's verdict (a floating
-  // label transitioning out of its field's box, an avatar joining a stack).
-  // Applied ancestors are re-planned — cheap, it's map hits up a short chain.
+  // A child's own change can invalidate an ancestor's verdict: a floating label
+  // transitioning out of its field's box, an avatar joining a stack.
   function enqueueAppliedAncestors(el: Element) {
     const up = (x: Element): Element | null =>
       x.parentElement ?? ((x.getRootNode() as ShadowRoot).host ?? null);
@@ -478,10 +464,9 @@ export function createEngine(initial: EngineSettings) {
     }
   }
 
-  // Animated hover/state changes (radius, size, colours) surface here; the
-  // composedPath target crosses shadow boundaries. Instant (non-animated)
-  // pseudo-class changes fire no DOM signal — that's the tracking ceiling.
-  // ponytail: no coverage for instant :hover restyles; accept it.
+  // Animated hover/state changes (radius, size, colours) surface here.
+  // ponytail: instant pseudo-class restyles fire no DOM signal at all — no
+  // coverage for those, accept it.
   function onTransition(e: Event) {
     if (!settings.enabled) return;
     const t = e.composedPath()[0] as Node | undefined;
@@ -491,9 +476,8 @@ export function createEngine(initial: EngineSettings) {
     }
   }
 
-  // Focus rings are :focus/:focus-within outlines — no DOM mutation fires, so
-  // re-plan the focus chain (composedPath crosses shadow boundaries) to let
-  // the outline skip engage on focus and release on blur.
+  // Focus rings are :focus/:focus-within outlines and fire no mutation, so the
+  // focus chain is re-planned to let the outline skip engage and release.
   function onFocusChange(e: Event) {
     if (!settings.enabled) return;
     for (const n of e.composedPath().slice(0, 10)) {
@@ -502,8 +486,8 @@ export function createEngine(initial: EngineSettings) {
     }
   }
 
-  // Same MAX_STYLED cap as scanRoot — a SPA route change can add thousands of
-  // elements in one mutation batch, which would otherwise all hit planFor.
+  // Capped like scanRoot: a SPA route change can add thousands of elements in
+  // one mutation batch, which would otherwise all hit planFor.
   function scanSubtree(el: HTMLElement) {
     if (skip(el)) return;
     if (applied.size + queue.size >= MAX_STYLED) return;
@@ -530,10 +514,8 @@ export function createEngine(initial: EngineSettings) {
     document.addEventListener("focusin", onFocusChange, true);
     document.addEventListener("focusout", onFocusChange, true);
     scanRoot(document);
-    // Safety nets once the tree is complete; the seen-set and the plan memo
-    // keep these cheap. The delayed settle pass re-plans everything applied:
-    // SPA hydration can invalidate a verdict (size, escaping children) with
-    // no signal any observer delivers.
+    // SPA hydration can invalidate a verdict (size, escaping children) with no
+    // signal any observer delivers, so re-plan once the tree settles.
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => scanRoot(document), { once: true });
     }
@@ -555,14 +537,13 @@ export function createEngine(initial: EngineSettings) {
     for (const el of applied.keys()) enqueue(el);
   }
 
-  // Disable restores styles but keeps records + observers so re-enable can
-  // reapply — undo() would forget them, leaving nothing to re-enable.
-  // Resetting lastX defeats writePlan()'s no-op guard on re-enable.
+  // Restores styles but keeps records + observers so re-enable can reapply;
+  // undo() would forget them. Resetting lastX defeats writePlan's no-op guard.
   function disableAll() {
     for (const [el, record] of applied) {
       restore(el, record);
       record.lastClip = record.clipPath;
-      record.lastFilter = record.filter;
+      if (record.lastFilter !== null) record.lastFilter = record.filter;
       record.lastBorderColor = record.borderColor;
       record.lastBgImage = record.bgImage;
     }
