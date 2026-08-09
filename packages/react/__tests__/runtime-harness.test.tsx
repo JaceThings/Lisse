@@ -231,6 +231,25 @@ describe("React adapter — SSR border-radius fallback teardown", () => {
     expect(el.style.borderRadius).toBe("4px");
   });
 
+  it("leaves an asChild child's border-radius untouched", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners asChild autoEffects={false} corners={{ radius: 16 }}>
+          <div style={{ borderRadius: 4 }} />
+        </SmoothCorners>,
+      );
+    });
+    const el = getInner();
+    stubLayout(el);
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+
+    expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderRadius).toBe("4px");
+  });
+
   it("restores the fallback on unmount", () => {
     act(() => {
       root.render(<SmoothCorners as="div" autoEffects={false} corners={{ radius: 16 }} />);
