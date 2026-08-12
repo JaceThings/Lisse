@@ -1,5 +1,12 @@
 # @lisse/vue
 
+## 0.6.4
+
+### Patch Changes
+
+- 6442774: Keep a consumer's `border-radius` out of the SSR fallback in two more places. `SmoothCorners` only recognised a `border-radius` shorthand on its own attrs, so the fallback overrode a radius set on an `asChild` child — including in server markup, where the child's value never reached the DOM at all — and briefly cleared a per-corner longhand such as `border-top-left-radius` when the clip-path landed.
+- 6442774: Stop tearing the clip-path down on every re-render. Vue re-normalizes a vnode's `ref` on each render, so the template ref was nulled and re-set even when the element never changed, and the composable treated that as a new element: it cleared the clip-path, destroyed the SVG effect handles, and rebuilt them on the next observer tick — a frame of square corners and missing effects on any unrelated state change. Re-attaching now happens only for a genuinely different element, or when `autoEffects` toggles and the extraction lifecycle has to run again.
+
 ## 0.6.3
 
 ### Patch Changes
