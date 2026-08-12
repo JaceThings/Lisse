@@ -100,3 +100,4 @@ jobs:
           --source-dir apps/extension/dist/firefox
           --channel listed
           --upload-source-code /tmp/lisse-source.zip
+          --approval-timeout 0
