@@ -117,6 +117,24 @@ function childSuppliedStyle(children: ReactNode): CSSProperties | undefined {
   return (child.props as { style?: CSSProperties }).style;
 }
 
+// `borderRadius` plus every per-corner longhand, physical and logical
+// (`borderTopLeftRadius`, `borderStartEndRadius`, …).
+const RADIUS_PROPERTY = /^border[A-Za-z]*Radius$/;
+
+/**
+ * True when `style` sets any corner radius. Longhands count: the teardown
+ * clears the `border-radius` shorthand, which erases the longhands with it, so
+ * a single per-corner value the consumer set is enough to disable the fallback.
+ */
+function styleHasBorderRadius(style: CSSProperties | undefined): boolean {
+  if (!style) return false;
+  const record = style as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (record[key] !== undefined && RADIUS_PROPERTY.test(key)) return true;
+  }
+  return false;
+}
+
 function SmoothCornersImpl<E extends ElementType = "div">(
   props: SmoothCornersProps<E>,
   externalRef: ForwardedRef<Element>,
@@ -170,8 +188,7 @@ function SmoothCornersImpl<E extends ElementType = "div">(
   // because Slot merges the child's style last. Clearing that would discard a
   // value the consumer set, so it counts as user-supplied here too.
   const childStyle = asChild ? childSuppliedStyle(children) : undefined;
-  const userSuppliedRadius =
-    userStyle?.borderRadius !== undefined || childStyle?.borderRadius !== undefined;
+  const userSuppliedRadius = styleHasBorderRadius(userStyle) || styleHasBorderRadius(childStyle);
   const innerStyle: CSSProperties = {
     borderRadius: fallbackRadiusRef.current,
     ...userStyle,

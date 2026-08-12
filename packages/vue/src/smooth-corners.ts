@@ -1,5 +1,6 @@
 import {
   defineComponent,
+  Fragment,
   h,
   ref,
   computed,
@@ -17,18 +18,40 @@ import type {
   EffectsConfig,
 } from "@lisse/core";
 
+// `border-radius` plus every per-corner longhand, physical and logical
+// (`border-top-left-radius`, `border-start-end-radius`, …), in both the kebab
+// and camel spellings Vue accepts.
+const RADIUS_PROPERTY = /^border(?:-[a-z]+)*-radius$|^border[A-Za-z]*Radius$/;
+const RADIUS_DECLARATION = /border(?:-[a-z]+)*-radius\s*:/i;
+
 // True when a consumer-supplied `style` (object, string, or nested array —
-// Vue's accepted forms) already sets a border-radius, so the SSR fallback must
-// defer to it and never clear it.
+// Vue's accepted forms) already sets a corner radius, so the SSR fallback must
+// defer to it and never clear it. Longhands count: the teardown clears the
+// `border-radius` shorthand, which erases the longhands with it.
 function styleHasBorderRadius(style: unknown): boolean {
   if (!style) return false;
   if (Array.isArray(style)) return style.some(styleHasBorderRadius);
-  if (typeof style === "string") return /border-radius/i.test(style);
+  if (typeof style === "string") return RADIUS_DECLARATION.test(style);
   if (typeof style === "object") {
     const s = style as Record<string, unknown>;
-    return s.borderRadius !== undefined || s["border-radius"] !== undefined;
+    return Object.keys(s).some((key) => s[key] !== undefined && RADIUS_PROPERTY.test(key));
   }
   return false;
+}
+
+// True when the single element `asChild` clones onto sets its own
+// border-radius. `Slot` merges the parent's style last, so the fallback would
+// override a radius the consumer put on the child — including in SSR markup,
+// where the child's value never reaches the DOM at all. Fragments are walked
+// because Slot flattens them before picking the element.
+function childStyleHasBorderRadius(vnodes: VNode[] | undefined): boolean {
+  if (!vnodes) return false;
+  return vnodes.some((vnode) => {
+    if (vnode.type === Fragment && Array.isArray(vnode.children)) {
+      return childStyleHasBorderRadius(vnode.children as VNode[]);
+    }
+    return styleHasBorderRadius((vnode.props as { style?: unknown } | null)?.style);
+  });
 }
 
 export const SmoothCorners = defineComponent({
@@ -121,31 +144,39 @@ export const SmoothCorners = defineComponent({
     // keeping it would cancel corner smoothing on the element's own background.
     // A user-supplied border-radius wins and disables the fallback entirely.
     const clipPathApplied = ref(false);
-    const userSuppliedRadius = styleHasBorderRadius(attrs.style);
-    const fallbackStyle = computed(() =>
-      clipPathApplied.value || userSuppliedRadius
-        ? undefined
-        : { borderRadius: cornerOptionsToBorderRadius(options.value) },
+    // Written while rendering, where both the `asChild` child's own style and
+    // the current `attrs.style` are visible — a snapshot taken here in setup
+    // would go stale the moment either one changes. The composable reads it
+    // only once the clip-path lands, which is always after a render, and
+    // nothing reads it reactively during one.
+    const fallbackRadius = ref<string | undefined>(
+      styleHasBorderRadius(attrs.style) ? undefined : cornerOptionsToBorderRadius(options.value),
     );
 
     useSmoothCorners(elRef, options, {
       wrapper: wrapperRef,
       effects: effectsConfig,
       autoEffects: computed(() => props.autoEffects ?? true),
-      fallbackBorderRadius: userSuppliedRadius
-        ? undefined
-        : cornerOptionsToBorderRadius(options.value),
+      fallbackBorderRadius: fallbackRadius,
       clipPathApplied,
     });
 
     return () => {
+      const childNodes = props.asChild ? slots.default?.() : undefined;
+      const suppressFallback =
+        styleHasBorderRadius(attrs.style) ||
+        (props.asChild && childStyleHasBorderRadius(childNodes));
+      const radius = suppressFallback ? undefined : cornerOptionsToBorderRadius(options.value);
+      fallbackRadius.value = radius;
+      const fallbackStyle =
+        clipPathApplied.value || radius === undefined ? undefined : { borderRadius: radius };
       const innerProps = {
         ...attrs,
         ref: elRef,
-        style: [fallbackStyle.value, attrs.style],
+        style: [fallbackStyle, attrs.style],
       };
       const inner = props.asChild
-        ? h(Slot, innerProps, slots.default)
+        ? h(Slot, innerProps, () => childNodes ?? [])
         : h(props.as, innerProps, slots.default?.());
 
       if (needsWrapper.value) {
