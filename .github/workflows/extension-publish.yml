@@ -70,27 +70,43 @@ jobs:
       - if: steps.gate.outputs.changed == 'true'
         run: pnpm --filter @lisse/extension build
 
+      # The two stores are independent: one refusing an upload must not rob the
+      # other of its attempt, so each records its own outcome and the job's
+      # verdict is settled at the end.
       - name: Publish to Chrome Web Store
-        if: steps.gate.outputs.changed == 'true' && env.HAS_CHROME == 'true'
+        id: chrome
+        if: ${{ !cancelled() && steps.gate.outputs.changed == 'true' && env.HAS_CHROME == 'true' }}
+        continue-on-error: true
         env:
           EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        run: >
-          npx --yes chrome-webstore-upload-cli@3
-          upload
-          --source apps/extension/dist/lisse-chrome.zip
-          --auto-publish
+        run: |
+          set -o pipefail
+          if npx --yes chrome-webstore-upload-cli@3 upload \
+            --source apps/extension/dist/lisse-chrome.zip \
+            --auto-publish 2>&1 | tee /tmp/chrome-upload.log; then
+            exit 0
+          fi
+          # This version is already submitted and waiting on Google's review —
+          # a re-run for the other store's sake, not a failure to publish.
+          if grep -q ITEM_NOT_UPDATABLE /tmp/chrome-upload.log; then
+            echo "::notice::Chrome already has this version in review; nothing to upload."
+            exit 0
+          fi
+          exit 1
 
       # AMO requires reviewable source for minified bundles, so the whole repo
       # (the buildable source of the zip) rides along via --upload-source-code.
       - name: Package source for AMO review
-        if: steps.gate.outputs.changed == 'true' && env.HAS_AMO == 'true'
+        if: ${{ !cancelled() && steps.gate.outputs.changed == 'true' && env.HAS_AMO == 'true' }}
         run: git archive --format=zip -o /tmp/lisse-source.zip HEAD
 
       - name: Publish to AMO
-        if: steps.gate.outputs.changed == 'true' && env.HAS_AMO == 'true'
+        id: amo
+        if: ${{ !cancelled() && steps.gate.outputs.changed == 'true' && env.HAS_AMO == 'true' }}
+        continue-on-error: true
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
@@ -101,3 +117,10 @@ jobs:
           --channel listed
           --upload-source-code /tmp/lisse-source.zip
           --approval-timeout 0
+
+      - name: Report store failures
+        if: ${{ !cancelled() && (steps.chrome.outcome == 'failure' || steps.amo.outcome == 'failure') }}
+        run: |
+          echo "chrome: ${{ steps.chrome.outcome }}"
+          echo "amo: ${{ steps.amo.outcome }}"
+          exit 1
