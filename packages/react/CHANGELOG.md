@@ -1,5 +1,12 @@
 # @lisse/react
 
+## 0.6.4
+
+### Patch Changes
+
+- 71d8781: Keep a `border-radius` set on an `asChild` child instead of clearing it as the SSR fallback. `SmoothCorners` only checked its own `style` prop, but `Slot` merges the child's style last, so a radius set on the child is the one that reaches the DOM and it was being removed once the clip-path landed.
+- 6442774: Keep a per-corner `border-radius` longhand out of the SSR fallback teardown. Only the `borderRadius` shorthand counted as consumer-supplied, so a `borderTopLeftRadius` armed the fallback anyway — and clearing the shorthand once the clip-path landed erased the longhand with it.
+
 ## 0.6.3
 
 ### Patch Changes

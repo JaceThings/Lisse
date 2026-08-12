@@ -1,6 +1,6 @@
 {
   "name": "@lisse/react",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "React hook and component for smooth-cornered (squircle) elements",
   "license": "MIT",
   "type": "module",
