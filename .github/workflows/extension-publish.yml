@@ -1,0 +1,102 @@
+name: Extension publish
+
+# Pushes the store-ready zips to the Chrome Web Store and AMO whenever the
+# extension version bumps on main. Store review still happens on their side;
+# this only removes the manual uploads.
+#
+# Secrets (uploads are skipped, not failed, while these are absent):
+#   Chrome — CHROME_EXTENSION_ID, CHROME_CLIENT_ID, CHROME_CLIENT_SECRET,
+#            CHROME_REFRESH_TOKEN (OAuth client on a GCP project with the
+#            Chrome Web Store API enabled; see
+#            https://developer.chrome.com/docs/webstore/using-api)
+#   Firefox — AMO_JWT_ISSUER, AMO_JWT_SECRET
+#            (addons.mozilla.org → Developer Hub → Manage API Keys)
+
+on:
+  push:
+    branches: [main]
+    paths: [apps/extension/package.json]
+  # Manual runs skip the version-changed gate: retries after a store-side
+  # failure, or the first run after adding secrets.
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      HAS_CHROME: ${{ secrets.CHROME_REFRESH_TOKEN != '' }}
+      HAS_AMO: ${{ secrets.AMO_JWT_SECRET != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # HEAD^ is needed to detect the version bump.
+          fetch-depth: 2
+
+      - name: Detect version bump
+        id: gate
+        run: |
+          set -euo pipefail
+          current=$(jq -r .version apps/extension/package.json)
+          previous=$(git show HEAD^:apps/extension/package.json 2>/dev/null | jq -r .version || echo "")
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "$current" != "$previous" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$current" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.changed == 'true'
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.changed == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - if: steps.gate.outputs.changed == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - if: steps.gate.outputs.changed == 'true'
+        run: pnpm --filter @lisse/core build
+
+      - if: steps.gate.outputs.changed == 'true'
+        run: pnpm --filter @lisse/extension build
+
+      - name: Publish to Chrome Web Store
+        if: steps.gate.outputs.changed == 'true' && env.HAS_CHROME == 'true'
+        env:
+          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: >
+          npx --yes chrome-webstore-upload-cli@3
+          upload
+          --source apps/extension/dist/lisse-chrome.zip
+          --auto-publish
+
+      # AMO requires reviewable source for minified bundles, so the whole repo
+      # (the buildable source of the zip) rides along via --upload-source-code.
+      - name: Package source for AMO review
+        if: steps.gate.outputs.changed == 'true' && env.HAS_AMO == 'true'
+        run: git archive --format=zip -o /tmp/lisse-source.zip HEAD
+
+      - name: Publish to AMO
+        if: steps.gate.outputs.changed == 'true' && env.HAS_AMO == 'true'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: >
+          npx --yes web-ext@8
+          sign
+          --source-dir apps/extension/dist/firefox
+          --channel listed
+          --upload-source-code /tmp/lisse-source.zip
