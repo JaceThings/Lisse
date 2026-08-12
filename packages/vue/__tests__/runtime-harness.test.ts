@@ -136,6 +136,34 @@ describe("Vue adapter — runtime harness", () => {
     expect(h_.observerCount()).toBe(observersAfterMount);
     expect(h_.isObserved(el)).toBe(true);
   });
+
+  it("keeps the clip-path across a re-render that never changed the element", async () => {
+    const cls = ref("a");
+    mount(() =>
+      h(SmoothCorners, {
+        as: "div",
+        autoEffects: false,
+        corners: { radius: 16 },
+        class: cls.value,
+      }),
+    );
+    const el = getInner();
+    stubLayout(el);
+    h_.deliverResize(el);
+    h_.flushRaf();
+    const clipped = el.style.clipPath;
+    expect(clipped).not.toBe("");
+
+    // Vue hands the vnode a freshly normalized `ref` every render, so the
+    // template ref churns even though the element is the same. Re-attaching
+    // there would strip the clip-path until the next observer tick.
+    cls.value = "b";
+    await nextTick();
+    expect(el.getAttribute("class")).toBe("b");
+    expect(el.style.clipPath).toBe(clipped);
+    expect(el.getAttribute("data-state")).toBe("ready");
+    expect(h_.isObserved(el)).toBe(true);
+  });
 });
 
 describe("Vue adapter — SSR border-radius fallback teardown", () => {
@@ -188,6 +216,48 @@ describe("Vue adapter — SSR border-radius fallback teardown", () => {
     h_.flushRaf();
 
     expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderRadius).toBe("4px");
+  });
+
+  it("leaves a user-supplied per-corner radius untouched", () => {
+    mount(() =>
+      h(SmoothCorners, {
+        as: "div",
+        autoEffects: false,
+        corners: { radius: 16 },
+        style: { borderTopLeftRadius: "8px" },
+      }),
+    );
+    const el = getInner();
+    // Clearing the shorthand would erase the longhand too, so the fallback must
+    // never arm when only a per-corner radius is set.
+    expect(el.style.borderRadius).toBe("");
+    stubLayout(el);
+    h_.deliverResize(el);
+    h_.flushRaf();
+
+    expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderTopLeftRadius).toBe("8px");
+  });
+
+  it("leaves an asChild child's border-radius untouched", async () => {
+    mount(() =>
+      h(
+        SmoothCorners,
+        { asChild: true, autoEffects: false, corners: { radius: 16 } },
+        () => h("div", { style: { borderRadius: "4px" } }),
+      ),
+    );
+    const el = getInner();
+    // The child's radius is what paints pre-clip; the fallback must not
+    // override it (Slot merges the parent's style last).
+    expect(el.style.borderRadius).toBe("4px");
+
+    stubLayout(el);
+    h_.deliverResize(el);
+    h_.flushRaf();
+    await nextTick();
+
     expect(el.style.borderRadius).toBe("4px");
   });
 });

@@ -35,8 +35,12 @@ export interface UseEffectsOptions {
    * fallback must go or it squares off the corners. Pass `undefined` when the
    * user supplied their own border-radius. Cleared from the DOM in `syncAll`
    * and restored on teardown.
+   *
+   * A ref, because under `asChild` the caller only learns the child's own
+   * border-radius while rendering — always before the clip-path lands, which
+   * is the only time this is read.
    */
-  fallbackBorderRadius?: string;
+  fallbackBorderRadius?: MaybeRef<string | undefined>;
   /**
    * Flipped `true` when the clip-path first lands, so the component can stop
    * emitting the fallback border-radius. Vue re-patches every inline style key
@@ -148,7 +152,7 @@ export function useSmoothCorners(
     // The clip-path is the silhouette now; drop the SSR border-radius fallback
     // so it stops intersecting (squaring off) the squircle. Clear it in the DOM
     // and flip the reactive flag so the component stops re-emitting it.
-    if (effectsOptions?.fallbackBorderRadius !== undefined && !clearedFallbackRadius) {
+    if (unrefOr(effectsOptions?.fallbackBorderRadius, undefined) !== undefined && !clearedFallbackRadius) {
       el.style.borderRadius = "";
       clearedFallbackRadius = true;
     }
@@ -173,9 +177,19 @@ export function useSmoothCorners(
     }
   }
 
-  function setup() {
-    cleanup();
+  // `force` re-attaches even when the element is unchanged, for the autoEffects
+  // toggle: that flips whether CSS effects are extracted and stripped, so the
+  // whole extraction lifecycle has to run again on the same element.
+  function setup(force = false) {
     const el = unref(target);
+    // Vue re-normalizes a vnode's `ref` into a fresh object on every render, so
+    // the template ref is nulled and re-set — and this watcher fires — on
+    // re-renders that never changed the element. Re-attaching then would clear
+    // the clip-path and destroy the SVG handles until the next observer tick, a
+    // visible flash of square corners on any unrelated state change. The
+    // element we are already attached to needs nothing.
+    if (!force && el && el === attachedEl) return;
+    cleanup();
     if (!el) return;
 
     attachedEl = el;
@@ -244,7 +258,9 @@ export function useSmoothCorners(
     savedClipPath = undefined;
   }
 
-  watch(() => unref(target), setup);
+  // Wrapped so the watcher's (newValue, oldValue) args aren't mistaken for
+  // `force`.
+  watch(() => unref(target), () => setup());
   // Watch the cheap serialized keys, not the deep trees. Wrapped so the
   // watcher's (newValue, oldValue) args aren't mistaken for a border-box size;
   // watcher-driven syncs always re-measure.
@@ -255,9 +271,9 @@ export function useSmoothCorners(
   // Re-run setup (not just syncAll) when autoEffects toggles so the extraction
   // lifecycle — stripping / restoring CSS — stays correct.
   if (effectsOptions?.autoEffects !== undefined) {
-    watch(() => unref(effectsOptions!.autoEffects!), setup);
+    watch(() => unref(effectsOptions!.autoEffects!), () => setup(true));
   }
 
-  onMounted(setup);
+  onMounted(() => setup());
   onBeforeUnmount(cleanup);
 }

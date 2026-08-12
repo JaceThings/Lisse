@@ -46,6 +46,20 @@ describe("SmoothCorners Vue - server-side rendering", () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
+  it("emits an asChild child's own border-radius instead of the fallback", async () => {
+    const app = createSSRApp({
+      render: () =>
+        h(
+          SmoothCorners,
+          { asChild: true, corners: { radius: 16 } },
+          () => h("div", { style: { borderRadius: "4px" } }),
+        ),
+    });
+    const html = await renderToString(app);
+    expect(html).toContain("border-radius:4px");
+    expect(html).not.toContain("border-radius:16px");
+  });
+
   it("renders with polymorphic `as` without throwing", async () => {
     const app = createSSRApp({
       render: () =>

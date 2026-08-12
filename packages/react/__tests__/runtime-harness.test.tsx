@@ -231,6 +231,30 @@ describe("React adapter — SSR border-radius fallback teardown", () => {
     expect(el.style.borderRadius).toBe("4px");
   });
 
+  it("leaves a user-supplied per-corner radius untouched", () => {
+    act(() => {
+      root.render(
+        <SmoothCorners
+          as="div"
+          autoEffects={false}
+          corners={{ radius: 16 }}
+          style={{ borderTopLeftRadius: 8 }}
+        />,
+      );
+    });
+    const el = getInner();
+    stubLayout(el);
+    act(() => {
+      h.deliverResize(el);
+      h.flushRaf();
+    });
+
+    // Clearing the shorthand would erase the longhand too, so the fallback must
+    // never arm when only a per-corner radius is set.
+    expect(el.style.clipPath).not.toBe("");
+    expect(el.style.borderTopLeftRadius).toBe("8px");
+  });
+
   it("leaves an asChild child's border-radius untouched", () => {
     act(() => {
       root.render(
