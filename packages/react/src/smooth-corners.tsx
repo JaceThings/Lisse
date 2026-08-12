@@ -1,5 +1,7 @@
 import {
+  Children,
   forwardRef,
+  isValidElement,
   useCallback,
   useMemo,
   useRef,
@@ -108,6 +110,13 @@ function hexToRgbChannels(hex: string): { r: number; g: number; b: number } | nu
   };
 }
 
+/** The `style` of the single element `asChild` clones onto. */
+function childSuppliedStyle(children: ReactNode): CSSProperties | undefined {
+  const child = Children.toArray(children)[0];
+  if (!isValidElement(child)) return undefined;
+  return (child.props as { style?: CSSProperties }).style;
+}
+
 function SmoothCornersImpl<E extends ElementType = "div">(
   props: SmoothCornersProps<E>,
   externalRef: ForwardedRef<Element>,
@@ -157,7 +166,12 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     fallbackRadiusRef.current = cornerOptionsToBorderRadius(options);
   }
   const userStyle = (rest as { style?: CSSProperties }).style;
-  const userSuppliedRadius = userStyle?.borderRadius !== undefined;
+  // Under `asChild` the radius that reaches the DOM may come from the child,
+  // because Slot merges the child's style last. Clearing that would discard a
+  // value the consumer set, so it counts as user-supplied here too.
+  const childStyle = asChild ? childSuppliedStyle(children) : undefined;
+  const userSuppliedRadius =
+    userStyle?.borderRadius !== undefined || childStyle?.borderRadius !== undefined;
   const innerStyle: CSSProperties = {
     borderRadius: fallbackRadiusRef.current,
     ...userStyle,
