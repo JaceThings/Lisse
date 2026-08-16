@@ -1,3 +1,4 @@
+/** @jsx createElement */
 // @vitest-environment happy-dom
 import { act, createElement, createRoot, type Root } from "octane";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -28,11 +29,9 @@ describe("@lisse/octane", () => {
   it("renders the direct element when effects are disabled", () => {
     act(() => {
       root.render(
-        createElement(
-          SmoothCorners,
-          { autoEffects: false, as: "span", corners: { radius: 12 } },
-          "hello",
-        ),
+        <SmoothCorners autoEffects={false} as="span" corners={{ radius: 12 }}>
+          hello
+        </SmoothCorners>
       );
     });
 
@@ -46,16 +45,16 @@ describe("@lisse/octane", () => {
   it("supports asChild and preserves the child element", () => {
     act(() => {
       root.render(
-        createElement(
-          SmoothCorners,
-          {
-            asChild: true,
-            autoEffects: false,
-            corners: { radius: 8 },
-            className: ["parent", { active: true }],
-          },
-          createElement("button", { class: ["child", { disabled: false }], type: "button" }, "save"),
-        ),
+        <SmoothCorners
+          asChild
+          autoEffects={false}
+          corners={{ radius: 8 }}
+          className={["parent", { active: true }]}
+        >
+          <button class={["child", { disabled: false }]} type="button">
+            save
+          </button>
+        </SmoothCorners>
       );
     });
 
@@ -71,11 +70,9 @@ describe("@lisse/octane", () => {
 
     act(() => {
       root.render(
-        createElement(
-          SmoothCorners,
-          { asChild: true, autoEffects: false, ref: forwardedRef },
-          createElement("button", { ref: childRef }, "save"),
-        ),
+        <SmoothCorners asChild autoEffects={false} ref={forwardedRef}>
+          <button ref={childRef}>save</button>
+        </SmoothCorners>
       );
     });
 
@@ -87,19 +84,19 @@ describe("@lisse/octane", () => {
   it("renders the CSS shadow sibling strategy", () => {
     act(() => {
       root.render(
-        createElement(SmoothCorners, {
-          autoEffects: false,
-          corners: { radius: 12 },
-          shadowStrategy: "box-shadow",
-          shadow: {
+        <SmoothCorners
+          autoEffects={false}
+          corners={{ radius: 12 }}
+          shadowStrategy="box-shadow"
+          shadow={{
             offsetX: 0,
             offsetY: 4,
             blur: 12,
             spread: 0,
             color: "#000000",
             opacity: 0.25,
-          },
-        }),
+          }}
+        />
       );
     });
 
@@ -123,7 +120,7 @@ describe("@lisse/octane", () => {
       return null;
     }
 
-    act(() => root.render(createElement(Tester, null)));
+    act(() => root.render(<Tester />));
     expect(element.getAttribute("data-slot")).toBe("smooth-corners");
     act(() => root.unmount());
     expect(element.style.clipPath).toBe("circle(10px)");

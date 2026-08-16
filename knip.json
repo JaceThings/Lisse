@@ -18,6 +18,7 @@
         "knip",
         "publint",
         "@arethetypeswrong/cli",
+        "octane",
         "@vitest/coverage-v8",
         "fast-check",
         "svg-path-properties",

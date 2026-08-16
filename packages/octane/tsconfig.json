@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
+    "jsx": "react",
+    "jsxFactory": "createElement",
     "paths": {
       "@lisse/core": ["../core/src/index.ts"]
     }

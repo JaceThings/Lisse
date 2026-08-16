@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 const coreAlias = {
   "@lisse/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
 };
+const octaneServerRuntime = fileURLToPath(
+  new URL("./packages/octane/node_modules/octane/dist/server/index.js", import.meta.url),
+);
 
 export default defineConfig({
   test: {
@@ -57,9 +60,23 @@ export default defineConfig({
         extends: true,
         test: {
           name: "octane",
-          include: ["packages/octane/__tests__/**/*.test.ts"],
+          include: ["packages/octane/__tests__/**/*.test.{ts,tsx}"],
+          exclude: ["packages/octane/__tests__/ssr.test.tsx"],
           environment: "happy-dom",
           alias: coreAlias,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "octane-ssr",
+          include: ["packages/octane/__tests__/ssr.test.tsx"],
+          environment: "node",
+          alias: [
+            { find: /^@lisse\/core$/, replacement: coreAlias["@lisse/core"] },
+            { find: /^octane$/, replacement: octaneServerRuntime },
+            { find: /^octane\/server$/, replacement: octaneServerRuntime },
+          ],
         },
       },
       {
