@@ -1,5 +1,12 @@
 # @lisse/extension
 
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [6792031]
+  - @lisse/core@0.7.0
+
 ## 0.1.6
 
 ### Patch Changes
