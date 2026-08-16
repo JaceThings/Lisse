@@ -1,5 +1,5 @@
 import { getPathParamsForCorner } from "../corner-params.js";
-import { toRadians } from "../utils.js";
+import { toRadians, fixed4 } from "../utils.js";
 
 /**
  * The blend regime: a uniform squircle resized into the band where its short
@@ -55,7 +55,7 @@ function shoulder(
 const clampEdge = (room: number, R: number, s: number): number =>
   Math.max(0, Math.min(room / R - 1, s));
 
-const r4 = (n: number): string => (Object.is(n, -0) ? 0 : n).toFixed(4);
+const r4 = (n: number): string => fixed4(Object.is(n, -0) ? 0 : n);
 
 /**
  * Full `d` string for a uniform-squircle rectangle in the blend band. `R` is

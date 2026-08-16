@@ -152,10 +152,11 @@ per-iteration mount cost of the larger counts.
 
 ## Results
 
-Re-measured against the fixed harness on 2026-08-16, Node v26.7.0 on macOS
-(Darwin 25.5.0, Apple M4 Max), machine otherwise idle. Every case below
-sampled at ≤10% rme except the adapter `innerBorder` cells at n=100, which
-run 10-27% because a 1 s budget only fits ~10 iterations of a 200 ms op.
+Measured on 2026-08-16, Node v26.7.0 on macOS (Darwin 25.5.0, Apple M4 Max),
+machine otherwise idle, against the fixed harness and the optimized path
+emitter. Every case below sampled at ≤8% rme except the adapter `innerBorder`
+cells at n=100, which run 10-22% because a 1 s budget only fits ~10
+iterations of a 100 ms op.
 
 ### Core path engine
 
@@ -163,24 +164,24 @@ run 10-27% because a 1 s budget only fits ~10 iterations of a 200 ms op.
 
 | curve | cold (cache miss) | cached |
 |---|---|---|
-| `arc` | 3.3 µs | 3.0 µs |
-| `squircle` | 8.1 µs | 3.5 µs |
-| `superellipse` | 12.6 µs | 3.1 µs |
-| `clothoid` | 14.0 µs | 2.7 µs |
+| `arc` | 1.0 µs | 0.70 µs |
+| `squircle` | 2.5 µs | 0.67 µs |
+| `superellipse` | 3.6 µs | 0.68 µs |
+| `clothoid` | 3.7 µs | 0.64 µs |
 
 The cached column is the 100-batch case divided by 100; it is flat across
 curves because a hit returns memoised segment strings and the curve never
-runs. The cold column is the actual per-curve build cost — a 4.2× spread
+runs. The cold column is the actual per-curve build cost — a 3.7× spread
 the old warm-only tables reported as 0.06 µs.
 
 500 corners in one frame, shared corner config:
 
 | curve | cached | cold |
 |---|---|---|
-| `arc` | 1.40 ms | 1.81 ms |
-| `squircle` | 1.46 ms | 2.99 ms |
-| `superellipse` | 1.46 ms | 2.93 ms |
-| `clothoid` | 1.28 ms | 3.06 ms |
+| `arc` | 0.297 ms | 0.425 ms |
+| `squircle` | 0.277 ms | 0.580 ms |
+| `superellipse` | 0.294 ms | 0.865 ms |
+| `clothoid` | 0.276 ms | 0.861 ms |
 
 Cached is 500 elements differing only on the long axis, which never reaches
 the cache key; cold is 500 distinct short axes, so all 500 budgets are
@@ -190,10 +191,10 @@ the radius stays at 24 — a masonry grid, not 500 different corner configs.
 
 | case | mean |
 |---|---|
-| capsule 300×100 r=50 s=0.6 (full-pill) | 0.0032 ms |
-| blend band 300×130 r=50 s=0.6 | 0.0048 ms |
-| resize sweep h=100..220 r=h/2 (61 calls) | 0.201 ms |
-| `createSvgEffects` + update cycle | 0.228 ms |
+| capsule 300×100 r=50 s=0.6 (full-pill) | 0.0013 ms |
+| blend band 300×130 r=50 s=0.6 | 0.0030 ms |
+| resize sweep h=100..220 r=h/2 (61 calls) | 0.080 ms |
+| `createSvgEffects` + update cycle | 0.157 ms |
 
 ### Adapters
 
@@ -201,19 +202,19 @@ Mean ms for the whole batch (not per element), `autoEffects: true`:
 
 | adapter | Mount n=1 | Mount n=100 | Resize n=1 | Resize n=100 | Update n=1 | Update n=100 |
 |---|---|---|---|---|---|---|
-| React | 0.262 | 26.9 | 0.030 | 2.58 | 0.059 | 9.73 |
-| Vue (component) | 0.250 | 24.7 | 0.040 | 3.02 | 0.063 | 10.8 |
-| Vue (composable) | 0.109 | 10.2 | 0.029 | 2.35 | 0.031 | 5.48 |
-| Svelte (action) | 0.063 | 7.60 | 0.029 | 2.26 | 0.030 | 4.83 |
+| React | 0.171 | 17.2 | 0.019 | 1.53 | 0.037 | 6.03 |
+| Vue (component) | 0.132 | 12.6 | 0.020 | 1.58 | 0.035 | 6.28 |
+| Vue (composable) | 0.078 | 6.74 | 0.019 | 1.39 | 0.019 | 2.96 |
+| Svelte (action) | 0.046 | 5.34 | 0.017 | 1.34 | 0.017 | 2.89 |
 
 Ordering is framework overhead, not Lisse: the component rows carry a
 wrapper element and its render, the composable and action rows attach to an
 existing node. `autoEffects: false` takes roughly a third off Mount (React
-16.8 ms at n=100) because nothing extracts CSS.
+10.4 ms at n=100) because nothing extracts CSS.
 
 Adding an `innerBorder` mounts an SVG overlay per element, and that is where
-the numbers stop being useful as absolutes: n=1 costs 0.10-0.61 ms across
-all four adapters, but n=100 lands at 153-245 ms — superlinear, ~1.5-2.4 ms
+the numbers stop being useful as absolutes: n=1 costs 0.07-0.36 ms across
+all four adapters, but n=100 lands at 110-173 ms — superlinear, ~1.1-1.7 ms
 per element against 0.1 ms at n=1. The cost is happy-dom's CSSOM and DOM
 mutation on an anchor that accumulates 100 overlay `<svg>` subtrees, not the
 library's own work; the same 500-element case in a real browser stays inside

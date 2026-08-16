@@ -1,7 +1,7 @@
-import { rounded } from "../utils.js";
+import { fixed4 } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
 import { EMPTY_BUILDER_OUTPUT } from "./types.js";
-import { transformX, transformY } from "./orient.js";
+import { equalArc, negated, type EqualArcText } from "./orient.js";
 
 /**
  * Plain quarter-circle corner via native SVG `a` — the CSS `border-radius`
@@ -14,12 +14,13 @@ export const buildArc: CurveBuilder = ({
   // Clamp to the budget so the adjacent straight `L` segments can't overlap.
   const p = Math.min(cornerRadius, roundingAndSmoothingBudget);
   if (p <= 0) return EMPTY_BUILDER_OUTPUT;
+  // Both radii and both sweep deltas are the same magnitude for a quarter
+  // circle, so one format call covers the whole command in all four orients
+  // — the old per-orient rounding ran sixteen.
+  const radius = fixed4(p);
+  const arc: EqualArcText = { radius, d: radius, dn: negated(p, radius) };
   return {
     p,
-    pathSegment: (orient) => {
-      const dx = transformX(p, p, orient);
-      const dy = transformY(p, p, orient);
-      return rounded`a ${p} ${p} 0 0 1 ${dx} ${dy}`;
-    },
+    pathSegment: (orient) => equalArc(arc, orient),
   };
 };

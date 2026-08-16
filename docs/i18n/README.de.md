@@ -70,7 +70,7 @@ Mathematische Referenz: [`docs/curves.md`](../curves.md).
 - Innen-/Außen-/Mittelrahmen mit Stilvarianten (solid, dashed, dotted, double, groove, ridge)
 - Schlagschatten und Innenschatten, mit Verlaufsrahmen über die API
 - Auto-Effekte: CSS-`border` und -`box-shadow` werden beim Mount in SVG-Äquivalente umgewandelt
-- ~3,5 µs pro `generatePath()`-Aufruf aus dem Cache (~8 µs ohne Cache); 500 Ecken werden in 1,5–3 ms neu berechnet ([Details](../performance.md))
+- ~0,7 µs pro `generatePath()`-Aufruf aus dem Cache (~2,5 µs ohne Cache); 500 Ecken werden in unter 1 ms neu berechnet ([Details](../performance.md))
 - Keine Laufzeitabhängigkeiten; dualer ESM- + CJS-Export; SSR-sicherer `/path`-Subpfad
 
 ## Dokumentation

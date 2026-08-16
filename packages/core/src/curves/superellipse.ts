@@ -1,7 +1,6 @@
-import { rounded } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
 import { EMPTY_BUILDER_OUTPUT } from "./types.js";
-import { transformX, transformY } from "./orient.js";
+import { cubic, cubicText, type CubicText } from "./orient.js";
 
 // Fixed sample angles θ ∈ {0, π/6, π/3, π/2} and their trig are shape-
 // independent, so precompute once at module load. Endpoints (i = 0, 3)
@@ -88,9 +87,11 @@ export const buildSuperellipse: CurveBuilder = ({
   });
 
   // The cubic fit is orient-independent, so solve it once here (not 4×
-  // inside pathSegment). Each segment reduces to six control-point deltas
-  // that pathSegment only has to transform + round.
-  const segments: Array<[number, number, number, number, number, number]> = [];
+  // inside pathSegment) — and format it here too. Each segment reduces to
+  // six control-point deltas that every orient re-emits with permuted slots
+  // and flipped signs, so 18 `fixed4` calls now cover all four orients where
+  // per-orient rounding ran 72.
+  const segments: CubicText[] = [];
   for (let i = 0; i < THETAS.length - 1; i++) {
     const [X0, Y0] = points[i];
     const [X1, Y1] = points[i + 1];
@@ -119,24 +120,17 @@ export const buildSuperellipse: CurveBuilder = ({
     const dB2y = B2y - Y0;
     const dB3x = X1 - X0;
     const dB3y = Y1 - Y0;
-    segments.push([dB1x, dB1y, dB2x, dB2y, dB3x, dB3y]);
+    segments.push(cubicText(dB1x, dB1y, dB2x, dB2y, dB3x, dB3y));
   }
 
   return {
     p,
     pathSegment: (orient) => {
-      const parts: string[] = [];
-      for (let i = 0; i < segments.length; i++) {
-        const [dB1x, dB1y, dB2x, dB2y, dB3x, dB3y] = segments[i];
-        const dx1 = transformX(dB1x, dB1y, orient);
-        const dy1 = transformY(dB1x, dB1y, orient);
-        const dx2 = transformX(dB2x, dB2y, orient);
-        const dy2 = transformY(dB2x, dB2y, orient);
-        const dx3 = transformX(dB3x, dB3y, orient);
-        const dy3 = transformY(dB3x, dB3y, orient);
-        parts.push(rounded`c ${dx1} ${dy1} ${dx2} ${dy2} ${dx3} ${dy3}`);
+      let out = cubic(segments[0], orient);
+      for (let i = 1; i < segments.length; i++) {
+        out += " " + cubic(segments[i], orient);
       }
-      return parts.join(" ");
+      return out;
     },
   };
 };

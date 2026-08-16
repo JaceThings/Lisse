@@ -70,7 +70,7 @@ Vue、Svelte、またはフレームワーク非依存のコアについては�
 - スタイルのバリエーション（solid、dashed、dotted、double、groove、ridge）を備えた内側 / 外側 / 中央のボーダー
 - ドロップシャドウと内側シャドウ、API 経由のグラデーションボーダー
 - 自動エフェクト: マウント時に CSS の `border` と `box-shadow` を SVG 相当に変換
-- キャッシュ済みの `generatePath()` 呼び出しあたり約 3.5 µs（未キャッシュは約 8 µs）。500 個の角を 1.5〜3 ms で再計算（[詳細](../performance.md)）
+- キャッシュ済みの `generatePath()` 呼び出しあたり約 0.7 µs（未キャッシュは約 2.5 µs）。500 個の角を 1 ms 未満で再計算（[詳細](../performance.md)）
 - ランタイム依存ゼロ。ESM + CJS のデュアルエクスポート。SSR セーフな `/path` サブパス
 
 ## ドキュメント
