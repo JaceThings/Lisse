@@ -10,7 +10,6 @@ import {
 import type { OctaneNode } from "octane";
 import { hasEffects, cornerOptionsToBorderRadius } from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@lisse/core";
-import { composeRefs } from "./compose-refs.js";
 import { componentSlot, subSlot } from "./manual.js";
 import { Slot } from "./slot.js";
 import { useSmoothCorners } from "./use-smooth-corners.js";
@@ -112,10 +111,10 @@ export function SmoothCorners<E extends ElementType = "div">(
   const Component = (as ?? "div") as any;
   const internalRef = useRef<HTMLElement | null>(null, subSlot(SMOOTH_CORNERS_SLOT, "inner-ref"));
   const wrapperRef = useRef<HTMLDivElement | null>(null, subSlot(SMOOTH_CORNERS_SLOT, "wrapper-ref"));
-  const setInnerRef = useMemo(
-    () => composeRefs<HTMLElement>(internalRef, externalRef as Ref<HTMLElement>),
+  const innerRef = useMemo(
+    () => [internalRef, (externalRef as Ref<HTMLElement> | null) ?? null],
     [externalRef],
-    subSlot(SMOOTH_CORNERS_SLOT, "compose-ref"),
+    subSlot(SMOOTH_CORNERS_SLOT, "ref-array"),
   );
 
   const options: SmoothCornerOptions = corners ?? { radius: 0 };
@@ -182,8 +181,8 @@ export function SmoothCorners<E extends ElementType = "div">(
   );
 
   const inner = asChild
-    ? createElement(Slot as any, { ...rest, style: innerStyle, ref: setInnerRef }, children)
-    : createElement(Component, { ...rest, style: innerStyle, ref: setInnerRef }, children);
+    ? createElement(Slot as any, { ...rest, style: innerStyle, ref: innerRef }, children)
+    : createElement(Component, { ...rest, style: innerStyle, ref: innerRef }, children);
 
   if (!needsWrapper) return inner;
 

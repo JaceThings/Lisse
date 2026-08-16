@@ -65,6 +65,25 @@ describe("@lisse/octane", () => {
     expect(button?.getAttribute("data-slot")).toBe("smooth-corners");
   });
 
+  it("composes forwarded and child refs with Octane ref arrays", () => {
+    const forwardedRef = { current: null as HTMLButtonElement | null };
+    const childRef = { current: null as HTMLButtonElement | null };
+
+    act(() => {
+      root.render(
+        createElement(
+          SmoothCorners,
+          { asChild: true, autoEffects: false, ref: forwardedRef },
+          createElement("button", { ref: childRef }, "save"),
+        ),
+      );
+    });
+
+    const button = container.querySelector("button");
+    expect(forwardedRef.current).toBe(button);
+    expect(childRef.current).toBe(button);
+  });
+
   it("renders the CSS shadow sibling strategy", () => {
     act(() => {
       root.render(

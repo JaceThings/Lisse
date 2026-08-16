@@ -5,7 +5,6 @@ import {
   isValidElement,
   useMemo,
 } from "octane";
-import { composeRefs } from "./compose-refs.js";
 import { componentSlot } from "./manual.js";
 import type {
   ComponentPropsWithoutRef,
@@ -112,10 +111,10 @@ export function Slot<E extends ElementType = ElementType>(
   const existingRef =
     (childProps as { ref?: Ref<HTMLElement> }).ref ?? childElement.ref ?? undefined;
   const merged = mergeProps(rest as AnyProps, childProps);
-  const composedRef = useMemo(
-    () => composeRefs(forwardedRef, existingRef),
+  const mergedRef = useMemo(
+    () => [forwardedRef ?? null, existingRef ?? null],
     [forwardedRef, existingRef],
-    componentSlot("Slot:compose-ref"),
+    componentSlot("Slot:ref-array"),
   );
-  return cloneElement(childElement, { ...merged, ref: composedRef });
+  return cloneElement(childElement, { ...merged, ref: mergedRef });
 }
