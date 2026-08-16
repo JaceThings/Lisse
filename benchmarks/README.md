@@ -8,19 +8,25 @@ counts and effect configurations. Results are summarised in
 
 ## What this measures
 
-The suite spans several files: `core.bench.ts` (the DOM-free path and
+The suite spans five files: `core.bench.ts` (the DOM-free path and
 effects engine), the three adapter benches
 (`use-smooth-corners.bench.ts` for React,
 `use-smooth-corners-vue.bench.ts`, `use-smooth-corners-svelte.bench.ts`),
-and `ssr.bench.ts` (server render). The adapter benches share a common
-grid, each driving one of three hot paths:
+and `ssr.bench.ts` (server render). The adapter benches share one grid
+out of `adapter-bench-harness.ts`, each cell driving three hot paths:
 
-- **Resize**: deliver a `ResizeObserver` callback to every mounted
-  element and wait for every per-element sync to finish.
+- **Resize**: deliver a `ResizeObserver` callback carrying a changed
+  border box to every mounted element and wait for every per-element sync
+  to finish. The delivered size alternates between 200x100 and 240x120
+  across iterations: core drops a notification that reports the box the
+  last flush already measured, and each adapter's own change guard bails
+  when width, height and the serialized options are all unchanged, so a
+  constant size would time two skips instead of a re-sync.
 - **Mount**: render _N_ `<SmoothCorners />` instances from scratch and run
   the first sync (clip-path apply + initial SVG overlay).
 - **Update**: mutate the `corners.radius` prop on every instance and
-  measure the re-sync cost (commit + second `useIsoLayoutEffect`).
+  measure the re-sync cost (framework commit + the adapter's
+  layout-effect equivalent).
 
 The suite exercises this grid:
 
@@ -30,8 +36,40 @@ The suite exercises this grid:
 | `autoEffects`   | `true`, `false`                               |
 | Effects present | `none`, `innerBorder: { width, color, opacity }` |
 
-That's 16 cells times 3 hot paths = **48 bench cases**, each sampled for
-~1 second of wall-clock time (tinybench defaults under vitest-bench).
+That's 16 cells times 3 hot paths = **48 cases per grid**. React and
+Svelte run the grid once each; the Vue file runs it twice, once through
+the `<SmoothCorners>` component and once through the `useSmoothCorners`
+composable — **192 adapter cases**. `core.bench.ts` adds 12 and
+`ssr.bench.ts` 8, for **212 cases** in total. Adapter and SSR cases
+sample for at least a second (`time: 1000`); the core cases take
+tinybench's 500 ms default. Every case also has tinybench's
+10-iteration floor.
+
+## How a vacuous case fails
+
+Each adapter bench asserts, immediately after the mount helper's first
+`fireAll`, that the element it just mounted actually synced —
+`data-state="ready"` plus a non-empty inline `clip-path` — and throws
+otherwise. A bench that silently measures an early return is worse than a
+missing benchmark: it reports a fast number.
+
+`core.bench.ts` guards its own two failure shapes, both of them the
+corner-output cache:
+
+- The cold `generatePath` cases walk a 128-value radius cycle, and assert
+  that one pass leaves the 64-slot curve cache exactly full — the proof
+  that the pass evicts, so the next pass misses and every call is a real
+  build.
+- The cached 100-batch case asserts the opposite, since that is what its
+  name promises: a working set below capacity that adds no entries on a
+  second pass.
+- The capsule sweep asserts its 61 calls produce 61 distinct paths, so it
+  cannot collapse onto one repeated shape.
+- Every case that must produce a corner asserts the `d` string contains a
+  cubic or arc command. Both of `generatePath`'s early returns — a
+  non-positive size, all-zero radii — emit a straight-line rectangle
+  instead, and so does an overlay `update()` that bails on its own
+  `width <= 0` guard.
 
 ## What this does NOT measure
 
@@ -42,9 +80,19 @@ That's 16 cells times 3 hot paths = **48 bench cases**, each sampled for
 - **Real `ResizeObserver` scheduling**. The bench installs a controllable
   stub and fires callbacks synchronously. This isolates the adapter's JS
   work from the browser's frame-aligned dispatch.
-- **Real layout**. `getBoundingClientRect` is stubbed to return a
-  constant 200x100 rect; clip-path math is deterministic regardless of
-  actual node layout.
+- **Real layout**. happy-dom runs no layout engine, so the harness stubs
+  one. `stubLayout()` defines `offsetWidth`/`offsetHeight` getters on
+  `HTMLElement.prototype` — the fallback `getLayoutSize` takes when
+  computed `width`/`height` are not px values, which is every element
+  under happy-dom — and points `getBoundingClientRect` at the same
+  numbers, since the SVG overlay's rect-measured placement branch reads
+  those. `fireAll(width, height)` moves that stubbed box and delivers a
+  `borderBoxSize` and `contentRect` that agree with it, which is what a
+  browser does: the notification's box and a live measure taken in the
+  same frame report the same size. Before this, only the rect was stubbed
+  while `offsetWidth` stayed at happy-dom's 0, so every adapter sync
+  bailed on `width <= 0` and the whole adapter grid timed a framework
+  mount plus an early return.
 
 Treat the output as a relative comparison tool ("how much does adding an
 `innerBorder` cost per instance?") not an absolute frame budget.
@@ -85,9 +133,10 @@ vitest-bench prints tinybench stats per case. The columns you want are:
   (returning `undefined` so the core's "frame scheduled?" guard stays
   correct) and a stub `ResizeObserver` that records callbacks for manual
   firing.
-- **happy-dom layout approximation**. No layout engine runs, so the
-  adapter never sees genuinely invalidated boxes. The bench simulates
-  "layout happened" by firing the observer stub.
+- **Stubbed layout, not approximated layout**. Sizes come from the
+  harness and change only when a bench says so, so nothing here exercises
+  a fractional box, an ancestor transform, a vertical writing mode, or a
+  box the browser invalidated on its own.
 - **Node-only**. These numbers come from V8 on Node under macOS. They're
   representative of user-agents that ship V8 (Chromium, Edge) but not
   direct proxies for Safari or Firefox.
@@ -96,59 +145,101 @@ vitest-bench prints tinybench stats per case. The columns you want are:
 
 ## Grid adjustments
 
-None. The full 4 x 2 x 2 x 3 = 48-case grid completes in a few minutes on
-a modern laptop; no dimensions were reduced.
+None. No dimension was reduced: 4 x 2 x 2 x 3 = 48 cases per adapter
+grid, 212 across the suite. Sampling alone therefore floors a full run at
+a little over three minutes (200 cases at ≥1 s, 12 at ≥0.5 s), before the
+per-iteration mount cost of the larger counts.
 
-## Results (2026-07-09, Node v26.4.0 on macOS Darwin 25.5.0)
+## Results
 
-See [`docs/performance.md`](../docs/performance.md) for narrative
-analysis and rules of thumb. The tables below are the raw per-case means
-in milliseconds. All cases sampled below ±2.6% rme; none needed a re-run.
+Re-measured against the fixed harness on 2026-08-16, Node v26.7.0 on macOS
+(Darwin 25.5.0, Apple M4 Max), machine otherwise idle. Every case below
+sampled at ≤10% rme except the adapter `innerBorder` cells at n=100, which
+run 10-27% because a 1 s budget only fits ~10 iterations of a 200 ms op.
 
-### Mount: initial render + first sync
+### Core path engine
 
-| n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
-|---|---|---|---|---|
-| **1** | 0.0741 ms | 0.234 ms | 0.0644 ms | 0.218 ms |
-| **10** | 0.593 ms | 2.50 ms | 0.400 ms | 2.33 ms |
-| **50** | 3.37 ms | 23.8 ms | 2.11 ms | 22.9 ms |
-| **100** | 8.51 ms | 72.0 ms | 4.84 ms | 71.7 ms |
+`generatePath`, 200×100 box, smoothing 0.6, per call:
 
-### Resize: single ResizeObserver callback tick
+| curve | cold (cache miss) | cached |
+|---|---|---|
+| `arc` | 3.3 µs | 3.0 µs |
+| `squircle` | 8.1 µs | 3.5 µs |
+| `superellipse` | 12.6 µs | 3.1 µs |
+| `clothoid` | 14.0 µs | 2.7 µs |
 
-| n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
-|---|---|---|---|---|
-| **1** | 0.0003 ms | 0.0004 ms | 0.0003 ms | 0.0004 ms |
-| **10** | 0.0024 ms | 0.0029 ms | 0.0024 ms | 0.0029 ms |
-| **50** | 0.0136 ms | 0.0154 ms | 0.0129 ms | 0.0159 ms |
-| **100** | 0.0277 ms | 0.0351 ms | 0.0247 ms | 0.0354 ms |
+The cached column is the 100-batch case divided by 100; it is flat across
+curves because a hit returns memoised segment strings and the curve never
+runs. The cold column is the actual per-curve build cost — a 4.2× spread
+the old warm-only tables reported as 0.06 µs.
 
-### Update: one `corners.radius` prop change
+500 corners in one frame, shared corner config:
 
-| n | auto eff=none | auto eff=border | manual eff=none | manual eff=border |
-|---|---|---|---|---|
-| **1** | 0.0127 ms | 0.0128 ms | 0.0104 ms | 0.0127 ms |
-| **10** | 0.0832 ms | 0.0860 ms | 0.0672 ms | 0.0849 ms |
-| **50** | 0.397 ms | 0.411 ms | 0.316 ms | 0.407 ms |
-| **100** | 0.816 ms | 0.814 ms | 0.616 ms | 0.818 ms |
+| curve | cached | cold |
+|---|---|---|
+| `arc` | 1.40 ms | 1.81 ms |
+| `squircle` | 1.46 ms | 2.99 ms |
+| `superellipse` | 1.46 ms | 2.93 ms |
+| `clothoid` | 1.28 ms | 3.06 ms |
 
-### Core `generatePath` (from `core.bench.ts`)
-
-Single call unless noted; per-corner curve builds are memoised, so batches
-below reflect distinct dimensions defeating that cache. Capsule and blend
-are squircle-only regimes (see `curves/capsule.ts`, `curves/blend.ts`).
+Cached is 500 elements differing only on the long axis, which never reaches
+the cache key; cold is 500 distinct short axes, so all 500 budgets are
+distinct keys evicting each other out of 64 slots. Cold costs less per call
+here than in the single-corner table because only the budget varies while
+the radius stays at 24 — a masonry grid, not 500 different corner configs.
 
 | case | mean |
 |---|---|
-| single-corner 200×100 r=24 — arc | 0.0018 ms |
-| single-corner 200×100 r=24 — squircle | 0.0020 ms |
-| single-corner 200×100 r=24 — superellipse | 0.0019 ms |
-| single-corner 200×100 r=24 — clothoid | 0.0019 ms |
-| 100-batch — arc | 0.205 ms |
-| 100-batch — squircle | 0.212 ms |
-| 100-batch — superellipse | 0.211 ms |
-| 100-batch — clothoid | 0.212 ms |
-| capsule 300×100 r=50 s=0.6 (full-pill) | 0.0028 ms |
-| blend band 300×130 r=50 s=0.6 | 0.0041 ms |
-| resize sweep h=100..220 r=h/2 (61 calls, cache-defeating) | 0.176 ms |
-| `createSvgEffects` + update cycle | 0.128 ms |
+| capsule 300×100 r=50 s=0.6 (full-pill) | 0.0032 ms |
+| blend band 300×130 r=50 s=0.6 | 0.0048 ms |
+| resize sweep h=100..220 r=h/2 (61 calls) | 0.201 ms |
+| `createSvgEffects` + update cycle | 0.228 ms |
+
+### Adapters
+
+Mean ms for the whole batch (not per element), `autoEffects: true`:
+
+| adapter | Mount n=1 | Mount n=100 | Resize n=1 | Resize n=100 | Update n=1 | Update n=100 |
+|---|---|---|---|---|---|---|
+| React | 0.262 | 26.9 | 0.030 | 2.58 | 0.059 | 9.73 |
+| Vue (component) | 0.250 | 24.7 | 0.040 | 3.02 | 0.063 | 10.8 |
+| Vue (composable) | 0.109 | 10.2 | 0.029 | 2.35 | 0.031 | 5.48 |
+| Svelte (action) | 0.063 | 7.60 | 0.029 | 2.26 | 0.030 | 4.83 |
+
+Ordering is framework overhead, not Lisse: the component rows carry a
+wrapper element and its render, the composable and action rows attach to an
+existing node. `autoEffects: false` takes roughly a third off Mount (React
+16.8 ms at n=100) because nothing extracts CSS.
+
+Adding an `innerBorder` mounts an SVG overlay per element, and that is where
+the numbers stop being useful as absolutes: n=1 costs 0.10-0.61 ms across
+all four adapters, but n=100 lands at 153-245 ms — superlinear, ~1.5-2.4 ms
+per element against 0.1 ms at n=1. The cost is happy-dom's CSSOM and DOM
+mutation on an anchor that accumulates 100 overlay `<svg>` subtrees, not the
+library's own work; the same 500-element case in a real browser stays inside
+the frame budget (`tests/browser-smoke/resize-storm.test.tsx`). Compare
+overlay cells against each other at equal n, never against a frame budget.
+
+The eight SSR cases render real markup (`<div style="position:relative"><div
+style="border-radius:12px">…`, the library's SSR `border-radius` fallback
+derived per instance at render time) with no DOM, observer, or layout read
+anywhere in the path.
+
+### What the 2026-07-09 tables got wrong
+
+They were removed rather than updated, because the harness they came from
+did not measure what they claimed.
+
+- All 192 adapter cases timed a framework mount plus an early return. Layout
+  was stubbed only through `getBoundingClientRect`, so `getLayoutSize` fell
+  through to happy-dom's `offsetWidth` of 0 and every sync bailed before
+  generating a clip-path: `data-state` never reached `"ready"`. On the same
+  machine, back to back, Resize at n=100 went from 0.147 ms to 141 ms once
+  the sync actually ran.
+- The four `generatePath` single-corner cases and the four 100-batch cases
+  timed corner-cache hits rather than curve builds. Repeating one identical
+  call pins the cache at a single entry; the batch's key set is 20 entries
+  against 64 slots, because size reaches the cache key only through the
+  rounding budget `min(w, h) / 2` — its 20 heights were 20 keys and its 50
+  widths were none, so it was never the "distinct dimensions defeat the
+  cache" case it was documented as.

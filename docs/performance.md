@@ -1,32 +1,36 @@
 # Performance
 
-Lisse generates SVG path strings in JS — no WASM, no workers, no dependencies. An internal 64-entry LRU cache memoises the shape-only computation (everything that depends on `radius`, `smoothing`, `curve`, `exponent`, and the per-corner budget), so identical corner configs on different-sized elements skip the math entirely.
+Lisse generates SVG path strings in JS — no WASM, no workers, no dependencies. An internal 64-entry LRU cache memoises the shape-only computation, keyed on `radius`, `smoothing`, `curve`, `exponent` and the per-corner rounding budget. That budget is `min(width, height) / 2` for uniform radii, so two elements share a cache entry when their *constrained* side matches: 200×100 and 250×100 hit, 200×100 and 200×120 miss.
 
-Numbers below are measured via [`pnpm bench`](../benchmarks) on an M-series Mac with Node 22.
+Numbers below are measured via [`pnpm bench`](../benchmarks) on 2026-08-16, Node v26.7.0 on an Apple M4 Max, machine otherwise idle. Both regimes are given because they differ by up to 4×, and a page's mix depends on whether its elements share a constrained side.
 
 ## Single corner
 
-One `generatePath()` call (200×100 box, radius 24, smoothing 0.6):
+One `generatePath()` call (200×100 box, smoothing 0.6):
 
-| Curve | Per call |
-|---|---|
-| `arc` | ~1.3 µs |
-| `squircle` (default) | ~1.5 µs |
-| `superellipse` | ~1.4 µs |
-| `clothoid` | ~1.4 µs |
+| Curve | Cold (cache miss) | Cached |
+|---|---|---|
+| `arc` | ~3.3 µs | ~3.0 µs |
+| `squircle` (default) | ~8.1 µs | ~3.5 µs |
+| `superellipse` | ~12.6 µs | ~3.1 µs |
+| `clothoid` | ~14.0 µs | ~2.7 µs |
 
-## 500 corners in a tight loop
+The cached column is flat across curves because a hit hands back memoised segment strings and the curve never runs; the cold column is the real per-curve build cost.
 
-What a resize event on a busy page costs (varied widths/heights, shared corner config — the realistic SPA case):
+## 500 corners in one frame
 
-| Curve | 500 corners |
-|---|---|
-| `arc` | ~0.78 ms |
-| `squircle` | ~0.80 ms |
-| `superellipse` | ~0.78 ms |
-| `clothoid` | ~0.78 ms |
+What a resize tick on a busy page costs, all 500 elements sharing one corner config:
 
-**Effects setup** (`createSvgEffects` + first update with a border): ~130 µs per element, one-shot at mount.
+| Curve | Cached (equal short side) | Cold (500 distinct short sides) |
+|---|---|---|
+| `arc` | ~1.40 ms | ~1.81 ms |
+| `squircle` | ~1.46 ms | ~2.99 ms |
+| `superellipse` | ~1.46 ms | ~2.93 ms |
+| `clothoid` | ~1.28 ms | ~3.06 ms |
+
+A grid of equal-height cards reflowing is the cached column. A masonry layout, or any list whose rows differ in height, is the cold one.
+
+**Effects setup** (`createSvgEffects` + first update with a border): ~230 µs per element, one-shot at mount.
 
 ## Computed-style budget
 
@@ -45,12 +49,12 @@ Measured in real Chromium, mounting a bordered card that contains four small eff
 
 ## What this means in practice
 
-At 60 fps you have 16.7 ms per frame. A page with 500 smooth-cornered squircles re-computes all clip-paths in **under 1 ms per resize tick** — about 5% of a frame, leaving plenty of room for paint and everything else. On low-end mobile (3-5× slower JS), the same workload stays inside budget.
+At 60 fps you have 16.7 ms per frame. A page with 500 smooth-cornered squircles re-computes all clip-paths in **1.3-3.1 ms per resize tick** depending on whether their corner shapes are cached — 8-18% of a frame, leaving room for paint and everything else. On low-end mobile (3-5× slower JS) the cached case still fits; 500 cold squircle corners at 3× would not, so a masonry grid that large wants fewer distinct heights or a smaller radius set.
 
-The JS hot path doesn't include browser paint, layout, or compositor work, which dominates on complex pages. Lisse minimises layout cost by setting `clip-path` and reading layout once per `ResizeObserver` tick (shared singleton observer across all elements). The cache scales with config diversity, not element count — a page with 5,000 elements sharing one corner config performs identically to a page with 50.
+The JS hot path doesn't include browser paint, layout, or compositor work, which dominates on complex pages. Lisse minimises layout cost by setting `clip-path` and reading layout once per `ResizeObserver` tick (shared singleton observer across all elements), and it skips a tick entirely when the observer reports a size it already measured. The cache scales with config diversity, not element count — but the per-corner budget is size-derived, so 5,000 elements perform like 50 only while they also share a constrained side.
 
 ## Bench locally
 
 ```sh
-pnpm bench           # full suite (core + adapter)
+pnpm bench           # full suite: core, three adapters, SSR (212 cases, ~8 min)
 ```

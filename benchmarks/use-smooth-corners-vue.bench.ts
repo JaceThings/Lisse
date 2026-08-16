@@ -17,7 +17,8 @@ import {
   fireAll,
   installSyncRaf,
   restoreRaf,
-  stubBoundingRect,
+  resizeSize,
+  stubLayout,
   forEachCase,
   BENCH_OPTS,
   INNER_BORDER,
@@ -27,7 +28,18 @@ import {
 beforeAll(() => {
   (globalThis as { ResizeObserver: unknown }).ResizeObserver = StubResizeObserver;
   installSyncRaf();
-  stubBoundingRect();
+  stubLayout();
+
+  // A throw from inside a bench task is swallowed: vitest prints no error, drops
+  // the case's row and still exits 0 — the same silent vacuity these benches
+  // exist to rule out. A throw in beforeAll fails the file, so smoke-mount one
+  // instance of each surface here; `mountWithRadius` asserts the sync landed, so
+  // a harness that stops producing a real layout can no longer go unnoticed.
+  const smokeSpec: CaseSpec = { count: 1, autoEffects: true, effects: "innerBorder" };
+  const smokeComponent = mountWithRadius((radiusRef) => componentList(smokeSpec, radiusRef.value));
+  teardownApp(smokeComponent.container, smokeComponent.app);
+  const smokeComposable = mountWithRadius((radiusRef) => composableList(smokeSpec, radiusRef));
+  teardownApp(smokeComposable.container, smokeComposable.app);
 });
 
 afterAll(() => {
@@ -45,6 +57,23 @@ function teardownApp(container: HTMLDivElement, app: App): void {
   container.remove();
 }
 
+// Until now these benches timed an early return, not a sync: `getLayoutSize`
+// found no px `width`/`height` in happy-dom's computed style and fell back to
+// `offsetWidth`/`offsetHeight`, which happy-dom reports as 0, so every adapter
+// sync bailed on `width <= 0` before generating a clip-path. A bench that
+// silently measures a bail is worse than a missing bench, so refuse to run
+// unless the mounted element actually reached a synced state.
+function assertSynced(container: HTMLElement): void {
+  const el = container.querySelector<HTMLElement>("[data-slot='smooth-corners']");
+  if (!el) throw new Error("vacuous bench: nothing was squircled");
+  const state = el.getAttribute("data-state");
+  if (state !== "ready" || el.style.clipPath === "") {
+    throw new Error(
+      `vacuous bench: sync never ran (data-state="${state}", clipPath="${el.style.clipPath}")`,
+    );
+  }
+}
+
 // `render` decides whether it reads `radiusRef.value` (tracks it in the
 // Root's render, so Root re-renders and diffs props on every mutation — the
 // `<SmoothCorners>` component path) or passes the ref itself down untouched
@@ -60,8 +89,13 @@ function mountWithRadius(render: (radiusRef: Ref<number>) => ReturnType<typeof h
   // The composable observes in onMounted, which queues the first sync
   // inside the shared rAF batch. Our sync-rAF polyfill means observe()
   // has already run its initial sync — but we still fire the observer to
-  // simulate the browser's first layout-delivered callback.
-  fireAll();
+  // simulate the browser's first layout-delivered callback, now carrying a
+  // real border box. Mounting at `resizeSize(0)` keeps the Resize bench
+  // honest: its first delivery is `resizeSize(1)`, and consecutive entries
+  // always differ, so that delivery is guaranteed to be a changed box.
+  const { width, height } = resizeSize(0);
+  fireAll(width, height);
+  assertSynced(container);
   return { container, app, radiusRef };
 }
 
@@ -83,11 +117,20 @@ function benchMountResizeUpdate(
 
   describe(`${labelPrefix} Resize ${label}`, () => {
     let ctx: MountedApp | null = null;
+    // Iteration counter, reset with `ctx` so a remounted element (measured at
+    // `resizeSize(0)`) is always followed by `resizeSize(1)`.
+    let iteration = 0;
     bench(
       "resize",
       () => {
         if (!ctx) ctx = mountWithRadius(render);
-        fireAll();
+        // Each iteration must deliver a *changed* border box. Core drops a
+        // notification whose box matches what the last flush measured, and the
+        // adapter's change guard bails when width, height and the options key
+        // are all unchanged — so redelivering one constant size would time a
+        // guard bail, not a re-sync.
+        const { width, height } = resizeSize(++iteration);
+        fireAll(width, height);
       },
       {
         ...BENCH_OPTS,
@@ -95,6 +138,7 @@ function benchMountResizeUpdate(
           if (ctx) {
             teardownApp(ctx.container, ctx.app);
             ctx = null;
+            iteration = 0;
           }
         },
       },
