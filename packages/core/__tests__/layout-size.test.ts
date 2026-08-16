@@ -37,4 +37,28 @@ describe("getLayoutSize", () => {
     } as CSSStyleDeclaration);
     expect(getLayoutSize(el)).toEqual({ width: 200, height: 80 });
   });
+
+  it("uses an injected declaration as-is and reads no computed style", () => {
+    // Callers that already hold a getComputedStyle result (extraction, the
+    // resize flush) hand it in rather than paying for a second style recalc.
+    const el = document.createElement("div");
+    const gcs = vi.spyOn(window, "getComputedStyle");
+
+    expect(
+      getLayoutSize(el, {
+        width: "120px",
+        height: "40px",
+        boxSizing: "content-box",
+        paddingTop: "4px",
+        paddingRight: "8px",
+        paddingBottom: "4px",
+        paddingLeft: "8px",
+        borderTopWidth: "1px",
+        borderRightWidth: "2px",
+        borderBottomWidth: "1px",
+        borderLeftWidth: "2px",
+      }),
+    ).toEqual({ width: 140, height: 50 });
+    expect(gcs).not.toHaveBeenCalled();
+  });
 });

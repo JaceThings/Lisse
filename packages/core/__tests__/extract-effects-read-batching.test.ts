@@ -6,6 +6,7 @@
 // padding/border writes forces repeated recalcs. These tests pin the batching.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { extractAndStripEffects } from "../src/extract-effects.js";
+import { getLayoutSize } from "../src/layout-size.js";
 
 const WRITE_PROPS = [
   "border",
@@ -97,5 +98,49 @@ describe("extractAndStripEffects — batched reads", () => {
       restore();
     }
     expect(events.filter((e) => e === "read")).toHaveLength(1);
+  });
+
+  it("reports the border box off the same single read", () => {
+    // The size rides out on the one declaration already being read, so the
+    // caller's first sync can render without measuring the element again.
+    el.style.boxSizing = "border-box";
+    el.style.width = "120px";
+    el.style.height = "40px";
+
+    const { events, restore } = instrument(el);
+    let size: { width: number; height: number };
+    try {
+      size = extractAndStripEffects(el).size;
+    } finally {
+      restore();
+    }
+
+    expect(events.filter((e) => e === "read")).toHaveLength(1);
+    expect(size).toEqual({ width: 120, height: 40 });
+    expect(size).toEqual(getLayoutSize(el));
+  });
+
+  it("reports a content-box border box that survives the strip", () => {
+    // Snapshotted before the border is stripped, yet still describing the
+    // element afterwards: the padding compensation adds back exactly the border
+    // widths that were removed, so the border box never moves.
+    el.style.boxSizing = "content-box";
+    el.style.width = "100px";
+    el.style.height = "50px";
+    el.style.padding = "5px";
+    el.style.border = "2px solid rgb(255, 0, 0)";
+
+    const { events, restore } = instrument(el);
+    let size: { width: number; height: number };
+    try {
+      size = extractAndStripEffects(el).size;
+    } finally {
+      restore();
+    }
+
+    expect(events.filter((e) => e === "read")).toHaveLength(1);
+    expect(size).toEqual({ width: 114, height: 64 });
+    expect(parseFloat(window.getComputedStyle(el).borderTopWidth)).toBe(0);
+    expect(getLayoutSize(el)).toEqual(size);
   });
 });

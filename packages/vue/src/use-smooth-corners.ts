@@ -12,7 +12,7 @@ import {
   createSvgEffects,
   createDropShadow,
   observeResize,
-  requestMeasure,
+  observeAnchor,
   getLayoutSize,
   DEFAULT_SHADOW,
   extractAndStripEffects,
@@ -22,7 +22,13 @@ import {
   hasEffects,
   mergeEffects,
 } from "@lisse/core";
-import type { SmoothCornerOptions, EffectsConfig, Measured, OverlayOffset } from "@lisse/core";
+import type {
+  SmoothCornerOptions,
+  EffectsConfig,
+  Measured,
+  MeasuredSize,
+  OverlayOffset,
+} from "@lisse/core";
 
 export interface UseEffectsOptions {
   wrapper?: Ref<HTMLElement | null>;
@@ -89,6 +95,13 @@ export function useSmoothCorners(
   let lastOffsetY = 0;
   // Whether we've cleared the SSR border-radius fallback for the current setup.
   let clearedFallbackRadius = false;
+  // The border-box size `extractAndStripEffects` already measured, handed to
+  // the next syncAll and then cleared. Extraction pays for a computed-style
+  // declaration on the element and reads its size off that same declaration;
+  // without this, the sync that fires immediately after setup() (the option and
+  // effect watchers, which run right after the element is attached) paid for a
+  // second full computed-style read of an element nothing had resized.
+  let pendingSize: MeasuredSize | undefined;
 
   // Vue's computed caches these, so JSON.stringify runs at most once per
   // underlying change, not per tick.
@@ -112,8 +125,11 @@ export function useSmoothCorners(
       attachedAnchor = anchor;
       didAcquire = acquirePosition(anchor);
       // An anchor can move the element without resizing it. Runs in the write
-      // pass, so measure nothing — re-queue instead.
-      unobserveAnchor = observeResize(anchor, () => requestMeasure(el));
+      // pass, so measure nothing — re-queue instead. The anchor's first
+      // dispatch is suppressed by observeAnchor: it lands in the same flush
+      // that already measured the element for its own subscribe, so re-queueing
+      // there would only buy the element a second identical measurement.
+      unobserveAnchor = observeAnchor(anchor, el);
     }
     if (!effectsHandle) {
       effectsHandle = createSvgEffects(attachedAnchor, el);
@@ -124,16 +140,22 @@ export function useSmoothCorners(
     return !!effectsHandle;
   }
 
-  function syncAll(measured?: Measured) {
+  function syncAll(measured?: Measured | MeasuredSize) {
     const el = unref(target);
     if (!el) return;
-    const { width, height } = measured ?? getLayoutSize(el);
+    const size = measured ?? pendingSize ?? getLayoutSize(el);
+    pendingSize = undefined;
+    const { width, height } = size;
     if (width <= 0 || height <= 0) return;
 
     // In the guard because an anchor can move the element without resizing it;
     // threaded from the read pass so it never becomes a write-pass layout read.
-    const offsetX = effectsHandle ? (measured?.offsetLeft ?? el.offsetLeft) : 0;
-    const offsetY = effectsHandle ? (measured?.offsetTop ?? el.offsetTop) : 0;
+    // A size threaded out of extraction carries no offsets on purpose —
+    // `offsetLeft`/`offsetTop` are not computed-style reads, so taking them
+    // directly here costs nothing this pass was trying to save.
+    const placed = measured && "offsetLeft" in measured ? measured : undefined;
+    const offsetX = effectsHandle ? (placed?.offsetLeft ?? el.offsetLeft) : 0;
+    const offsetY = effectsHandle ? (placed?.offsetTop ?? el.offsetTop) : 0;
 
     const key = syncKey.value;
     if (
@@ -201,6 +223,7 @@ export function useSmoothCorners(
     // the merged config on the first observeResize tick.
     if (unrefOr(effectsOptions?.autoEffects, true)) {
       extractedResult = extractAndStripEffects(el);
+      pendingSize = extractedResult.size;
     }
 
     // Eager handle creation so the overlay exists before the resize observer's
@@ -240,6 +263,9 @@ export function useSmoothCorners(
     lastSyncKey = null;
     lastOffsetX = 0;
     lastOffsetY = 0;
+    // A size measured for an element we are detaching from must not be handed
+    // to the next setup's first sync, which may be attached to a different one.
+    pendingSize = undefined;
 
     clearedFallbackRadius = false;
     // We deliberately do NOT restore the SSR border-radius fallback here, nor

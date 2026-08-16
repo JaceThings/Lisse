@@ -1,7 +1,14 @@
 import type { BorderConfig, BorderStyle, ShadowConfig, EffectsConfig } from "./types.js";
+import { getLayoutSize, type MeasuredSize } from "./layout-size.js";
 
 export interface ExtractedEffects {
   effects: EffectsConfig;
+  /**
+   * The element's border box as it stood at extraction, so the caller's first
+   * sync can render without reading layout again. Still accurate after the
+   * strip: `extractAndStripEffects` only removes a border it compensates for.
+   */
+  size: MeasuredSize;
   savedStyles: {
     border: string;
     boxShadow: string;
@@ -186,6 +193,13 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   const paddingBottom = parseFloat(cs.paddingBottom) || 0;
   const paddingLeft = parseFloat(cs.paddingLeft) || 0;
 
+  // The border box, derived from that same declaration so it costs no extra
+  // read, letting the caller's first sync render without measuring. It survives
+  // the strip below: on `border-box` the computed width/height are the border
+  // box and dropping the border doesn't move them, and on `content-box` the
+  // padding compensation adds back exactly the border widths it removes.
+  const size = getLayoutSize(el, cs);
+
   const innerBorder = parseBorder(el, borderStyleSource);
   const { shadow, innerShadow } = parseBoxShadow(boxShadow);
 
@@ -214,7 +228,7 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   if (shadow) effects.shadow = shadow;
   if (innerShadow) effects.innerShadow = innerShadow;
 
-  return { effects, savedStyles };
+  return { effects, size, savedStyles };
 }
 
 /** True when `config` defines any renderable effect. */
