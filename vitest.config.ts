@@ -56,6 +56,15 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: "octane",
+          include: ["packages/octane/__tests__/**/*.test.ts"],
+          environment: "happy-dom",
+          alias: coreAlias,
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: "extension",
           include: ["apps/extension/__tests__/**/*.test.ts"],
           environment: "happy-dom",

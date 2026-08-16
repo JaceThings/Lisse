@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-Smooth-corner SVG primitives for React, Vue, and Svelte.
+Smooth-corner SVG primitives for React, Vue, Svelte, and Octane.
 Pixel-perfect Figma squircles + three other corner curves.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
@@ -22,7 +22,7 @@ Pixel-perfect Figma squircles + three other corner curves.
 
 Standard CSS `border-radius` produces circular arcs at the corners. Designers (and Apple, and Figma) prefer **squircles** — corners where curvature transitions smoothly into the straight edges, creating a more organic shape.
 
-Lisse implements [Figma's corner smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/) and three other corner curves in JavaScript. It generates SVG paths and CSS `clip-path` values, with first-class bindings for React, Vue, and Svelte.
+Lisse implements [Figma's corner smoothing algorithm](https://www.figma.com/blog/desperately-seeking-squircles/) and three other corner curves in JavaScript. It generates SVG paths and CSS `clip-path` values, with first-class bindings for React, Vue, Svelte, and Octane.
 
 ## Quick start
 
@@ -42,7 +42,7 @@ function Card() {
 }
 ```
 
-For Vue, Svelte, or framework-agnostic core, see the [packages](#packages) below.
+For Vue, Svelte, Octane, or framework-agnostic core, see the [packages](#packages) below.
 
 ## Curve types
 
@@ -63,6 +63,7 @@ Math reference: [`docs/curves.md`](docs/curves.md).
 | `@lisse/react` | [![npm](https://img.shields.io/npm/v/%40lisse%2Freact?label=)](https://www.npmjs.com/package/@lisse/react) | React hook and component |
 | `@lisse/vue` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue?label=)](https://www.npmjs.com/package/@lisse/vue) | Vue composable and component |
 | `@lisse/svelte` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=)](https://www.npmjs.com/package/@lisse/svelte) | Svelte action |
+| `@lisse/octane` | [![npm](https://img.shields.io/npm/v/%40lisse%2Foctane?label=)](https://www.npmjs.com/package/@lisse/octane) | Octane hook and component |
 
 ## Features
 

@@ -19,7 +19,7 @@ layer should answer "did it change". They are not the same.
 | Runtime harness | `packages/*/​__tests__/runtime-harness.test.{ts,tsx}` | "Does ResizeObserver + rAF batching, prop updates, and cleanup work correctly per adapter?" |
 | Adapter contract | `packages/*/​__tests__/contract.test.{ts,tsx}` | "Do React / Vue / Svelte feed the same props into core?" Shared fixture, 26 cases × 3 adapters. |
 | Browser smoke | `tests/browser-smoke/*.test.tsx` | "Does Lisse hold up on real browsers at 500-element scale?" Main / tagged-release only. |
-| Consumer smoke | `tests/consumer-smoke/*.{mjs,cjs}` | "Does the *packed* tarball install and import cleanly?" |
+| Consumer smoke | `tests/consumer-smoke/*.{mjs,cjs}` | "Does the *packed* tarball install and import cleanly?" (including Octane) |
 | Perf | `benchmarks/*.bench.ts` | "Did the JS hot path regress?" Local `pnpm bench` (tinybench wall-clock). |
 | Size | `package.json#size-limit` | "Did the bundle size regress?" Per-package brotli-budgeted. |
 | Dead code | `knip.json` | "Are there unused exports / files / deps?" |
@@ -27,7 +27,7 @@ layer should answer "did it change". They are not the same.
 ## Running tests
 
 ```bash
-pnpm test                # all projects (core / react / vue / svelte)
+pnpm test                # all projects (core / react / vue / svelte / octane)
 pnpm test --project=core # one project
 pnpm coverage            # with coverage report (writes coverage/lcov.info)
 pnpm bench               # JS hot-path benchmarks (tinybench wall-clock)
@@ -70,10 +70,13 @@ for a fully worked example.
 
 ## The contract-test model
 
-Three adapter packages all consume `@lisse/core`. The contract: each
+The React, Vue, and Svelte adapter packages all consume `@lisse/core`. The contract: each
 wrapper feeds the same props, defaults, dimensions, and effects into
 core. There is no independent oracle — these are contract tests, not
 parity tests in the strict sense.
+
+The Octane adapter has its own focused smoke suite for manual hook-slot
+forwarding, `asChild`, class merging, CSS shadow siblings, and cleanup.
 
 The matrices live in `packages/core/__fixtures__/contract.ts`:
 

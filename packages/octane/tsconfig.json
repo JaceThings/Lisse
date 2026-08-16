@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "paths": {
+      "@lisse/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

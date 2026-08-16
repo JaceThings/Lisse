@@ -8,7 +8,7 @@ Each framework binding offers two ways to apply smooth corners.
 |---|---|---|
 | **What it does** | Renders its own element with smooth corners applied | Applies smooth corners to an existing element you already have |
 | **When to use** | Building new UI from scratch, or when you want a drop-in replacement for a `<div>` | You already have an element and want to add smooth corners without changing your DOM structure |
-| **Effects** | Handled automatically (wrapper div is created for you) | You manage the wrapper element yourself (React/Vue) or ensure the parent has `position: relative` (Svelte) |
+| **Effects** | Handled automatically (wrapper div is created for you) | You manage the wrapper element yourself (React/Vue/Octane) or ensure the parent has `position: relative` (Svelte) |
 
 If you're starting fresh, the component is simpler. If you're adding smooth corners to existing elements, use the hook/composable/action.
 
