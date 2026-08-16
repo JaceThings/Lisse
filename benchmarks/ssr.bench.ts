@@ -4,12 +4,14 @@
 // `tests/consumer-smoke/ssr-smoke.mjs` (import the adapter's component and
 // call its framework's string-renderer directly).
 //
-// `@lisse/vue`'s renderToString path additionally exercises the inline
-// `border-radius` fallback markup computed at render time.
+// Both adapters emit the library's SSR `border-radius` fallback markup, derived
+// per instance at render time — measured output for one instance is
+// `<div style="position:relative"><div style="border-radius:12px">…`, so neither
+// case is timing a bare framework render.
 import { bench, describe } from "vitest";
 import { createElement } from "react";
 import { renderToString as reactRenderToString } from "react-dom/server";
-import { createSSRApp, h } from "vue";
+import { createSSRApp, h, type VNode } from "vue";
 import { renderToString as vueRenderToString } from "vue/server-renderer";
 import { SmoothCorners as ReactSmoothCorners } from "../packages/react/src/smooth-corners.js";
 import { SmoothCorners as VueSmoothCorners } from "../packages/vue/src/smooth-corners.js";
@@ -32,7 +34,7 @@ function reactTree(count: number) {
 }
 
 function vueApp(count: number) {
-  const nodes = [];
+  const nodes: VNode[] = [];
   for (let i = 0; i < count; i++) {
     nodes.push(
       h(

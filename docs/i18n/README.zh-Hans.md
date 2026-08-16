@@ -70,7 +70,7 @@ function Card() {
 - 内 / 外 / 居中边框，含多种样式变体（实线、虚线、点线、双线、凹槽、凸脊）
 - 投影与内阴影，并可通过 API 实现渐变边框
 - 自动效果：挂载时将 CSS `border` 和 `box-shadow` 转换为等效的 SVG
-- 每次 `generatePath()` 调用约 1.5 µs；500 个边角的重算在 <1 ms 内完成（[详情](../performance.md)）
+- 每次命中缓存的 `generatePath()` 调用约 3.5 µs（未命中约 8 µs）；500 个边角的重算在 1.5–3 ms 内完成（[详情](../performance.md)）
 - 零运行时依赖；ESM + CJS 双重导出；SSR 安全的 `/path` 子路径
 
 ## 文档

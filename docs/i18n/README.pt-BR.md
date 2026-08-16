@@ -70,7 +70,7 @@ Referência matemática: [`docs/curves.md`](../curves.md).
 - Bordas interna / externa / central com variantes de estilo (solid, dashed, dotted, double, groove, ridge)
 - Sombras projetadas e sombras internas, com bordas em gradiente via a API
 - Auto-efeitos: `border` e `box-shadow` do CSS são convertidos em equivalentes SVG na montagem
-- ~1.5 µs por chamada de `generatePath()`; 500 cantos recalculados em <1 ms ([detalhes](../performance.md))
+- ~3,5 µs por chamada de `generatePath()` em cache (~8 µs sem cache); 500 cantos recalculados em 1,5–3 ms ([detalhes](../performance.md))
 - Zero dependências em runtime; exportação dupla ESM + CJS; subcaminho `/path` seguro para SSR
 
 ## Documentação
