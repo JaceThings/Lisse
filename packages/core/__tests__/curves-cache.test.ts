@@ -9,6 +9,7 @@ import {
   CURVE_CACHE_CAPACITY,
   _curveCacheSize,
 } from "../src/curves/cache.js";
+import type { CurveBuilderOutput } from "../src/curves/types.js";
 
 const base = {
   cornerRadius: 24,
@@ -67,6 +68,30 @@ describe("curve cache — LRU eviction", () => {
     const refetchOne = getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 });
     const refetchOneAgain = getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 });
     expect(refetchOneAgain).toBe(refetchOne);
+  });
+
+  it("a repeated hit on the newest key keeps it newest for eviction", () => {
+    // A hit on the already-newest key skips the delete+set touch. If that skip
+    // ever loses the entry's position, the next insert evicts the wrong key.
+    const refs: CurveBuilderOutput[] = [];
+    for (let i = 0; i < CURVE_CACHE_CAPACITY; i++) {
+      refs.push(
+        getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: i + 1 })
+      );
+    }
+
+    const one = getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 });
+    expect(one).toBe(refs[0]);
+    // Second hit takes the skip path.
+    expect(getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 })).toBe(one);
+
+    getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 999 });
+    expect(_curveCacheSize()).toBe(CURVE_CACHE_CAPACITY);
+    // Radius 1 survives; radius 2, the true least-recently-used, is the casualty.
+    expect(getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 1 })).toBe(one);
+    expect(
+      getCachedBuilderOutput("squircle", buildSquircle, { ...base, cornerRadius: 2 })
+    ).not.toBe(refs[1]);
   });
 });
 

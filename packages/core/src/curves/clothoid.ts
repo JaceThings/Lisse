@@ -1,6 +1,6 @@
-import { rounded } from "../utils.js";
+import { fixed4 } from "../utils.js";
 import type { CurveBuilder } from "./types.js";
-import { transformX, transformY } from "./orient.js";
+import { cubic, cubicText, equalArc, negated, type EqualArcText } from "./orient.js";
 import { EMPTY_BUILDER_OUTPUT } from "./types.js";
 import { integrateClothoid } from "./integrate.js";
 
@@ -73,11 +73,11 @@ export const buildClothoid: CurveBuilder = ({
   // h1, back-substitution gives h0. Walton–Meek's closed-form
   // (cos α_a / cos α_b weights) instead dipped B2 ~0.45 px outside the
   // rectangle at R = 40 / smoothing = 0.6.
+  const cosDt = Math.cos(dTheta);
+  const sinDt = Math.sin(dTheta);
   let h0 = 0;
   let h1 = 0;
   if (L > 0) {
-    const cosDt = Math.cos(dTheta);
-    const sinDt = Math.sin(dTheta);
     if (sinDt > 1e-12) {
       h1 = ((8 / 3) * (effY / 2 - effMy)) / sinDt;
     }
@@ -87,61 +87,42 @@ export const buildClothoid: CurveBuilder = ({
   const arcSweep = Math.PI / 2 - 2 * dTheta;
   const hasArc = Math.abs(arcSweep) > ANGLE_EPSILON;
 
+  // Both half-fillets and the arc are orient-independent, so solve and format
+  // them once here. pathSegment used to redo the trig, the deltas and 16
+  // `fixed4` calls on every orient — 64 per corner for these 14 magnitudes.
+  //
+  // Cloth1: B0 = (0, 0), B1 = (h0, 0), B3 = (effX, effY),
+  //         B2 = B3 − h1·(cos dTheta, sin dTheta).
+  // Cloth2: the mirror of cloth1 across X + Y = p, running
+  //         (p − effY, p − effX) → (p, p); relative to its own B0,
+  //         B1 = (h1·sin dTheta, h1·cos dTheta), B2 = (effY, effX − h0),
+  //         B3 = (effY, effX).
+  const fillets =
+    L > 0
+      ? {
+          head: cubicText(h0, 0, effX - h1 * cosDt, effY - h1 * sinDt, effX, effY),
+          tail: cubicText(h1 * sinDt, h1 * cosDt, effY, effX - h0, effY, effX),
+        }
+      : null;
+
+  // Arc (effX, effY) → (p − effY, p − effX); relative delta is
+  // (p − effX − effY) on both axes by symmetry.
+  let arc: EqualArcText | null = null;
+  if (hasArc) {
+    const delta = p - effX - effY;
+    const d = fixed4(delta);
+    arc = { radius: fixed4(effR), d, dn: negated(delta, d) };
+  }
+
   return {
     p,
     pathSegment: (orient) => {
-      const parts: string[] = [];
-
-      if (L > 0) {
-        // Cloth1: B0 = (0, 0), B1 = (h0, 0), B3 = (effX, effY),
-        // B2 = B3 − h1·(cos dTheta, sin dTheta).
-        const B1dx = h0;
-        const B1dy = 0;
-        const B2dx = effX - h1 * Math.cos(dTheta);
-        const B2dy = effY - h1 * Math.sin(dTheta);
-        const B3dx = effX;
-        const B3dy = effY;
-        const a = transformX(B1dx, B1dy, orient);
-        const b = transformY(B1dx, B1dy, orient);
-        const c = transformX(B2dx, B2dy, orient);
-        const d = transformY(B2dx, B2dy, orient);
-        const e = transformX(B3dx, B3dy, orient);
-        const f = transformY(B3dx, B3dy, orient);
-        parts.push(rounded`c ${a} ${b} ${c} ${d} ${e} ${f}`);
-      }
-
-      if (hasArc) {
-        // Arc (effX, effY) → (p − effY, p − effX); relative delta is
-        // (p − effX − effY, p − effX − effY) on both axes by symmetry.
-        const arcDx = p - effX - effY;
-        const arcDy = p - effX - effY;
-        const ax = transformX(arcDx, arcDy, orient);
-        const ay = transformY(arcDx, arcDy, orient);
-        parts.push(rounded`a ${effR} ${effR} 0 0 1 ${ax} ${ay}`);
-      }
-
-      if (L > 0) {
-        // Cloth2: mirror of cloth1 across X + Y = p, from
-        // (p − effY, p − effX) → (p, p). Relative to B0:
-        //   B1 = (h1·sin dTheta, h1·cos dTheta)
-        //   B2 = (effY, effX − h0)
-        //   B3 = (effY, effX)
-        const B1dx = h1 * Math.sin(dTheta);
-        const B1dy = h1 * Math.cos(dTheta);
-        const B2dx = effY;
-        const B2dy = effX - h0;
-        const B3dx = effY;
-        const B3dy = effX;
-        const a = transformX(B1dx, B1dy, orient);
-        const b = transformY(B1dx, B1dy, orient);
-        const c = transformX(B2dx, B2dy, orient);
-        const d = transformY(B2dx, B2dy, orient);
-        const e = transformX(B3dx, B3dy, orient);
-        const f = transformY(B3dx, B3dy, orient);
-        parts.push(rounded`c ${a} ${b} ${c} ${d} ${e} ${f}`);
-      }
-
-      return parts.join(" ");
+      // At smoothing = 0 there are no fillets, at smoothing = 1 no arc.
+      if (fillets === null) return arc === null ? "" : equalArc(arc, orient);
+      const head = cubic(fillets.head, orient);
+      const tail = cubic(fillets.tail, orient);
+      if (arc === null) return head + " " + tail;
+      return head + " " + equalArc(arc, orient) + " " + tail;
     },
   };
 };

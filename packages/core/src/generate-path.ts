@@ -1,7 +1,13 @@
-import type { SmoothCornerOptions, CornerConfig, CurveType } from "./types.js";
+import type {
+  SmoothCornerOptions,
+  CornerConfig,
+  CurveType,
+  NormalizedCorner,
+} from "./types.js";
 import { distributeAndNormalize } from "./distribute.js";
 import { getCurveBuilder, DEFAULT_EXPONENT } from "./curves/index.js";
 import { getCachedBuilderOutput } from "./curves/cache.js";
+import type { CurveBuilderOutput } from "./curves/types.js";
 import {
   capsuleEndParams,
   drawRightCap,
@@ -10,6 +16,7 @@ import {
   drawBottomCap,
 } from "./curves/capsule.js";
 import { drawBlendPath } from "./curves/blend.js";
+import { fixed4 } from "./utils.js";
 
 /** Closest Figma-curve match to Apple continuous corners (≈0.5 px residual at R=100). */
 export const APPLE_SMOOTHING = 0.65;
@@ -21,6 +28,10 @@ export const FIGMA_SMOOTHING = 0.6;
 export const DEFAULT_SMOOTHING = 0.65;
 export const DEFAULT_PRESERVE_SMOOTHING = true;
 export const DEFAULT_CURVE: CurveType = "squircle";
+
+/** Coordinate formatter for the path templates below, which call it ~26 times
+ *  per build; module scope so no closure is allocated per `generatePath` call. */
+const r = fixed4;
 
 type Resolved = Required<CornerConfig>;
 
@@ -59,6 +70,81 @@ function resolveOptions(options: SmoothCornerOptions): ResolvedCorners {
   };
 }
 
+/** Prefix a corner's path segment with a space, or emit nothing for an empty
+ *  segment (radius 0) so the `d` string never contains a double space. */
+function seg(s: string): string {
+  return s.length > 0 ? " " + s : "";
+}
+
+/** Cached builder output for one corner, keyed on its *normalized* radius and
+ *  budget rather than the raw config. */
+function cornerOutput(
+  corner: Resolved,
+  normalized: NormalizedCorner
+): CurveBuilderOutput {
+  const builder = getCurveBuilder(corner.curve);
+  return getCachedBuilderOutput(corner.curve, builder, {
+    cornerRadius: normalized.radius,
+    smoothing: corner.smoothing,
+    exponent: corner.exponent,
+    preserveSmoothing: corner.preserveSmoothing,
+    roundingAndSmoothingBudget: normalized.roundingAndSmoothingBudget,
+  });
+}
+
+/** Slack allowed when deciding a corner's radius has reached the cap radius. */
+const CAP_EPS = 1e-9;
+
+/** True when the two corners of one end form a single continuous cap. */
+function isCapEnd(
+  cx: Resolved,
+  cy: Resolved,
+  nx: NormalizedCorner,
+  ny: NormalizedCorner,
+  capR: number
+): boolean {
+  return (
+    cx.curve === "squircle" &&
+    cy.curve === "squircle" &&
+    Math.abs(nx.radius - capR) < CAP_EPS &&
+    Math.abs(ny.radius - capR) < CAP_EPS &&
+    cx.smoothing === cy.smoothing &&
+    cx.preserveSmoothing === cy.preserveSmoothing
+  );
+}
+
+/**
+ * True when two corners feed the builder identical input, so a single cached
+ * output can serve both orients.
+ *
+ * `resolveOptions` hands back one shared config object for the `{radius}` form
+ * and `distributeAndNormalize` one shared normalized corner when all four radii
+ * match, so reference identity answers the common case without reading a field.
+ *
+ * The raw `radius` is deliberately not compared: the builder only ever sees the
+ * *normalized* radius, so two raw radii clamped to the same normalized value are
+ * genuinely interchangeable. The normalized values must be compared, though —
+ * `distributeAndNormalize` can give corners with identical configs different
+ * budgets, and a different budget is a different corner shape.
+ */
+function sameBuilderInput(
+  a: Resolved,
+  an: NormalizedCorner,
+  b: Resolved,
+  bn: NormalizedCorner
+): boolean {
+  return (
+    (a === b ||
+      (a.curve === b.curve &&
+        a.smoothing === b.smoothing &&
+        a.exponent === b.exponent &&
+        a.preserveSmoothing === b.preserveSmoothing)) &&
+    (an === bn ||
+      (an.radius === bn.radius &&
+        an.roundingAndSmoothingBudget === bn.roundingAndSmoothingBudget))
+  );
+}
+
 /** SVG path `d` string for a smooth-cornered rectangle. */
 export function generatePath(
   width: number,
@@ -90,33 +176,10 @@ export function generatePath(
     height,
   });
 
-  const builderOutFor = (name: keyof ResolvedCorners) => {
-    const corner = corners[name];
-    const builder = getCurveBuilder(corner.curve);
-    return getCachedBuilderOutput(corner.curve, builder, {
-      cornerRadius: normalized[name].radius,
-      smoothing: corner.smoothing,
-      exponent: corner.exponent,
-      preserveSmoothing: corner.preserveSmoothing,
-      roundingAndSmoothingBudget: normalized[name].roundingAndSmoothingBudget,
-    });
-  };
-
-  // Lazy: the blend and cap branches below return without touching some (or
-  // any) corners — ~18% of a blend/capsule call was spent building outputs
-  // that were then discarded. Memoised so the template still computes each
-  // corner once.
-  const lazyOut = (name: keyof ResolvedCorners) => {
-    let v: ReturnType<typeof builderOutFor> | undefined;
-    return () => (v ??= builderOutFor(name));
-  };
-  const tl = lazyOut("topLeft");
-  const tr = lazyOut("topRight");
-  const br = lazyOut("bottomRight");
-  const bl = lazyOut("bottomLeft");
-
-  const r = (n: number): string => n.toFixed(4);
-  const seg = (s: string): string => (s.length > 0 ? " " + s : "");
+  // Corner outputs are resolved by the branch that needs them, not up front:
+  // the blend branch below returns without touching any corner, and a capped
+  // end discards both of its corners. ~18% of a blend/capsule call used to go
+  // into building outputs that were then thrown away.
 
   // In the band 2R < short side < 2(1+s)R the classic template would pop while
   // resizing toward a capsule; curves/blend.ts smooths per-edge instead. Both
@@ -139,28 +202,18 @@ export function generatePath(
   // Sketch-style capsule smoothing: a fully-rounded end becomes one continuous
   // cap segment. Each end is independent (half-pills work); non-capsule ends
   // fall through to the byte-identical template below.
-  const EPS = 1e-9;
   const horizontal = width >= height;
   const capR = horizontal ? height / 2 : width / 2;
-  const isCap = (
-    x: keyof ResolvedCorners,
-    y: keyof ResolvedCorners
-  ): boolean => {
-    const cx = corners[x];
-    const cy = corners[y];
-    return (
-      cx.curve === "squircle" &&
-      cy.curve === "squircle" &&
-      Math.abs(normalized[x].radius - capR) < EPS &&
-      Math.abs(normalized[y].radius - capR) < EPS &&
-      cx.smoothing === cy.smoothing &&
-      cx.preserveSmoothing === cy.preserveSmoothing
-    );
-  };
 
   if (horizontal) {
-    const rightCap = isCap("topRight", "bottomRight");
-    const leftCap = isCap("topLeft", "bottomLeft");
+    const rightCap = isCapEnd(
+      corners.topRight, corners.bottomRight,
+      normalized.topRight, normalized.bottomRight, capR
+    );
+    const leftCap = isCapEnd(
+      corners.topLeft, corners.bottomLeft,
+      normalized.topLeft, normalized.bottomLeft, capR
+    );
     if (rightCap || leftCap) {
       const longHalf = width / 2;
       const cR = rightCap
@@ -170,32 +223,45 @@ export function generatePath(
         ? capsuleEndParams(capR, corners.topLeft.smoothing, corners.topLeft.preserveSmoothing, longHalf)
         : null;
 
-      let d = "M " + r(cL ? cL.p : tl().p) + " 0";
-      d += " L " + r(width - (cR ? cR.p : tr().p)) + " 0";
+      // A capped end emits one cap segment, so only the uncapped end's corners
+      // are built. Each `!` below sits inside the matching `cR`/`cL` guard.
+      const oTL = cL ? null : cornerOutput(corners.topLeft, normalized.topLeft);
+      const oTR = cR ? null : cornerOutput(corners.topRight, normalized.topRight);
+      const oBR = cR ? null : cornerOutput(corners.bottomRight, normalized.bottomRight);
+      const oBL = cL ? null : cornerOutput(corners.bottomLeft, normalized.bottomLeft);
+
+      let d = "M " + r(cL ? cL.p : oTL!.p) + " 0";
+      d += " L " + r(width - (cR ? cR.p : oTR!.p)) + " 0";
       if (cR) {
         d += " " + drawRightCap(cR);
       } else {
-        d += seg(tr().pathSegment("TR"));
-        d += " L " + r(width) + " " + r(br().p);
-        d += " L " + r(width) + " " + r(height - br().p);
-        d += seg(br().pathSegment("BR"));
+        d += seg(oTR!.pathSegment("TR"));
+        d += " L " + r(width) + " " + r(oBR!.p);
+        d += " L " + r(width) + " " + r(height - oBR!.p);
+        d += seg(oBR!.pathSegment("BR"));
       }
       if (cL) {
         d += " L " + r(cL.p) + " " + r(height);
         d += " " + drawLeftCap(cL);
       } else {
-        d += " L " + r(width - bl().p) + " " + r(height);
-        d += " L " + r(bl().p) + " " + r(height);
-        d += seg(bl().pathSegment("BL"));
-        d += " L 0 " + r(height - tl().p);
-        d += " L 0 " + r(tl().p);
-        d += seg(tl().pathSegment("TL"));
+        d += " L " + r(width - oBL!.p) + " " + r(height);
+        d += " L " + r(oBL!.p) + " " + r(height);
+        d += seg(oBL!.pathSegment("BL"));
+        d += " L 0 " + r(height - oTL!.p);
+        d += " L 0 " + r(oTL!.p);
+        d += seg(oTL!.pathSegment("TL"));
       }
       return d + " Z";
     }
   } else {
-    const topCap = isCap("topLeft", "topRight");
-    const bottomCap = isCap("bottomLeft", "bottomRight");
+    const topCap = isCapEnd(
+      corners.topLeft, corners.topRight,
+      normalized.topLeft, normalized.topRight, capR
+    );
+    const bottomCap = isCapEnd(
+      corners.bottomLeft, corners.bottomRight,
+      normalized.bottomLeft, normalized.bottomRight, capR
+    );
     if (topCap || bottomCap) {
       const longHalf = height / 2;
       const cT = topCap
@@ -205,32 +271,52 @@ export function generatePath(
         ? capsuleEndParams(capR, corners.bottomLeft.smoothing, corners.bottomLeft.preserveSmoothing, longHalf)
         : null;
 
+      const oTL = cT ? null : cornerOutput(corners.topLeft, normalized.topLeft);
+      const oTR = cT ? null : cornerOutput(corners.topRight, normalized.topRight);
+      const oBR = cB ? null : cornerOutput(corners.bottomRight, normalized.bottomRight);
+      const oBL = cB ? null : cornerOutput(corners.bottomLeft, normalized.bottomLeft);
+
       let d: string;
       if (cT) {
         d = "M 0 " + r(cT.p) + " " + drawTopCap(cT);
       } else {
-        d = "M " + r(tl().p) + " 0";
-        d += " L " + r(width - tr().p) + " 0";
-        d += seg(tr().pathSegment("TR"));
+        d = "M " + r(oTL!.p) + " 0";
+        d += " L " + r(width - oTR!.p) + " 0";
+        d += seg(oTR!.pathSegment("TR"));
       }
-      d += " L " + r(width) + " " + r(height - (cB ? cB.p : br().p));
+      d += " L " + r(width) + " " + r(height - (cB ? cB.p : oBR!.p));
       if (cB) {
         d += " " + drawBottomCap(cB);
       } else {
-        d += seg(br().pathSegment("BR"));
-        d += " L " + r(bl().p) + " " + r(height);
-        d += seg(bl().pathSegment("BL"));
+        d += seg(oBR!.pathSegment("BR"));
+        d += " L " + r(oBL!.p) + " " + r(height);
+        d += seg(oBL!.pathSegment("BL"));
       }
       if (cT) {
         d += " L 0 " + r(cT.p);
       } else {
-        d += " L 0 " + r(height - tl().p);
-        d += " L 0 " + r(tl().p);
-        d += seg(tl().pathSegment("TL"));
+        d += " L 0 " + r(height - oTL!.p);
+        d += " L 0 " + r(oTL!.p);
+        d += seg(oTL!.pathSegment("TL"));
       }
       return d + " Z";
     }
   }
+
+  // Every corner contributes here, so all four resolve now. When they feed the
+  // builder identical input, one lookup serves all four orients: four lookups
+  // cost 0.383 µs building four cache keys and touching the LRU four times
+  // against 0.094 µs for one — and they already returned this very object,
+  // since an identical key is the same cache entry. The per-orient string memo
+  // lives on the output, so each orient's segment stays independent.
+  const oTL = cornerOutput(corners.topLeft, normalized.topLeft);
+  const uniform =
+    sameBuilderInput(corners.topLeft, normalized.topLeft, corners.topRight, normalized.topRight) &&
+    sameBuilderInput(corners.topLeft, normalized.topLeft, corners.bottomRight, normalized.bottomRight) &&
+    sameBuilderInput(corners.topLeft, normalized.topLeft, corners.bottomLeft, normalized.bottomLeft);
+  const oTR = uniform ? oTL : cornerOutput(corners.topRight, normalized.topRight);
+  const oBR = uniform ? oTL : cornerOutput(corners.bottomRight, normalized.bottomRight);
+  const oBL = uniform ? oTL : cornerOutput(corners.bottomLeft, normalized.bottomLeft);
 
   // Each side ends with a paired L to the next corner's `p` — geometrically
   // a no-op when adjacent radii match, harmless otherwise. Direct concat
@@ -241,33 +327,41 @@ export function generatePath(
   // the leading space for empty corner segments (radius=0) so we never
   // emit double-spaces.
   return (
-    "M " + r(tl().p) + " 0" +
-    " L " + r(width - tr().p) + " 0" +
-    seg(tr().pathSegment("TR")) +
-    " L " + r(width) + " " + r(br().p) +
-    " L " + r(width) + " " + r(height - br().p) +
-    seg(br().pathSegment("BR")) +
-    " L " + r(width - bl().p) + " " + r(height) +
-    " L " + r(bl().p) + " " + r(height) +
-    seg(bl().pathSegment("BL")) +
-    " L 0 " + r(height - tl().p) +
-    " L 0 " + r(tl().p) +
-    seg(tl().pathSegment("TL")) +
+    "M " + r(oTL.p) + " 0" +
+    " L " + r(width - oTR.p) + " 0" +
+    seg(oTR.pathSegment("TR")) +
+    " L " + r(width) + " " + r(oBR.p) +
+    " L " + r(width) + " " + r(height - oBR.p) +
+    seg(oBR.pathSegment("BR")) +
+    " L " + r(width - oBL.p) + " " + r(height) +
+    " L " + r(oBL.p) + " " + r(height) +
+    seg(oBL.pathSegment("BL")) +
+    " L 0 " + r(height - oTL.p) +
+    " L 0 " + r(oTL.p) +
+    seg(oTL.pathSegment("TL")) +
     " Z"
   );
 }
 
 function isUniformSquircle(c: ResolvedCorners): boolean {
   const u = c.topLeft;
+  const tr = c.topRight;
+  const br = c.bottomRight;
+  const bl = c.bottomLeft;
   return (
     u.curve === "squircle" &&
-    [c.topRight, c.bottomRight, c.bottomLeft].every(
-      (o) =>
-        o.curve === "squircle" &&
-        o.radius === u.radius &&
-        o.smoothing === u.smoothing &&
-        o.preserveSmoothing === u.preserveSmoothing
-    )
+    tr.curve === "squircle" &&
+    tr.radius === u.radius &&
+    tr.smoothing === u.smoothing &&
+    tr.preserveSmoothing === u.preserveSmoothing &&
+    br.curve === "squircle" &&
+    br.radius === u.radius &&
+    br.smoothing === u.smoothing &&
+    br.preserveSmoothing === u.preserveSmoothing &&
+    bl.curve === "squircle" &&
+    bl.radius === u.radius &&
+    bl.smoothing === u.smoothing &&
+    bl.preserveSmoothing === u.preserveSmoothing
   );
 }
 

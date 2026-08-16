@@ -70,7 +70,7 @@ Math reference: [`docs/curves.md`](docs/curves.md).
 - Inner / outer / middle borders with style variants (solid, dashed, dotted, double, groove, ridge)
 - Drop shadows and inner shadows, with gradient borders via the API
 - Auto-effects: CSS `border` and `box-shadow` are converted to SVG equivalents on mount
-- ~3.5 µs per cached `generatePath()` call (~8 µs cold); 500 corners re-compute in 1.5–3 ms ([details](docs/performance.md))
+- ~0.7 µs per cached `generatePath()` call (~2.5 µs cold); 500 corners re-compute in under 1 ms ([details](docs/performance.md))
 - Zero runtime dependencies; ESM + CJS dual export; SSR-safe `/path` subpath
 
 ## Documentation

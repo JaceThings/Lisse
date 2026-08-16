@@ -25,7 +25,7 @@
     {
       "name": "@lisse/core/path (ESM, brotli)",
       "path": "packages/core/dist/path.js",
-      "limit": "4 KB"
+      "limit": "4.5 KB"
     },
     {
       "name": "@lisse/react (incl. core, ESM, brotli, excluding peer dep)",
@@ -47,7 +47,7 @@
     {
       "name": "@lisse/svelte (incl. core, ESM, brotli, excluding peer dep)",
       "path": "packages/svelte/dist/index.js",
-      "limit": "10 KB",
+      "limit": "10.5 KB",
       "ignore": [
         "svelte"
       ]

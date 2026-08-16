@@ -11,6 +11,13 @@ import type { CurveBuilder, CurveBuilderInput, CurveBuilderOutput, CurveType, Or
 const CAPACITY = 64;
 const cache = new Map<string, CurveBuilderOutput>();
 
+/** Key most recently moved to the back of `cache`. A hit on it needs no
+ *  delete+set: the entry is already last in insertion order, so the touch is
+ *  three rehashing Map operations that change nothing. A page whose elements
+ *  share one corner config hammers exactly this key. `null` whenever the
+ *  newest key is unknown (start, after `clearCurveCache`). */
+let newestKey: string | null = null;
+
 function key(curve: CurveType, input: CurveBuilderInput): string {
   // Exact-number key — rounding would let two inputs that differ by
   // less than the tolerance share an entry while `builder(input)`
@@ -67,8 +74,11 @@ export function getCachedBuilderOutput(
   const k = key(curve, input);
   const cached = cache.get(k);
   if (cached) {
-    cache.delete(k);
-    cache.set(k, cached);
+    if (k !== newestKey) {
+      cache.delete(k);
+      cache.set(k, cached);
+      newestKey = k;
+    }
     return cached;
   }
   const fresh = wrapWithOrientCache(builder(input));
@@ -76,6 +86,7 @@ export function getCachedBuilderOutput(
     cache.delete(cache.keys().next().value!);
   }
   cache.set(k, fresh);
+  newestKey = k;
   return fresh;
 }
 
@@ -87,4 +98,5 @@ export function _curveCacheSize(): number {
 
 export function clearCurveCache(): void {
   cache.clear();
+  newestKey = null;
 }
