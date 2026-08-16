@@ -126,6 +126,39 @@ unsubscribe();
 
 **Returns:** `() => void`. An unsubscribe function.
 
+### `observeAnchor(anchor, target)`
+
+Re-measure `target` whenever `anchor` resizes, through the same shared `ResizeObserver` and the same batched flush as `observeResize`. Use it when the element you clip is sized by something other than itself — an overlay inside a wrapper, for instance.
+
+```ts
+import { observeAnchor } from "@lisse/core";
+
+const unsubscribe = observeAnchor(wrapperElement, element);
+```
+
+The anchor's first dispatch is skipped: it arrives in the same flush that already measured `target` for its own subscription, so re-queueing there would cost `target` a second read of the same size. Every later dispatch calls `requestMeasure(target)`.
+
+**Returns:** `() => void`. An unsubscribe function.
+
+### `getLayoutSize(el, cs?)`
+
+Read an element's border-box size from its computed style, falling back to `offsetWidth`/`offsetHeight` when the computed width or height is not expressed in pixels (percentages, `auto`).
+
+```ts
+import { getLayoutSize } from "@lisse/core";
+
+const { width, height } = getLayoutSize(element);
+```
+
+Pass a declaration you already hold as the second argument to avoid a second `getComputedStyle` call — the same pattern as [`parseBorder(el, cs?)`](#parseborderel-cs):
+
+```ts
+const cs = window.getComputedStyle(element);
+const size = getLayoutSize(element, cs);
+```
+
+**Returns:** `MeasuredSize` with the shape `{ width: number; height: number }`.
+
 ### `createSvgEffects(anchor)`
 
 Create an SVG overlay element for rendering inner/outer borders and inner shadows along a squircle path.
@@ -165,12 +198,15 @@ Read CSS `border` and `box-shadow` from an element, strip them from inline style
 ```ts
 import { extractAndStripEffects } from "@lisse/core";
 
-const { effects, savedStyles } = extractAndStripEffects(element);
+const { effects, savedStyles, size } = extractAndStripEffects(element);
 // effects: { innerBorder?, shadow?, innerShadow? }
+// size: the element's border box, { width, height }
 // CSS border and box-shadow are now stripped from the element
 ```
 
-**Returns:** `ExtractedEffects` with the shape `{ effects: EffectsConfig; savedStyles: { border: string; boxShadow: string } }`.
+`size` comes from the single computed-style declaration the extraction already reads, snapshotted before the first style write, so a caller that clips straight afterwards needs no `getComputedStyle` of its own. It stays correct across the strip because the strip preserves the border box: with `box-sizing: border-box` removing the border does not change the computed width or height, and with `content-box` the padding compensation adds back exactly the border widths that were removed.
+
+**Returns:** `ExtractedEffects` with the shape `{ effects: EffectsConfig; savedStyles: { border: string; boxShadow: string }; size: MeasuredSize }`.
 
 ### `restoreStyles(el, saved)`
 
@@ -195,9 +231,9 @@ const color = parseColor("rgba(255, 0, 0, 0.5)");
 
 **Returns:** `{ hex: string; opacity: number } | undefined`.
 
-### `parseBorder(el)`
+### `parseBorder(el, cs?)`
 
-Read the computed border from an element and convert it to a `BorderConfig`. Returns `undefined` if the border is invisible (none/hidden, width 0, or transparent).
+Read the computed border from an element and convert it to a `BorderConfig`. Returns `undefined` if the border is invisible (none/hidden, width 0, or transparent). Pass a declaration you already hold as `cs` to avoid a second `getComputedStyle` call.
 
 ```ts
 import { parseBorder } from "@lisse/core";
@@ -488,7 +524,7 @@ import { generatePath, generateClipPath } from "@lisse/core/path";
 
 ### Excluded
 
-`createSvgEffects`, `createDropShadow`, `observeResize`, `extractAndStripEffects`, `restoreStyles`, `parseBorder`, `parseBoxShadow`, `parseColor`. These depend on the DOM and are only available from the main entry point.
+`createSvgEffects`, `createDropShadow`, `observeResize`, `observeAnchor`, `getLayoutSize`, `extractAndStripEffects`, `restoreStyles`, `parseBorder`, `parseBoxShadow`, `parseColor`. These depend on the DOM and are only available from the main entry point.
 
 ### When to use it
 

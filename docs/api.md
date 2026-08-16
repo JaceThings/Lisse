@@ -11,6 +11,7 @@
 | `extractAndStripEffects(el)` | `core` | Extract CSS border/shadow and convert to SVG effects |
 | `restoreStyles(el, saved)` | `core` | Restore stripped CSS border/shadow styles |
 | `observeResize(el, callback)` | `core` | Observe element resize with a shared `ResizeObserver` |
+| `observeAnchor(anchor, target)` | `core` | Re-measure `target` whenever `anchor` resizes |
 | `getCurveBuilder(curve)` | `core` | Dispatch to one of the four curve builders |
 | `CURVE_TYPES` | `core` | Array of `'arc' \| 'squircle' \| 'superellipse' \| 'clothoid'` |
 | `clearCurveCache()` | `core` | Reset the internal LRU cache (tests / SSR-per-request) |

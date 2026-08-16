@@ -1,7 +1,14 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type * as ObserveResizeModule from "../src/observe-resize.js";
 
-let observeResize: typeof import("../src/observe-resize.js").observeResize;
+let observeResize: typeof ObserveResizeModule.observeResize;
+let observeAnchor: typeof ObserveResizeModule.observeAnchor;
+let requestMeasure: typeof ObserveResizeModule.requestMeasure;
+
+// Captured before any test can spy on it, so the counting spy below always
+// delegates to the genuine happy-dom implementation.
+const realComputedStyle = window.getComputedStyle.bind(window);
 
 let roCallback: ResizeObserverCallback;
 let observedElements: Set<Element>;
@@ -40,9 +47,17 @@ beforeEach(async () => {
   mockUnobserve.mockClear();
   mockDisconnect.mockClear();
 
+  // Dynamic: each test needs the module's rAF/observer state rebuilt from
+  // scratch after `vi.resetModules()`, which a static import wouldn't see.
   const mod = await import("../src/observe-resize.js");
   observeResize = mod.observeResize;
+  observeAnchor = mod.observeAnchor;
+  requestMeasure = mod.requestMeasure;
 });
+
+// Spies leak across tests otherwise, and the read-count assertions below need a
+// getComputedStyle that no earlier test has redefined.
+afterEach(() => vi.restoreAllMocks());
 
 function flushRaf() {
   const cbs = [...rafCallbacks.values()];
@@ -53,6 +68,27 @@ function flushRaf() {
 function triggerResize(...elements: Element[]) {
   const entries = elements.map((target) => ({ target } as ResizeObserverEntry));
   roCallback(entries, {} as ResizeObserver);
+}
+
+// happy-dom has no layout engine, so computed width/height come back as "" and
+// `getLayoutSize` falls back to `offset*`. Those are the only dial for the size
+// the flush will measure.
+function sized(width: number, height: number): HTMLElement {
+  const el = document.createElement("div");
+  Object.defineProperty(el, "offsetWidth", { value: width, configurable: true });
+  Object.defineProperty(el, "offsetHeight", { value: height, configurable: true });
+  // Attached: happy-dom resolves an inline `writing-mode` to "" while the
+  // element is detached, which would silently make every element horizontal.
+  document.body.appendChild(el);
+  return el;
+}
+
+/** Count getComputedStyle calls without changing what any of them return. */
+function countComputedStyle() {
+  return vi
+    .spyOn(window, "getComputedStyle")
+    .mockImplementation(((el: Element, pseudo?: string | null) =>
+      realComputedStyle(el, pseudo)) as typeof window.getComputedStyle);
 }
 
 // Resize with a border-box size on the entry. The flush ignores it and
@@ -324,5 +360,121 @@ describe("observeResize", () => {
     flushRaf();
 
     expect(cbB).toHaveBeenCalled();
+  });
+
+  // The RO guarantees an initial observation for every newly observed element,
+  // delivered a frame after `observeResize` already queued and measured it. It
+  // reports the size we hold, so re-measuring buys a style recalc per element
+  // for no new information.
+  it("skips a notification reporting the box the last flush already measured", () => {
+    const el = sized(200, 100);
+    const cb = vi.fn();
+    observeResize(el, cb);
+    flushRaf();
+    cb.mockClear();
+
+    const gcs = countComputedStyle();
+    triggerResizeSized(el, 200, 100);
+
+    expect(rafCallbacks.size).toBe(0);
+    flushRaf();
+    expect(cb).not.toHaveBeenCalled();
+    expect(gcs).not.toHaveBeenCalled();
+  });
+
+  it("measures when the notification reports a box other than the last measured", () => {
+    const el = sized(200, 100);
+    const cb = vi.fn();
+    observeResize(el, cb);
+    flushRaf();
+    cb.mockClear();
+
+    Object.defineProperty(el, "offsetWidth", { value: 240, configurable: true });
+    const gcs = countComputedStyle();
+    triggerResizeSized(el, 240, 100);
+    flushRaf();
+
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ width: 240, height: 100 }));
+    expect(gcs).toHaveBeenCalledTimes(1);
+  });
+
+  it("measures a same-box notification anyway in a vertical writing mode", () => {
+    // `borderBoxSize` is inline/block relative, so inline→width only holds
+    // horizontally. Under `vertical-rl` a resize that transposed the box to
+    // 100×200 arrives as inlineSize 200 / blockSize 100 — identical to the last
+    // measured pair — and comparing them would skip a real resize.
+    const el = sized(200, 100);
+    el.style.writingMode = "vertical-rl";
+    const cb = vi.fn();
+    observeResize(el, cb);
+    flushRaf();
+    cb.mockClear();
+
+    const gcs = countComputedStyle();
+    triggerResizeSized(el, 200, 100);
+    flushRaf();
+
+    expect(cb).toHaveBeenCalledOnce();
+    expect(gcs).toHaveBeenCalledTimes(1);
+  });
+
+  it("measures an element whose notification precedes its first flush", () => {
+    // Nothing is recorded until a flush measures the element, so the first
+    // notification has no box to be compared against. Pins that the record is
+    // written by the flush and never seeded at subscribe time, where it would
+    // dismiss the element's genuine first size.
+    const el = sized(200, 100);
+    const cb = vi.fn();
+    const gcs = countComputedStyle();
+
+    observeResize(el, cb);
+    triggerResizeSized(el, 200, 100);
+    flushRaf();
+
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ width: 200, height: 100 }));
+    expect(gcs).toHaveBeenCalledTimes(1);
+  });
+
+  it("requestMeasure queues even when the size is unchanged", () => {
+    // Its callers ask because something *other* than the element changed what
+    // it should render, and there is no entry box to recognise as stale news.
+    const el = sized(200, 100);
+    const cb = vi.fn();
+    observeResize(el, cb);
+    flushRaf();
+    cb.mockClear();
+
+    const gcs = countComputedStyle();
+    requestMeasure(el);
+    flushRaf();
+
+    expect(cb).toHaveBeenCalledOnce();
+    expect(gcs).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("observeAnchor", () => {
+  it("ignores the anchor's first dispatch, then re-measures the target", () => {
+    // The anchor's first dispatch shares the flush that already measured the
+    // target for its own subscribe, so requesting a measure there would cost
+    // the target an entire extra flush read for a size it just reported.
+    const anchor = sized(300, 200);
+    const target = sized(200, 100);
+    const targetCb = vi.fn();
+    observeResize(target, targetCb);
+    observeAnchor(anchor, target);
+
+    flushRaf();
+    expect(targetCb).toHaveBeenCalledOnce();
+    expect(rafCallbacks.size).toBe(0);
+    targetCb.mockClear();
+
+    Object.defineProperty(anchor, "offsetWidth", { value: 340, configurable: true });
+    triggerResizeSized(anchor, 340, 200);
+    flushRaf();
+    expect(targetCb).not.toHaveBeenCalled();
+
+    flushRaf();
+    expect(targetCb).toHaveBeenCalledOnce();
   });
 });

@@ -4,7 +4,7 @@ import {
   createSvgEffects,
   createDropShadow,
   observeResize,
-  requestMeasure,
+  observeAnchor,
   getLayoutSize,
   DEFAULT_SHADOW,
   extractAndStripEffects,
@@ -14,7 +14,9 @@ import {
   hasEffects,
   mergeEffects,
 } from "@lisse/core";
-import type { SmoothCornerOptions, EffectsConfig, ShadowConfig, Measured, OverlayOffset } from "@lisse/core";
+import type {
+  SmoothCornerOptions, EffectsConfig, ShadowConfig, Measured, MeasuredSize, OverlayOffset,
+} from "@lisse/core";
 
 /**
  * `useLayoutEffect` on the client, `useEffect` during SSR — mutate the DOM
@@ -45,6 +47,13 @@ interface State {
   anchor: HTMLElement | null;
   didAcquire: boolean;
   unobserveAnchor: (() => void) | undefined;
+  // Border-box size an extraction just measured, handed to the next sync so it
+  // doesn't read the same element's computed style a second time in the same
+  // commit — and that second read would be a full style recalc, because the
+  // extraction's border/padding strip dirtied style in between. Consumed once
+  // (extraction and the sync that follows it are the same layout state);
+  // every later sync measures for itself.
+  pendingSize: MeasuredSize | undefined;
   // Last-synced snapshot. runSync bails when nothing changed, which keeps
   // the every-commit re-clip at one computed-style read per render. `null`
   // key = invalidated (effects state mutated outside the render keys).
@@ -79,22 +88,30 @@ interface SyncRefs {
  * handles are created on first sight of effects, reused thereafter, and a
  * zero-size element bails out (the next resize tick picks it up).
  */
-function runSync(s: State, refs: SyncRefs, measured?: Measured): void {
+function runSync(s: State, refs: SyncRefs, measured?: Measured | MeasuredSize): void {
   const merged = mergeEffects(s.extracted, refs.effectsPropRef.current);
   if (hasEffects(merged))
     ensureHandles(s, merged, refs.wrapperRefRef.current, refs.skipShadowHandleRef.current);
 
-  // Resize ticks thread the size the observer measured for this flush; the
-  // initial mount and the every-commit sync below pass none and read it here
-  // (the latter deliberately, for WebKit mid-animation correctness).
-  const { width, height } = measured ?? getLayoutSize(s.el);
+  // Resize ticks thread the size the observer measured for this flush, and a
+  // just-finished extraction threads the size it already read (see
+  // `State.pendingSize`). Only a sync with neither — the every-commit one —
+  // reads here, deliberately, for WebKit mid-animation correctness. The
+  // pending size is dropped either way: once a caller has threaded its own
+  // measurement, an older extraction snapshot can only be staler.
+  const pending = s.pendingSize;
+  s.pendingSize = undefined;
+  const { width, height } = measured ?? pending ?? getLayoutSize(s.el);
   if (width <= 0 || height <= 0) return;
 
   // In the guard because an anchor can move the element without resizing it;
   // threaded from the read pass so it never becomes a write-pass layout read.
+  // An extraction size carries no offsets, on purpose: `offsetLeft` is not a
+  // computed-style read, so the mount path is free to take it directly.
+  const placed = measured && "offsetLeft" in measured ? measured : undefined;
   const anchored = s.effectsHandle !== undefined;
-  const offsetX = anchored ? (measured?.offsetLeft ?? s.el.offsetLeft) : 0;
-  const offsetY = anchored ? (measured?.offsetTop ?? s.el.offsetTop) : 0;
+  const offsetX = anchored ? (placed?.offsetLeft ?? s.el.offsetLeft) : 0;
+  const offsetY = anchored ? (placed?.offsetTop ?? s.el.offsetTop) : 0;
 
   const key = refs.syncKeyRef.current;
   if (
@@ -144,9 +161,13 @@ function ensureHandles(
     if (!anchor) return;
     s.anchor = anchor;
     s.didAcquire = acquirePosition(anchor);
-    // An anchor can move the element without resizing it. The callback runs in
-    // the write pass, so it measures nothing and re-queues instead.
-    s.unobserveAnchor = observeResize(anchor, () => requestMeasure(s.el));
+    // An anchor can move the element without resizing it, so the element is
+    // re-measured whenever the anchor resizes. The re-measure is queued rather
+    // than taken inline because the dispatch runs in the write pass. The
+    // anchor's own first dispatch is suppressed: it lands in the same flush
+    // that already measured the element for its own subscribe, so re-queueing
+    // there would buy nothing and cost the element an extra layout read.
+    s.unobserveAnchor = observeAnchor(anchor, s.el);
   }
   if (!s.effectsHandle) {
     s.effectsHandle = createSvgEffects(s.anchor, s.el);
@@ -284,6 +305,7 @@ export function useSmoothCorners(
       anchor: null,
       didAcquire: false,
       unobserveAnchor: undefined,
+      pendingSize: initialExtracted?.size,
       lastWidth: 0,
       lastHeight: 0,
       lastSyncKey: null,
@@ -362,6 +384,7 @@ export function useSmoothCorners(
     const hadExtraction = s.extracted !== undefined;
     if (autoEffectsKey && !hadExtraction) {
       s.extracted = extractAndStripEffects(s.el);
+      s.pendingSize = s.extracted.size;
     } else if (!autoEffectsKey && hadExtraction) {
       restoreStyles(s.el, s.extracted!.savedStyles);
       s.extracted = undefined;

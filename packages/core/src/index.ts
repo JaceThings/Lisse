@@ -3,8 +3,8 @@ export { getPathParamsForCorner } from "./corner-params.js";
 export { distributeAndNormalize } from "./distribute.js";
 export { createSvgEffects, type SvgEffectsHandle } from "./svg-effects.js";
 export { createDropShadow, type DropShadowHandle } from "./drop-shadow.js";
-export { observeResize, requestMeasure, type Measured } from "./observe-resize.js";
-export { getLayoutSize } from "./layout-size.js";
+export { observeResize, observeAnchor, requestMeasure, type Measured } from "./observe-resize.js";
+export { getLayoutSize, type MeasuredSize } from "./layout-size.js";
 export {
   APPLE_SMOOTHING,
   FIGMA_SMOOTHING,

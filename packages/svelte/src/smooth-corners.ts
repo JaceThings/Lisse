@@ -1,5 +1,5 @@
-import { generateClipPath, createSvgEffects, createDropShadow, observeResize, requestMeasure, getLayoutSize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
-import type { SmoothCornerOptions, EffectsConfig, Measured, OverlayOffset } from "@lisse/core";
+import { generateClipPath, createSvgEffects, createDropShadow, observeResize, observeAnchor, getLayoutSize, DEFAULT_SHADOW, extractAndStripEffects, restoreStyles, acquirePosition, releasePosition, hasEffects, mergeEffects } from "@lisse/core";
+import type { SmoothCornerOptions, EffectsConfig, Measured, MeasuredSize, OverlayOffset } from "@lisse/core";
 
 export interface SmoothCornersAction {
   update: (config: SmoothCornersConfig) => void;
@@ -49,10 +49,18 @@ export function smoothCorners(
   let attachedAnchor: HTMLElement | null = null;
   let didAcquire = false;
   let unobserveAnchor: (() => void) | undefined;
+  // The border-box size `extractAndStripEffects` already measured, handed to
+  // the next apply() and then cleared. Extraction pays for a computed-style
+  // declaration on the node and reads its size off that same declaration;
+  // without this, the apply() that immediately follows an autoEffects toggle in
+  // update() paid for a second full computed-style read of a node nothing had
+  // resized.
+  let pendingSize: MeasuredSize | undefined;
 
   function setAutoExtraction(enable: boolean): void {
     if (enable && !extractedResult) {
       extractedResult = extractAndStripEffects(node);
+      pendingSize = extractedResult.size;
     } else if (!enable && extractedResult) {
       restoreStyles(node, extractedResult.savedStyles);
       extractedResult = undefined;
@@ -77,8 +85,11 @@ export function smoothCorners(
       attachedAnchor = anchor;
       didAcquire = acquirePosition(anchor);
       // An anchor can move the node without resizing it. Runs in the write
-      // pass, so measure nothing — re-queue instead.
-      unobserveAnchor = observeResize(anchor, () => requestMeasure(node));
+      // pass, so measure nothing — re-queue instead. The anchor's first
+      // dispatch is suppressed by observeAnchor: it lands in the same flush
+      // that already measured the node for its own subscribe, so re-queueing
+      // there would only buy the node a second identical measurement.
+      unobserveAnchor = observeAnchor(anchor, node);
     }
 
     if (!effectsHandle) {
@@ -106,17 +117,24 @@ export function smoothCorners(
   let lastOffsetX = 0;
   let lastOffsetY = 0;
 
-  // size comes from the resize observer's border-box entry; initial attach
-  // and update() omit it and fall back to a measured read.
-  function apply(measured?: Measured) {
-    const { width, height } = measured ?? getLayoutSize(node);
+  // size comes from the resize flush's read pass; update() passes nothing and
+  // takes the one-shot pendingSize extraction already measured, falling back to
+  // its own read when there is none left to consume.
+  function apply(measured?: Measured | MeasuredSize) {
+    const size = measured ?? pendingSize ?? getLayoutSize(node);
+    pendingSize = undefined;
+    const { width, height } = size;
     if (width <= 0 || height <= 0) return;
 
     // In the guard because an anchor can move the node without resizing it;
     // threaded from the read pass so it never becomes a write-pass layout read.
+    // A size threaded out of extraction carries no offsets on purpose —
+    // `offsetLeft`/`offsetTop` are not computed-style reads, so taking them
+    // directly here costs nothing this pass was trying to save.
+    const placed = measured && "offsetLeft" in measured ? measured : undefined;
     const anchored = attachedAnchor !== null;
-    const offsetX = anchored ? (measured?.offsetLeft ?? node.offsetLeft) : 0;
-    const offsetY = anchored ? (measured?.offsetTop ?? node.offsetTop) : 0;
+    const offsetX = anchored ? (placed?.offsetLeft ?? node.offsetLeft) : 0;
+    const offsetY = anchored ? (placed?.offsetTop ?? node.offsetTop) : 0;
 
     const key = currentSyncKey;
     if (
@@ -176,6 +194,8 @@ export function smoothCorners(
         restoreStyles(node, extractedResult.savedStyles);
         extractedResult = undefined;
       }
+      // Nothing may consume a size measured before the styles were restored.
+      pendingSize = undefined;
       if (didAcquire && attachedAnchor) {
         releasePosition(attachedAnchor);
       }
