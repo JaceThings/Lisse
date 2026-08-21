@@ -23,6 +23,7 @@ layer should answer "did it change". They are not the same.
 | Perf | `benchmarks/*.bench.ts` | "Did the JS hot path regress?" Local `pnpm bench` (tinybench wall-clock). |
 | Size | `package.json#size-limit` | "Did the bundle size regress?" Per-package brotli-budgeted. |
 | Dead code | `knip.json` | "Are there unused exports / files / deps?" |
+| Type coverage | `packages/*/tsconfig.test.json` | "Does the test code still typecheck against `src`?" `pnpm typecheck`. |
 
 ## Running tests
 
@@ -39,6 +40,39 @@ pnpm consumer-smoke      # pack tarballs, lint, install in fixture, import
 Browser smoke is heavy and is wired only in CI on main / tags. To run
 locally: `cd tests/browser-smoke && pnpm test`. First run needs
 `pnpm exec playwright install chromium webkit firefox`.
+
+## Typechecking tests
+
+`pnpm typecheck` runs two programs per package: `tsconfig.json` over
+`src`, then `tsconfig.test.json` over `__tests__`.
+
+Widening the build config's `include` to `["src", "__tests__"]` instead
+does not work. Adapter tests import the core harness by explicit `.ts`
+path, so the program needs `allowImportingTsExtensions`, which
+TypeScript only allows under `noEmit`; `packages/core` would also have
+to drop `rootDir: "src"`, which currently rejects any file outside
+`src`. Octane settles it: its tests only typecheck under
+`jsx: "react-jsx"`, and its build config has to keep the classic
+`jsxFactory` that esbuild uses to run them.
+
+A new package with a `__tests__` directory needs its own
+`tsconfig.test.json` and `&& tsc -p tsconfig.test.json` appended to its
+`typecheck` script, or its tests are never checked.
+
+`packages/octane/tsconfig.test.json` extends `tsconfig.base.json`
+instead of its sibling, because TypeScript rejects the sibling's
+`jsxFactory` beside `jsx: "react-jsx"` — the only mode that finds
+octane's JSX namespace, since octane exports it from
+`octane/jsx-runtime` rather than declaring a global one.
+
+That mode costs `noUnusedLocals`, which stays off: every octane test
+imports `createElement` for its `/** @jsx createElement */` pragma, and
+the automatic-runtime typecheck cannot see that it is used.
+
+`tests/browser-smoke` and `tests/consumer-smoke` are not covered. The
+former needs `lib: es2024`, a cast for the undeclared `CDPSession.send`,
+and a fix for the vite 6 / vite 7 duplicate-types clash in its
+`vitest.config.ts`; the latter is plain `.mjs` / `.cjs`.
 
 ## The runtime harness pattern
 

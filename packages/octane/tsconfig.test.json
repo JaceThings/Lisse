@@ -1,0 +1,15 @@
+{
+  // Not ./tsconfig.json: its classic jsxFactory (which esbuild needs to run these
+  // files) is illegal beside jsx: react-jsx, the only mode that finds octane's JSX.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "octane",
+    "paths": {
+      "@lisse/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["__tests__"]
+}
