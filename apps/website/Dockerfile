@@ -21,13 +21,18 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /workspace
 
 # Copy only the lock + workspace + package manifests first so the install
-# layer caches independently of source-code changes.
+# layer caches independently of source-code changes. Every package under
+# packages/ needs a line here: `COPY packages packages` below brings its source
+# in regardless, and `pnpm -r build` then builds it with no node_modules of its
+# own — @lisse/octane broke the deploy that way, its dts build unable to resolve
+# the `octane` peer.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY tsconfig.base.json ./
 COPY packages/core/package.json packages/core/
 COPY packages/react/package.json packages/react/
 COPY packages/vue/package.json packages/vue/
 COPY packages/svelte/package.json packages/svelte/
+COPY packages/octane/package.json packages/octane/
 COPY benchmarks/package.json benchmarks/
 COPY apps/website/package.json apps/website/
 
