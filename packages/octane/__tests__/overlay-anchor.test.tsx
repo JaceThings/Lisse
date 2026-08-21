@@ -1,14 +1,12 @@
 /** @jsx createElement */
 // @vitest-environment happy-dom
-//
-// Overlays must live outside the clipped element so outer effects can paint.
 import { act, createElement, createRoot, useRef, type Root } from "octane";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { BorderConfig } from "@lisse/core";
 import { SmoothCorners } from "../src/smooth-corners.js";
 import { useSmoothCorners } from "../src/use-smooth-corners.js";
-import type { RefObject } from "../src/use-smooth-corners.js";
-import { installNoopResizeObserver } from "./helpers.js";
+
+type RefObject<T> = { current: T };
 
 const OUTER: BorderConfig = { width: 3, color: "#ff0000", opacity: 1 };
 
@@ -16,7 +14,6 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  installNoopResizeObserver();
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);

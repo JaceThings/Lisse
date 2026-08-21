@@ -2,13 +2,14 @@
 // @vitest-environment happy-dom
 import { act, createElement, createRoot, type Root } from "octane";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { generatePath } from "@lisse/core";
 import {
   installHarness,
   uninstallHarness,
   type RuntimeHarness,
 } from "../../core/__tests__/harness/runtime-harness.ts";
 import { SmoothCorners } from "../src/smooth-corners.js";
-import { getInner, stubLayout } from "./helpers.js";
+import { getInner, readClipPathD, stubLayout } from "./helpers.js";
 
 let container: HTMLDivElement;
 let root: Root;
@@ -28,23 +29,44 @@ afterEach(() => {
 });
 
 describe("Octane adapter — runtime harness", () => {
-  it("batches multiple resize entries into one rAF flush", () => {
-    act(() =>
-      root.render(<SmoothCorners as="div" autoEffects={false} corners={{ radius: 16 }} />),
-    );
+  it("coalesces a burst of resize entries into the one pending rAF", () => {
+    const corners = { radius: 16 };
+    act(() => root.render(<SmoothCorners as="div" autoEffects={false} corners={corners} />));
     const el = getInner(container);
-    stubLayout(el);
+    stubLayout(el, 200, 100);
 
+    // Subscribing already queued a frame; the entries below must ride it, not queue their own.
+    expect(harness.pendingRafCount()).toBe(1);
     act(() => {
       harness.deliverResize(el, 200, 100);
       harness.deliverResize(el, 250, 120);
       harness.deliverResize(el, 300, 140);
     });
+    expect(harness.pendingRafCount()).toBe(1);
 
-    expect(harness.pendingRafCount()).toBeLessThanOrEqual(1);
     act(() => harness.flushRaf());
     expect(harness.pendingRafCount()).toBe(0);
-    expect(el.style.clipPath).not.toBe("");
+    // The flush measures live, so the stubbed 200x100 beats the last entry's numbers.
+    expect(readClipPathD(container)).toBe(generatePath(200, 100, corners));
+  });
+
+  it("re-clips to each new measured size, not just the first", () => {
+    const corners = { radius: 16 };
+    act(() => root.render(<SmoothCorners as="div" autoEffects={false} corners={corners} />));
+    const el = getInner(container);
+
+    for (const [width, height] of [
+      [200, 100],
+      [250, 120],
+      [300, 140],
+    ]) {
+      stubLayout(el, width, height);
+      act(() => {
+        harness.deliverResize(el, width, height);
+        harness.flushRaf();
+      });
+      expect(readClipPathD(container)).toBe(generatePath(width, height, corners));
+    }
   });
 
   it("updates the clip-path style when the radius prop changes", () => {
@@ -145,6 +167,7 @@ describe("Octane adapter — SSR border-radius fallback teardown", () => {
     const el = getInner(container);
     expect(el.style.borderRadius).toBe("16px");
     expect(el.style.clipPath).toBe("");
+    expect(el.getAttribute("data-state")).toBe("pending");
 
     stubLayout(el);
     act(() => {
@@ -153,6 +176,7 @@ describe("Octane adapter — SSR border-radius fallback teardown", () => {
     });
     expect(el.style.clipPath).not.toBe("");
     expect(el.style.borderRadius).toBe("");
+    expect(el.getAttribute("data-state")).toBe("ready");
   });
 
   it("leaves a user-supplied border-radius untouched", () => {
