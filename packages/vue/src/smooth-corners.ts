@@ -21,8 +21,18 @@ import type {
 // `border-radius` plus every per-corner longhand, physical and logical
 // (`border-top-left-radius`, `border-start-end-radius`, …), in both the kebab
 // and camel spellings Vue accepts.
-const RADIUS_PROPERTY = /^border(?:-[a-z]+)*-radius$|^border[A-Za-z]*Radius$/;
-const RADIUS_DECLARATION = /border(?:-[a-z]+)*-radius\s*:/i;
+const RADIUS_PROPERTY = /^border[a-z-]*-radius$|^border[A-Za-z]*Radius$/;
+
+// A declaration list is walked rather than matched: `border(?:-[a-z]+)*-radius`
+// backtracks polynomially on a consumer-supplied string.
+function radiusDeclaration(text: string): boolean {
+  for (const declaration of text.split(";")) {
+    const colon = declaration.indexOf(":");
+    if (colon < 0) continue;
+    if (declaration.slice(0, colon).trim().toLowerCase().endsWith("-radius")) return true;
+  }
+  return false;
+}
 
 // True when a consumer-supplied `style` (object, string, or nested array —
 // Vue's accepted forms) already sets a corner radius, so the SSR fallback must
@@ -31,7 +41,7 @@ const RADIUS_DECLARATION = /border(?:-[a-z]+)*-radius\s*:/i;
 function styleHasBorderRadius(style: unknown): boolean {
   if (!style) return false;
   if (Array.isArray(style)) return style.some(styleHasBorderRadius);
-  if (typeof style === "string") return RADIUS_DECLARATION.test(style);
+  if (typeof style === "string") return radiusDeclaration(style);
   if (typeof style === "object") {
     const s = style as Record<string, unknown>;
     return Object.keys(s).some((key) => s[key] !== undefined && RADIUS_PROPERTY.test(key));
