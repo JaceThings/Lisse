@@ -1,6 +1,6 @@
 # Publishing
 
-How to ship a new version of the five `@lisse/*` packages on npm.
+How to ship a new version of the five `@lisse/*` packages on npm. Four of them — core, react, vue and svelte — release on one shared version; `@lisse/octane` versions on its own because it tracks a pre-1.0 peer.
 
 ## TL;DR — the normal flow
 

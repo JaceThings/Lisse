@@ -4,7 +4,7 @@
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@lisse/core", "@lisse/react", "@lisse/vue", "@lisse/svelte", "@lisse/octane"]
+    ["@lisse/core", "@lisse/react", "@lisse/vue", "@lisse/svelte"]
   ],
   "access": "public",
   "baseBranch": "main",
