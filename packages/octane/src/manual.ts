@@ -1,13 +1,7 @@
-// Octane compiles consumer hook calls with a trailing Symbol. Published plain
-// TypeScript bindings receive that Symbol and derive stable sub-slots for the
-// base hooks they compose.
+// Octane stamps each hook call site with a uniquely described Symbol and passes
+// it as the last argument. Sub-slots key off that description, so an empty one
+// would collide every call site's hook state.
 const subSlotCache = new Map<symbol, Map<string, symbol>>();
-
-export function splitSlot<T>(args: T[]): [T[], symbol | undefined] {
-  const tail = args[args.length - 1];
-  const slot = typeof tail === "symbol" ? (tail as symbol) : undefined;
-  return [slot === undefined ? args : args.slice(0, -1), slot];
-}
 
 export function subSlot(slot: symbol | undefined, tag: string): symbol | undefined {
   if (slot === undefined) return undefined;
@@ -15,14 +9,18 @@ export function subSlot(slot: symbol | undefined, tag: string): symbol | undefin
   if (byTag === undefined) subSlotCache.set(slot, (byTag = new Map()));
   let child = byTag.get(tag);
   if (child === undefined) {
-    child = Symbol.for(`@lisse/octane:${slot.description ?? ""}:${tag}`);
+    const description = slot.description;
+    if (!description) {
+      throw new Error(
+        `@lisse/octane: hook slot for "${tag}" has no description. Pass Octane's own slot through, or a Symbol.for("<unique id>") of your own.`,
+      );
+    }
+    child = Symbol.for(`@lisse/octane:${description}:${tag}`);
     byTag.set(tag, child);
   }
   return child;
 }
 
-// Plain-TS components in this package do not receive compiler slots at their
-// own hook sites, so each hook call gets a stable package-local symbol.
 const componentSlotCache = new Map<string, symbol>();
 
 export function componentSlot(name: string): symbol {
