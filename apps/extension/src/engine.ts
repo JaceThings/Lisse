@@ -4,25 +4,23 @@ import {
   parseCornerRadius,
   isElliptical,
   pseudoEscapesBox,
-  isDefaultCornerShape,
+  isDefaultCorner,
   MIN_RADIUS,
   DEFAULT_SMOOTHING,
   type Radii,
   type PlanInput,
   type BorderInput,
   type BackgroundInput,
+  type BorderLayer,
 } from "./plan.js";
 
 export interface EngineSettings {
   enabled: boolean;
-  /** Fixed per build; the userscript exposes it as an editable constant. */
   smoothing?: number;
 }
 
 const MAX_STYLED = 1500;
-/** Stamped by every Lisse framework binding, so its presence means the page ships Lisse. */
 const LISSE_MARKER = '[data-slot="smooth-corners"]';
-/** Replaced elements are a single box even at display:inline. */
 const REPLACED_TAGS = new Set(["IMG", "VIDEO", "CANVAS", "IFRAME", "EMBED", "OBJECT"]);
 const FRAME_BUDGET_MS = 6;
 const CHUNK = 32;
@@ -34,7 +32,6 @@ interface BorderColors {
   left: string;
 }
 
-/** Site-original computed values: our own writes corrupt the readback, so a re-plan reuses these. */
 interface SiteStyles {
   filter: string;
   borderColors: BorderColors;
@@ -45,21 +42,17 @@ interface OriginalStyles {
   clipPath: string;
   filter: string;
   borderColor: string;
-  bgImage: string;
-  bgOrigin: string;
-  bgClip: string;
-  bgRepeat: string;
-  bgSize: string;
+  bg: BackgroundInput;
+  boxShadow: string;
 }
 
 interface Applied extends OriginalStyles {
   site: SiteStyles;
-  // What we last wrote, pre-serialisation — readback normalises values.
-  // A null filter means the site owns the property and we never wrote one.
   lastClip: string;
   lastFilter: string | null;
   lastBorderColor: string;
   lastBgImage: string;
+  lastBoxShadow: string | null;
   unobserve: () => void;
 }
 
@@ -107,13 +100,10 @@ function pseudoOutside(el: HTMLElement, w: number, h: number): boolean {
 
 const ESCAPE_SCAN_CAP = 200;
 
-/**
- * A visible descendant sticking out of the border box gets amputated by
- * clip-path (GitHub avatar stacks: 20px avatars overflowing a 9px capsule
- * container). Escapes are often deep, so this walks — capped, since huge
- * containers must stay cheap.
- * ponytail: beyond the cap we assume no escape — widen if real sites bite.
- */
+function host(n: EventTarget | Node | null | undefined): HTMLElement | null {
+  return n instanceof HTMLElement ? n : null;
+}
+
 function childrenEscapeBox(el: HTMLElement, cs: CSSStyleDeclaration): boolean {
   if (cs.overflowX !== "visible" && cs.overflowY !== "visible") return false;
   if (el.childElementCount === 0) return false;
@@ -121,23 +111,61 @@ function childrenEscapeBox(el: HTMLElement, cs: CSSStyleDeclaration): boolean {
   if (r.width === 0 && r.height === 0) return false;
   const eps = 0.6;
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT);
-  let node = walker.nextNode() as Element | null;
+  let node = walker.nextNode();
   let seen = 0;
-  while (node && seen++ < ESCAPE_SCAN_CAP) {
+  while (node instanceof Element && seen++ < ESCAPE_SCAN_CAP) {
     const kr = node.getBoundingClientRect();
     if (kr.width > 0 && kr.height > 0 &&
         (kr.left < r.left - eps || kr.top < r.top - eps ||
          kr.right > r.right + eps || kr.bottom > r.bottom + eps)) {
       const kcs = getComputedStyle(node);
-      // visibility inherits, so one check covers hidden subtrees; fixed
-      // descendants are viewport-anchored portals, not box content.
       if (kcs.visibility !== "hidden" && kcs.opacity !== "0" && kcs.position !== "fixed") {
         return true;
       }
     }
-    node = walker.nextNode() as Element | null;
+    node = walker.nextNode();
   }
   return false;
+}
+
+function writeOwnedShadow(el: HTMLElement, value: string) {
+  el.style.setProperty("box-shadow", value, "important");
+}
+
+function releaseOwnedShadow(el: HTMLElement, orig: string) {
+  el.style.removeProperty("box-shadow");
+  if (orig) el.style.boxShadow = orig;
+}
+
+function readBg(s: CSSStyleDeclaration): BackgroundInput {
+  return {
+    image: s.backgroundImage,
+    origin: s.backgroundOrigin,
+    clip: s.backgroundClip,
+    repeat: s.backgroundRepeat,
+    size: s.backgroundSize,
+    position: s.backgroundPosition,
+  };
+}
+
+function bgFromLayer(layer: BorderLayer): BackgroundInput {
+  return {
+    image: layer.backgroundImage,
+    origin: layer.backgroundOrigin,
+    clip: layer.backgroundClip,
+    repeat: layer.backgroundRepeat,
+    size: layer.backgroundSize,
+    position: layer.backgroundPosition,
+  };
+}
+
+function writeBg(el: HTMLElement, bg: BackgroundInput) {
+  el.style.backgroundImage = bg.image;
+  el.style.backgroundOrigin = bg.origin;
+  el.style.backgroundClip = bg.clip;
+  el.style.backgroundRepeat = bg.repeat;
+  el.style.backgroundSize = bg.size;
+  el.style.backgroundPosition = bg.position;
 }
 
 function readRadii(cs: CSSStyleDeclaration, w: number, h: number): { radii: Radii; elliptical: boolean } | null {
@@ -155,13 +183,9 @@ export function createEngine(initial: EngineSettings) {
   const applied = new Map<HTMLElement, Applied>();
   const seen = new WeakSet<HTMLElement>();
   const queue = new Set<HTMLElement>();
-  // MutationObserver on `document` cannot see inside shadow roots, so every
-  // discovered root gets observed individually (Reddit-class apps mutate
-  // almost exclusively inside shadow DOM).
   const observedRoots = new WeakSet<ShadowRoot>();
   let rafHandle: number | undefined;
   let mo: MutationObserver | undefined;
-  /** Latched once the page is found to ship Lisse; never unset. */
   let stoodDown = false;
 
   const MO_OPTS: MutationObserverInit = {
@@ -173,25 +197,15 @@ export function createEngine(initial: EngineSettings) {
 
   function planFor(el: HTMLElement): PlanResult | null {
     const cs = getComputedStyle(el);
-    // A non-replaced inline element fragments across line boxes — no single
-    // path describes it, and its computed width/height are unresolved.
     if (cs.display === "inline" && !REPLACED_TAGS.has(el.tagName)) return null;
-    // A fieldset's legend rides a notch cut into the border (Material-style
-    // outlined inputs) — no single path + uniform stroke can represent it.
     if (el.tagName === "FIELDSET" && el.querySelector(":scope > legend")) return null;
-    // Native CSS corner-shape (x.com ships `squircle`): the site has already
-    // chosen its geometry — smooth or decorative, ours has no business there.
-    const cornerShape = cs.getPropertyValue("corner-shape");
-    if (cornerShape && !isDefaultCornerShape(cornerShape)) return null;
-    // Border-box floats; clip-path's default reference box is the border box.
+    const corners = cs.getPropertyValue("corner-shape");
+    if (corners && !isDefaultCorner(corners)) return null;
     const { width: w, height: h } = getLayoutSize(el);
     if (isNaN(w) || isNaN(h)) return null;
-    // Page position feeds border pixel-snapping (untransformed page coords).
     const rect = el.getBoundingClientRect();
     const read = readRadii(cs, w, h);
     if (!read) return null;
-    // Bail before the expensive reads (pseudo styles, descendant rects) —
-    // most mutation-enqueued elements have negligible radius.
     const { tl, tr, br, bl } = read.radii;
     if (Math.max(tl, tr, br, bl) < MIN_RADIUS) return null;
 
@@ -203,13 +217,7 @@ export function createEngine(initial: EngineSettings) {
         bottom: cs.borderBottomColor,
         left: cs.borderLeftColor,
       },
-      bg: {
-        image: cs.backgroundImage,
-        origin: cs.backgroundOrigin,
-        clip: cs.backgroundClip,
-        repeat: cs.backgroundRepeat,
-        size: cs.backgroundSize,
-      },
+      bg: readBg(cs),
     };
 
     const bgColor = parseColor(cs.backgroundColor);
@@ -252,63 +260,55 @@ export function createEngine(initial: EngineSettings) {
       clipPath: el.style.clipPath,
       filter: el.style.filter,
       borderColor: el.style.borderColor,
-      bgImage: el.style.backgroundImage,
-      bgOrigin: el.style.backgroundOrigin,
-      bgClip: el.style.backgroundClip,
-      bgRepeat: el.style.backgroundRepeat,
-      bgSize: el.style.backgroundSize,
+      bg: readBg(el.style),
+      boxShadow: el.style.boxShadow,
     };
 
-    const b = plan.border;
-    // Only a shadow plan gives us a filter. Otherwise the property is the site's:
-    // `orig.filter` is an inline snapshot from whenever we first landed on the
-    // element, routinely mid-animation, so writing it back on a later re-plan
-    // replays a stale frame over what the site is animating now.
-    const targetFilter = plan.filter ?? null;
-    const targetBorderColor = b ? "transparent" : orig.borderColor;
-    const targetBgImage = b ? b.backgroundImage : orig.bgImage;
+    const clipPath = "clipPath" in plan ? plan.clipPath : "";
+    const border = "border" in plan ? plan.border : undefined;
+    const filter = "filter" in plan ? plan.filter ?? null : null;
+    const boxShadow = "boxShadow" in plan ? plan.boxShadow ?? null : null;
+    const borderColor = border && !border.keepBorderColor ? "transparent" : orig.borderColor;
+    const bg = border ? bgFromLayer(border) : orig.bg;
+    const bgImage = bg.image;
 
-    // Our writes re-trigger the MutationObserver (it fires async, so a flag
-    // can't intercept them) — skipping no-op writes breaks the feedback loop.
-    // Compare against what we last wrote, not readback: data URIs and colours
-    // re-serialise and won't match.
     if (record &&
-        record.lastClip === plan.clipPath &&
-        record.lastFilter === targetFilter &&
-        record.lastBorderColor === targetBorderColor &&
-        record.lastBgImage === targetBgImage) {
+        record.lastClip === clipPath &&
+        record.lastFilter === filter &&
+        record.lastBorderColor === borderColor &&
+        record.lastBgImage === bgImage &&
+        record.lastBoxShadow === boxShadow) {
+      // flush() released the site shadow so we could read :focus; put ours back.
+      if (record.lastBoxShadow !== null) writeOwnedShadow(el, record.lastBoxShadow);
       return;
     }
 
-    el.style.clipPath = plan.clipPath;
+    el.style.clipPath = clipPath || orig.clipPath;
 
-    // Filter and border/background follow the same rule: write while the
-    // property is ours, hand it back once when it stops being.
-    if (targetFilter !== null) el.style.filter = targetFilter;
+    if (filter !== null) el.style.filter = filter;
     else if (record && record.lastFilter !== null) el.style.filter = orig.filter;
 
-    if (b || record?.lastBorderColor === "transparent") {
-      el.style.borderColor = targetBorderColor;
-      el.style.backgroundImage = targetBgImage;
-      el.style.backgroundOrigin = b ? b.backgroundOrigin : orig.bgOrigin;
-      el.style.backgroundClip = b ? b.backgroundClip : orig.bgClip;
-      el.style.backgroundRepeat = b ? b.backgroundRepeat : orig.bgRepeat;
-      el.style.backgroundSize = b ? b.backgroundSize : orig.bgSize;
+    if (boxShadow !== null) writeOwnedShadow(el, boxShadow);
+    else if (record && record.lastBoxShadow !== null) releaseOwnedShadow(el, orig.boxShadow);
+
+    if (border || record?.lastBorderColor === "transparent") {
+      el.style.borderColor = borderColor;
+      writeBg(el, bg);
     }
 
-    if (record) {
-      record.lastClip = plan.clipPath;
-      record.lastFilter = targetFilter;
-      record.lastBorderColor = targetBorderColor;
-      record.lastBgImage = targetBgImage;
-    } else {
+    const last = {
+      lastClip: clipPath,
+      lastFilter: filter,
+      lastBorderColor: borderColor,
+      lastBgImage: bgImage,
+      lastBoxShadow: boxShadow,
+    };
+    if (record) Object.assign(record, last);
+    else {
       applied.set(el, {
         ...orig,
+        ...last,
         site: result.site,
-        lastClip: plan.clipPath,
-        lastFilter: targetFilter,
-        lastBorderColor: targetBorderColor,
-        lastBgImage: targetBgImage,
         unobserve: observeResize(el, () => enqueue(el)),
       });
     }
@@ -318,11 +318,8 @@ export function createEngine(initial: EngineSettings) {
     el.style.clipPath = record.clipPath;
     if (record.lastFilter !== null) el.style.filter = record.filter;
     el.style.borderColor = record.borderColor;
-    el.style.backgroundImage = record.bgImage;
-    el.style.backgroundOrigin = record.bgOrigin;
-    el.style.backgroundClip = record.bgClip;
-    el.style.backgroundRepeat = record.bgRepeat;
-    el.style.backgroundSize = record.bgSize;
+    writeBg(el, record.bg);
+    if (record.lastBoxShadow !== null) releaseOwnedShadow(el, record.boxShadow);
   }
 
   function undo(el: HTMLElement) {
@@ -348,23 +345,10 @@ export function createEngine(initial: EngineSettings) {
     rafHandle = requestAnimationFrame(flush);
   }
 
-  /**
-   * Whether the page ships Lisse itself, in which case we hand the whole page
-   * back to it. Its bindings mount SVG overlays for borders and shadows into
-   * *ancestor* boxes, which our clip-path amputates — so the bail is page-wide
-   * rather than per-element, since the damage lands on elements carrying no
-   * marker of their own. Probed per flush because at document_start the page is
-   * empty and bindings only mark elements once their framework mounts; latched,
-   * so it costs one selector per frame that had work and nothing afterwards.
-   * ponytail: light DOM only — a site using Lisse exclusively inside shadow
-   * roots goes undetected; probe observedRoots too if that ever shows up.
-   */
   function siteShipsLisse(): boolean {
     if (stoodDown) return true;
     if (!document.querySelector(LISSE_MARKER)) return false;
     stoodDown = true;
-    // Full undo, not disableAll(): permanent, so the records and their resize
-    // observers go too.
     for (const el of [...applied.keys()]) undo(el);
     mo?.disconnect();
     document.removeEventListener("transitionend", onTransition, true);
@@ -374,9 +358,6 @@ export function createEngine(initial: EngineSettings) {
     return true;
   }
 
-  // rAF runs before paint, so elements styled in the frame they arrive never
-  // flash square. ALL reads run before ANY write — interleaving would force a
-  // layout recomputation per chunk.
   function flush() {
     rafHandle = undefined;
     if (!settings.enabled || siteShipsLisse()) {
@@ -384,6 +365,10 @@ export function createEngine(initial: EngineSettings) {
       return;
     }
     const deadline = performance.now() + FRAME_BUDGET_MS;
+    for (const el of queue) {
+      const rec = applied.get(el);
+      if (rec && rec.lastBoxShadow !== null) releaseOwnedShadow(el, rec.boxShadow);
+    }
     const ops: Array<{ el: HTMLElement; result: PlanResult | null }> = [];
     let n = 0;
     for (const el of queue) {
@@ -401,12 +386,12 @@ export function createEngine(initial: EngineSettings) {
       mo.observe(root, MO_OPTS);
     }
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    let node = walker.nextNode() as Element | null;
+    let node = walker.nextNode();
     while (node) {
       if (applied.size + queue.size >= MAX_STYLED) break;
-      const el = node as HTMLElement;
-      node = walker.nextNode() as Element | null;
-      if (skip(el)) continue;
+      const el = host(node);
+      node = walker.nextNode();
+      if (!el || skip(el)) continue;
       if (el.shadowRoot) scanRoot(el.shadowRoot);
       if (seen.has(el)) continue;
       seen.add(el);
@@ -423,90 +408,83 @@ export function createEngine(initial: EngineSettings) {
     if (!settings.enabled) return;
     for (const rec of records) {
       if (rec.type === "attributes") {
-        const el = rec.target as HTMLElement;
-        if (el.nodeType === 1 && !skip(el)) {
+        const el = host(rec.target);
+        if (el && !skip(el)) {
           enqueue(el);
           enqueueAppliedAncestors(el);
         }
       } else {
-        // Re-plan the parent too: a new child may now escape its box (or an
-        // escaping one may be gone), flipping the child-outside verdict.
-        const parent = rec.target as HTMLElement;
-        if (parent.nodeType === 1 && !skip(parent)) enqueue(parent);
+        const parent = host(rec.target);
+        if (parent && !skip(parent)) enqueue(parent);
         for (const added of rec.addedNodes) {
-          if (added.nodeType !== 1) continue;
-          const el = added as HTMLElement;
+          const el = host(added);
+          if (!el) continue;
           if (el.shadowRoot) scanRoot(el.shadowRoot);
           scanSubtree(el);
         }
         for (const removed of rec.removedNodes) {
-          if (removed.nodeType !== 1) continue;
-          const root = removed as HTMLElement;
+          const root = host(removed);
+          if (!root) continue;
           if (applied.has(root)) undo(root);
           const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-          let node = walker.nextNode() as HTMLElement | null;
+          let node = walker.nextNode();
           while (node) {
-            if (applied.has(node)) undo(node);
-            node = walker.nextNode() as HTMLElement | null;
+            const child = host(node);
+            if (child && applied.has(child)) undo(child);
+            node = walker.nextNode();
           }
         }
       }
     }
   }
 
-  // A child's own change can invalidate an ancestor's verdict: a floating label
-  // transitioning out of its field's box, an avatar joining a stack.
   function enqueueAppliedAncestors(el: Element) {
-    const up = (x: Element): Element | null =>
-      x.parentElement ?? ((x.getRootNode() as ShadowRoot).host ?? null);
+    const up = (x: Element): Element | null => {
+      if (x.parentElement) return x.parentElement;
+      const root = x.getRootNode();
+      return root instanceof ShadowRoot ? host(root.host) : null;
+    };
     for (let n = up(el), d = 0; n && d < 12; n = up(n), d++) {
-      if (applied.has(n as HTMLElement)) enqueue(n as HTMLElement);
+      const h = host(n);
+      if (h && applied.has(h)) enqueue(h);
     }
   }
 
-  // Animated hover/state changes (radius, size, colours) surface here.
-  // ponytail: instant pseudo-class restyles fire no DOM signal at all — no
-  // coverage for those, accept it.
   function onTransition(e: Event) {
     if (!settings.enabled) return;
-    const t = e.composedPath()[0] as Node | undefined;
-    if (t && t.nodeType === 1 && !skip(t as Element)) {
-      enqueue(t as HTMLElement);
-      enqueueAppliedAncestors(t as Element);
+    const t = host(e.composedPath()[0]);
+    if (t && !skip(t)) {
+      enqueue(t);
+      enqueueAppliedAncestors(t);
     }
   }
 
-  // Focus rings are :focus/:focus-within outlines and fire no mutation, so the
-  // focus chain is re-planned to let the outline skip engage and release.
   function onFocusChange(e: Event) {
     if (!settings.enabled) return;
     for (const n of e.composedPath().slice(0, 10)) {
-      const el = n as Element;
-      if (el.nodeType === 1 && !skip(el)) enqueue(el as HTMLElement);
+      const el = host(n);
+      if (el && !skip(el)) enqueue(el);
     }
   }
 
-  // Capped like scanRoot: a SPA route change can add thousands of elements in
-  // one mutation batch, which would otherwise all hit planFor.
   function scanSubtree(el: HTMLElement) {
     if (skip(el)) return;
     if (applied.size + queue.size >= MAX_STYLED) return;
     enqueue(el);
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT);
-    let node = walker.nextNode() as HTMLElement | null;
+    let node = walker.nextNode();
     while (node) {
       if (applied.size + queue.size >= MAX_STYLED) break;
-      if (!skip(node)) {
-        if (node.shadowRoot) scanRoot(node.shadowRoot);
-        enqueue(node);
+      const child = host(node);
+      if (child && !skip(child)) {
+        if (child.shadowRoot) scanRoot(child.shadowRoot);
+        enqueue(child);
       }
-      node = walker.nextNode() as HTMLElement | null;
+      node = walker.nextNode();
     }
   }
 
   function start() {
-    // At document_start documentElement may be absent, so observe the document
-    // node — the parser then streams elements in as childList mutations.
     mo = new MutationObserver(onMutations);
     mo.observe(document, MO_OPTS);
     document.addEventListener("transitionend", onTransition, true);
@@ -514,8 +492,6 @@ export function createEngine(initial: EngineSettings) {
     document.addEventListener("focusin", onFocusChange, true);
     document.addEventListener("focusout", onFocusChange, true);
     scanRoot(document);
-    // SPA hydration can invalidate a verdict (size, escaping children) with no
-    // signal any observer delivers, so re-plan once the tree settles.
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => scanRoot(document), { once: true });
     }
@@ -537,15 +513,14 @@ export function createEngine(initial: EngineSettings) {
     for (const el of applied.keys()) enqueue(el);
   }
 
-  // Restores styles but keeps records + observers so re-enable can reapply;
-  // undo() would forget them. Resetting lastX defeats writePlan's no-op guard.
   function disableAll() {
     for (const [el, record] of applied) {
       restore(el, record);
       record.lastClip = record.clipPath;
       if (record.lastFilter !== null) record.lastFilter = record.filter;
       record.lastBorderColor = record.borderColor;
-      record.lastBgImage = record.bgImage;
+      record.lastBgImage = record.bg.image;
+      if (record.lastBoxShadow !== null) record.lastBoxShadow = record.boxShadow;
     }
   }
 
@@ -559,7 +534,7 @@ export function createEngine(initial: EngineSettings) {
         if (!mo) start();
         else {
           reapplyAll();
-          scanRoot(document); // catch elements added while disabled (seen-set keeps this cheap)
+          scanRoot(document);
         }
       } else {
         disableAll();

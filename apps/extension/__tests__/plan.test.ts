@@ -4,9 +4,10 @@ import {
   parseCornerRadius,
   isElliptical,
   boxShadowToFilter,
+  hasInsetShadow,
   computeElementPlan,
   pseudoEscapesBox,
-  isDefaultCornerShape,
+  isDefaultCorner,
   uniformSolidBorder,
   borderStrokeLayer,
   snapStroke,
@@ -28,19 +29,20 @@ const noBackground: BackgroundInput = {
   clip: "border-box",
   repeat: "repeat",
   size: "auto",
+  position: "0% 0%",
 };
 
-describe("isDefaultCornerShape", () => {
+describe("isDefaultCorner", () => {
   it("treats round (keyword or superellipse(1)) as default", () => {
     for (const v of ["round", "superellipse(1)", "round round round round"]) {
-      expect(isDefaultCornerShape(v), v).toBe(true);
+      expect(isDefaultCorner(v), v).toBe(true);
     }
   });
 
   it("treats every explicit shape as the site's own choice", () => {
     for (const v of ["squircle", "superellipse(2)", "scoop", "bevel", "notch", "square",
       "superellipse(0.5)", "superellipse(-1)", "squircle round round round"]) {
-      expect(isDefaultCornerShape(v), v).toBe(false);
+      expect(isDefaultCorner(v), v).toBe(false);
     }
   });
 });
@@ -117,6 +119,12 @@ describe("boxShadowToFilter", () => {
     expect(boxShadowToFilter("rgba(0, 0, 0, 0.5) 0px 0px 4px 0px inset")).toBeNull();
   });
 
+  it("detects an inset layer", () => {
+    expect(hasInsetShadow("rgba(1, 4, 9, 0.24) 0px 1px 0px 0px inset")).toBe(true);
+    expect(hasInsetShadow("rgba(0, 0, 0, 0.25) 0px 2px 8px 0px")).toBe(false);
+    expect(hasInsetShadow("none")).toBe(false);
+  });
+
   it("skips when spread is too large to approximate", () => {
     expect(boxShadowToFilter("rgb(0, 0, 0) 0px 0px 2px 10px")).toBe("skip");
   });
@@ -168,6 +176,7 @@ describe("borderStrokeLayer", () => {
       clip: "border-box",
       repeat: "repeat-x",
       size: "cover",
+      position: "right 8px center",
     });
     expect(layer.backgroundImage).toBe(`url("data:image/svg+xml,${
       encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40' viewBox='0 0 100 40' preserveAspectRatio='none'><g transform='translate(0.5 0.5)'><path d='M 0 0 Z' fill='none' stroke='rgb(0, 0, 0)' stroke-width='1'/></g></svg>")
@@ -176,12 +185,14 @@ describe("borderStrokeLayer", () => {
     expect(layer.backgroundClip).toBe("border-box, border-box");
     expect(layer.backgroundRepeat).toBe("no-repeat, repeat-x");
     expect(layer.backgroundSize).toBe("100% 100%, cover");
+    expect(layer.backgroundPosition).toBe("0% 0%, right 8px center");
   });
 
   it("is the sole layer when there is no existing background", () => {
     const layer = borderStrokeLayer("M 0 0 Z", 10, 10, 0.5, 0.5, 1, "rgb(0, 0, 0)", noBackground);
     expect(layer.backgroundOrigin).toBe("border-box");
     expect(layer.backgroundSize).toBe("100% 100%");
+    expect(layer.backgroundPosition).toBe("0% 0%");
   });
 });
 
@@ -292,7 +303,7 @@ describe("computeElementPlan", () => {
   it("applies a clip-path for a plain rounded box", () => {
     const plan = computeElementPlan(base);
     expect(plan.action).toBe("apply");
-    if (plan.action === "apply") {
+    if (plan.action === "apply" && "clipPath" in plan) {
       expect(plan.clipPath).toMatch(/^path\("M /);
       expect(plan.filter).toBeUndefined();
     }
@@ -320,7 +331,7 @@ describe("computeElementPlan", () => {
   it("draws a uniform solid border as a stroked SVG background layer", () => {
     const plan = computeElementPlan({ ...base, border: uniform(1) });
     expect(plan.action).toBe("apply");
-    if (plan.action === "apply") {
+    if (plan.action === "apply" && "border" in plan) {
       expect(plan.border).toBeDefined();
       // Stroke sits fully inside the box, centerline inset by half its width.
       expect(plan.border!.backgroundImage).toContain("stroke-width%3D'1'");
@@ -337,7 +348,7 @@ describe("computeElementPlan", () => {
 
   it("scales stroke width to a 4px border", () => {
     const plan = computeElementPlan({ ...base, border: uniform(4) });
-    if (plan.action === "apply") {
+    if (plan.action === "apply" && "border" in plan) {
       expect(plan.border!.backgroundImage).toContain("stroke-width%3D'4'");
       expect(plan.border!.backgroundImage).toContain(
         encodeURIComponent("<g transform='translate(2 2)'>"),
@@ -349,7 +360,7 @@ describe("computeElementPlan", () => {
     const plan = computeElementPlan({
       ...base, height: 40.5, border: uniform(1), pageLeft: 20, pageTop: 84, dpr: 1,
     });
-    if (plan.action === "apply") {
+    if (plan.action === "apply" && "border" in plan) {
       // bottom band shifts up 0.5px: translate y stays 0.5, inner height 39.
       expect(plan.border!.backgroundImage).toContain(
         encodeURIComponent("<g transform='translate(0.5 0.5)'>"),
@@ -367,9 +378,10 @@ describe("computeElementPlan", () => {
       clip: "border-box",
       repeat: "repeat",
       size: "auto",
+      position: "0% 0%",
     };
     const plan = computeElementPlan({ ...base, border: uniform(2), background: bg });
-    if (plan.action === "apply") {
+    if (plan.action === "apply" && "border" in plan) {
       // Our stroke is prepended (painted on top); the gradient survives after it.
       expect(plan.border!.backgroundImage).toMatch(/^url\("data:image\/svg\+xml,.*"\), linear-gradient\(/);
       expect(plan.border!.backgroundSize).toBe("100% 100%, auto");
@@ -410,7 +422,7 @@ describe("computeElementPlan", () => {
   it("converts an outer box-shadow into a drop-shadow filter", () => {
     const plan = computeElementPlan({ ...base, boxShadow: "rgba(0, 0, 0, 0.25) 0px 2px 8px 0px" });
     expect(plan.action).toBe("apply");
-    if (plan.action === "apply") {
+    if (plan.action === "apply" && "filter" in plan) {
       expect(plan.filter).toBe("drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.25))");
     }
   });
@@ -421,7 +433,7 @@ describe("computeElementPlan", () => {
       boxShadow: "rgba(0, 0, 0, 0.25) 0px 2px 8px 0px",
       existingFilter: "blur(2px)",
     });
-    if (plan.action === "apply") {
+    if (plan.action === "apply" && "filter" in plan) {
       expect(plan.filter).toBe("drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.25)) blur(2px)");
     }
   });
@@ -436,6 +448,41 @@ describe("computeElementPlan", () => {
   it("handles a capsule radius via core (radius >= half the short side)", () => {
     const plan = computeElementPlan({ ...base, radii: { tl: 9999, tr: 9999, br: 9999, bl: 9999 } });
     expect(plan.action).toBe("apply");
-    if (plan.action === "apply") expect(plan.clipPath).toMatch(/^path\("M /);
+    if (plan.action === "apply" && "clipPath" in plan) expect(plan.clipPath).toMatch(/^path\("M /);
+  });
+
+  it("redraws a top inset highlight on the Lisse path", () => {
+    const plan = computeElementPlan({
+      ...base,
+      border: uniform(1),
+      boxShadow: "rgba(1, 4, 9, 0.24) 0px 1px 0px 0px inset",
+    });
+    expect(plan.action).toBe("apply");
+    if (plan.action === "apply" && "clipPath" in plan) {
+      expect(plan.clipPath).toMatch(/^path\("M /);
+      expect(plan.boxShadow).toBe("none");
+      expect(plan.border?.backgroundImage).toContain("clipPath");
+      expect(decodeURIComponent(plan.border!.backgroundImage)).toContain("rgba(1, 4, 9, 0.24)");
+    }
+  });
+
+  it("redraws an inset focus ring on the Lisse path", () => {
+    const plan = computeElementPlan({
+      ...base,
+      border: uniform(1),
+      boxShadow: "rgb(9, 105, 218) 0px 0px 0px 1px inset",
+    });
+    expect(plan.action).toBe("apply");
+    if (plan.action === "apply" && "border" in plan) {
+      expect(plan.boxShadow).toBe("none");
+      expect(decodeURIComponent(plan.border!.backgroundImage)).toContain("rgba(9, 105, 218, 1)");
+    }
+  });
+
+  it("skips a blurred inset", () => {
+    expect(computeElementPlan({
+      ...base,
+      boxShadow: "rgba(0, 0, 0, 0.4) 0px 1px 4px 0px inset",
+    })).toEqual({ action: "skip", reason: "inset-blur" });
   });
 });
