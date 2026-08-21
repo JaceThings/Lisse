@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-React, Vue, Svelte용 부드러운 모서리 SVG 프리미티브.  
+React, Vue, Svelte, Octane용 부드러운 모서리 SVG 프리미티브.  
 픽셀 단위로 정확한 Figma squircle과 세 가지 다른 모서리 곡선.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
@@ -22,7 +22,7 @@ React, Vue, Svelte용 부드러운 모서리 SVG 프리미티브.
 
 표준 CSS `border-radius`는 모서리에 원호를 만듭니다. 디자이너들, 그리고 Apple과 Figma는 **squircle** 형태를 선호합니다. 곡률이 직선 가장자리로 부드럽게 이어져 더 유기적인 형태를 만드는 모서리입니다.
 
-Lisse는 [Figma의 모서리 스무딩 알고리즘](https://www.figma.com/blog/desperately-seeking-squircles/)과 세 가지 다른 모서리 곡선을 JavaScript로 구현합니다. SVG 경로와 CSS `clip-path` 값을 생성하며, React, Vue, Svelte용 바인딩을 제공합니다.
+Lisse는 [Figma의 모서리 스무딩 알고리즘](https://www.figma.com/blog/desperately-seeking-squircles/)과 세 가지 다른 모서리 곡선을 JavaScript로 구현합니다. SVG 경로와 CSS `clip-path` 값을 생성하며, React, Vue, Svelte, Octane용 바인딩을 제공합니다.
 
 ## 빠른 시작
 
@@ -42,7 +42,7 @@ function Card() {
 }
 ```
 
-Vue, Svelte 또는 프레임워크 독립적인 코어는 아래의 [패키지](#packages)를 참고하세요.
+Vue, Svelte, Octane 또는 프레임워크 독립적인 코어는 아래의 [패키지](#packages)를 참고하세요.
 
 ## 곡선 유형
 
@@ -63,6 +63,7 @@ Vue, Svelte 또는 프레임워크 독립적인 코어는 아래의 [패키지](
 | `@lisse/react` | [![npm](https://img.shields.io/npm/v/%40lisse%2Freact?label=)](https://www.npmjs.com/package/@lisse/react) | React 훅과 컴포넌트 |
 | `@lisse/vue` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue?label=)](https://www.npmjs.com/package/@lisse/vue) | Vue 컴포저블과 컴포넌트 |
 | `@lisse/svelte` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=)](https://www.npmjs.com/package/@lisse/svelte) | Svelte 액션 |
+| `@lisse/octane` | [![npm](https://img.shields.io/npm/v/%40lisse%2Foctane?label=)](https://www.npmjs.com/package/@lisse/octane) | Octane 훅과 컴포넌트 |
 
 ## 기능
 

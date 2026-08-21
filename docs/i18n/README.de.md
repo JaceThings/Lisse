@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-SVG-Primitive mit glatten Ecken für React, Vue und Svelte.
+SVG-Primitive mit glatten Ecken für React, Vue, Svelte und Octane.
 Pixelgenaue Figma-Squircles + drei weitere Eckkurven.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
@@ -22,7 +22,7 @@ Pixelgenaue Figma-Squircles + drei weitere Eckkurven.
 
 Standard-CSS-`border-radius` erzeugt an den Ecken Kreisbögen. Designer (und Apple und Figma) bevorzugen **Squircles** – Ecken, bei denen die Krümmung glatt in die geraden Kanten übergeht und so eine organischere Form entsteht.
 
-Lisse implementiert [Figmas Algorithmus zur Eckenglättung](https://www.figma.com/blog/desperately-seeking-squircles/) und drei weitere Eckkurven in JavaScript. Es generiert SVG-Pfade und CSS-`clip-path`-Werte, mit erstklassigen Bindings für React, Vue und Svelte.
+Lisse implementiert [Figmas Algorithmus zur Eckenglättung](https://www.figma.com/blog/desperately-seeking-squircles/) und drei weitere Eckkurven in JavaScript. Es generiert SVG-Pfade und CSS-`clip-path`-Werte, mit erstklassigen Bindings für React, Vue, Svelte und Octane.
 
 ## Schnellstart
 
@@ -42,7 +42,7 @@ function Card() {
 }
 ```
 
-Für Vue, Svelte oder den Framework-unabhängigen Kern siehe die [Pakete](#pakete) unten.
+Für Vue, Svelte, Octane oder den Framework-unabhängigen Kern siehe die [Pakete](#pakete) unten.
 
 ## Kurventypen
 
@@ -63,6 +63,7 @@ Mathematische Referenz: [`docs/curves.md`](../curves.md).
 | `@lisse/react` | [![npm](https://img.shields.io/npm/v/%40lisse%2Freact?label=)](https://www.npmjs.com/package/@lisse/react) | React-Hook und -Komponente |
 | `@lisse/vue` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue?label=)](https://www.npmjs.com/package/@lisse/vue) | Vue-Composable und -Komponente |
 | `@lisse/svelte` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=)](https://www.npmjs.com/package/@lisse/svelte) | Svelte-Action |
+| `@lisse/octane` | [![npm](https://img.shields.io/npm/v/%40lisse%2Foctane?label=)](https://www.npmjs.com/package/@lisse/octane) | Octane-Hook und -Komponente |
 
 ## Funktionen
 

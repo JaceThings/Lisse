@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-Primitivas SVG de cantos suaves para React, Vue e Svelte.
+Primitivas SVG de cantos suaves para React, Vue, Svelte e Octane.
 Squircles do Figma pixel-perfect + três outras curvas de canto.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
@@ -22,7 +22,7 @@ Squircles do Figma pixel-perfect + três outras curvas de canto.
 
 O `border-radius` padrão do CSS produz arcos circulares nos cantos. Designers (e a Apple, e o Figma) preferem **squircles** — cantos onde a curvatura faz a transição suavemente para as arestas retas, criando uma forma mais orgânica.
 
-O Lisse implementa o [algoritmo de suavização de cantos do Figma](https://www.figma.com/blog/desperately-seeking-squircles/) e três outras curvas de canto em JavaScript. Ele gera caminhos SVG e valores de `clip-path` do CSS, com bindings de primeira classe para React, Vue e Svelte.
+O Lisse implementa o [algoritmo de suavização de cantos do Figma](https://www.figma.com/blog/desperately-seeking-squircles/) e três outras curvas de canto em JavaScript. Ele gera caminhos SVG e valores de `clip-path` do CSS, com bindings de primeira classe para React, Vue, Svelte e Octane.
 
 ## Início rápido
 
@@ -42,7 +42,7 @@ function Card() {
 }
 ```
 
-Para Vue, Svelte ou o núcleo agnóstico de framework, veja os [pacotes](#pacotes) abaixo.
+Para Vue, Svelte, Octane ou o núcleo agnóstico de framework, veja os [pacotes](#pacotes) abaixo.
 
 ## Tipos de curva
 
@@ -63,6 +63,7 @@ Referência matemática: [`docs/curves.md`](../curves.md).
 | `@lisse/react` | [![npm](https://img.shields.io/npm/v/%40lisse%2Freact?label=)](https://www.npmjs.com/package/@lisse/react) | Hook e componente React |
 | `@lisse/vue` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue?label=)](https://www.npmjs.com/package/@lisse/vue) | Composable e componente Vue |
 | `@lisse/svelte` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=)](https://www.npmjs.com/package/@lisse/svelte) | Action Svelte |
+| `@lisse/octane` | [![npm](https://img.shields.io/npm/v/%40lisse%2Foctane?label=)](https://www.npmjs.com/package/@lisse/octane) | Hook e componente Octane |
 
 ## Recursos
 
