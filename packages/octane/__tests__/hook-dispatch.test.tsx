@@ -38,13 +38,13 @@ afterEach(() => {
 });
 
 function SlotOnly() {
-  const ref = useRef<HTMLElement | null>(null, Symbol.for("@lisse/octane:test:ref-slot-only"));
+  const ref = useRef<HTMLDivElement | null>(null, Symbol.for("@lisse/octane:test:ref-slot-only"));
   useSmoothCorners(ref as RefObject<HTMLElement | null>, CORNERS, SLOT_ONLY);
   return <div ref={ref} />;
 }
 
 function SlotWithEffects() {
-  const ref = useRef<HTMLElement | null>(null, Symbol.for("@lisse/octane:test:ref-with-effects"));
+  const ref = useRef<HTMLDivElement | null>(null, Symbol.for("@lisse/octane:test:ref-with-effects"));
   useSmoothCorners(
     ref as RefObject<HTMLElement | null>,
     CORNERS,
