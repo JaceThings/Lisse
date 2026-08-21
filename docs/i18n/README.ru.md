@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-SVG-примитивы для плавно скругленных углов в React, Vue и Svelte.
+SVG-примитивы для плавно скругленных углов в React, Vue, Svelte и Octane.
 Пиксельно точные сквирклы как в Figma и еще три типа кривых для углов.
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
@@ -22,7 +22,7 @@ SVG-примитивы для плавно скругленных углов в 
 
 Стандартный CSS `border-radius` создает в углах дуги окружности. Дизайнеры (а также Apple и Figma) предпочитают **сквирклы** — углы, где кривизна плавно переходит в прямые стороны, создавая более органичную форму.
 
-Lisse реализует [алгоритм сглаживания углов Figma](https://www.figma.com/blog/desperately-seeking-squircles/) и еще три типа кривых для углов на JavaScript. Библиотека генерирует SVG-пути и значения CSS `clip-path`, а также предоставляет полноценные биндинги для React, Vue и Svelte.
+Lisse реализует [алгоритм сглаживания углов Figma](https://www.figma.com/blog/desperately-seeking-squircles/) и еще три типа кривых для углов на JavaScript. Библиотека генерирует SVG-пути и значения CSS `clip-path`, а также предоставляет полноценные биндинги для React, Vue, Svelte и Octane.
 
 ## Быстрый старт
 
@@ -42,7 +42,7 @@ function Card() {
 }
 ```
 
-Для Vue, Svelte или ядра без привязки к фреймворку см. [пакеты](#packages) ниже.
+Для Vue, Svelte, Octane или ядра без привязки к фреймворку см. [пакеты](#packages) ниже.
 
 ## Типы кривых
 
@@ -63,6 +63,7 @@ function Card() {
 | `@lisse/react` | [![npm](https://img.shields.io/npm/v/%40lisse%2Freact?label=)](https://www.npmjs.com/package/@lisse/react) | React-хук и компонент |
 | `@lisse/vue` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue?label=)](https://www.npmjs.com/package/@lisse/vue) | Composable-функция и компонент для Vue |
 | `@lisse/svelte` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=)](https://www.npmjs.com/package/@lisse/svelte) | Action для Svelte |
+| `@lisse/octane` | [![npm](https://img.shields.io/npm/v/%40lisse%2Foctane?label=)](https://www.npmjs.com/package/@lisse/octane) | Octane-хук и компонент |
 
 ## Возможности
 

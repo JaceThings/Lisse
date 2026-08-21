@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-React、Vue、Svelte 向けのなめらかな角の SVG プリミティブ。
+React、Vue、Svelte、Octane 向けのなめらかな角の SVG プリミティブ。
 ピクセルパーフェクトな Figma squircle と、その他 3 種類の角の曲線。
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
@@ -22,7 +22,7 @@ React、Vue、Svelte 向けのなめらかな角の SVG プリミティブ。
 
 標準的な CSS の `border-radius` は角に円弧を生成します。デザイナー（そして Apple や Figma）は **squircle** を好みます。これは曲率が直線エッジへとなめらかに遷移する角で、より有機的な形状を生み出します。
 
-Lisse は [Figma の角スムージングアルゴリズム](https://www.figma.com/blog/desperately-seeking-squircles/) と、その他 3 種類の角の曲線を JavaScript で実装します。SVG パスと CSS の `clip-path` 値を生成し、React、Vue、Svelte 向けの第一級のバインディングを備えています。
+Lisse は [Figma の角スムージングアルゴリズム](https://www.figma.com/blog/desperately-seeking-squircles/) と、その他 3 種類の角の曲線を JavaScript で実装します。SVG パスと CSS の `clip-path` 値を生成し、React、Vue、Svelte、Octane 向けの第一級のバインディングを備えています。
 
 ## クイックスタート
 
@@ -42,7 +42,7 @@ function Card() {
 }
 ```
 
-Vue、Svelte、またはフレームワーク非依存のコアについては、以下の [パッケージ](#packages) を参照してください。
+Vue、Svelte、Octane、またはフレームワーク非依存のコアについては、以下の [パッケージ](#packages) を参照してください。
 
 ## 曲線の種類
 
@@ -63,6 +63,7 @@ Vue、Svelte、またはフレームワーク非依存のコアについては�
 | `@lisse/react` | [![npm](https://img.shields.io/npm/v/%40lisse%2Freact?label=)](https://www.npmjs.com/package/@lisse/react) | React フックとコンポーネント |
 | `@lisse/vue` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue?label=)](https://www.npmjs.com/package/@lisse/vue) | Vue コンポーザブルとコンポーネント |
 | `@lisse/svelte` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=)](https://www.npmjs.com/package/@lisse/svelte) | Svelte アクション |
+| `@lisse/octane` | [![npm](https://img.shields.io/npm/v/%40lisse%2Foctane?label=)](https://www.npmjs.com/package/@lisse/octane) | Octane フックとコンポーネント |
 
 ## 機能
 

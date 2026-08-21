@@ -4,7 +4,7 @@
 
 <h1>Lisse</h1>
 
-面向 React、Vue 和 Svelte 的平滑边角 SVG 原语。
+面向 React、Vue、Svelte 和 Octane 的平滑边角 SVG 原语。
 像素级精确的 Figma squircle，外加另外三种边角曲线。
 
 [![npm](https://img.shields.io/npm/v/%40lisse%2Fcore?label=%40lisse%2Fcore)](https://www.npmjs.com/package/@lisse/core)
@@ -22,7 +22,7 @@
 
 标准的 CSS `border-radius` 在边角处产生圆弧。设计师（以及 Apple 和 Figma）更偏爱 **squircle**——曲率平滑过渡到直边的边角，从而形成更有机的形状。
 
-Lisse 用 JavaScript 实现了 [Figma 的边角平滑算法](https://www.figma.com/blog/desperately-seeking-squircles/)以及另外三种边角曲线。它生成 SVG 路径和 CSS `clip-path` 值，并为 React、Vue 和 Svelte 提供一流的绑定。
+Lisse 用 JavaScript 实现了 [Figma 的边角平滑算法](https://www.figma.com/blog/desperately-seeking-squircles/)以及另外三种边角曲线。它生成 SVG 路径和 CSS `clip-path` 值，并为 React、Vue、Svelte 和 Octane 提供一流的绑定。
 
 ## 快速上手
 
@@ -42,7 +42,7 @@ function Card() {
 }
 ```
 
-如需 Vue、Svelte 或与框架无关的核心，请参见下方的[软件包](#packages)。
+如需 Vue、Svelte、Octane 或与框架无关的核心，请参见下方的[软件包](#packages)。
 
 ## 曲线类型
 
@@ -63,6 +63,7 @@ function Card() {
 | `@lisse/react` | [![npm](https://img.shields.io/npm/v/%40lisse%2Freact?label=)](https://www.npmjs.com/package/@lisse/react) | React hook 与组件 |
 | `@lisse/vue` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fvue?label=)](https://www.npmjs.com/package/@lisse/vue) | Vue composable 与组件 |
 | `@lisse/svelte` | [![npm](https://img.shields.io/npm/v/%40lisse%2Fsvelte?label=)](https://www.npmjs.com/package/@lisse/svelte) | Svelte action |
+| `@lisse/octane` | [![npm](https://img.shields.io/npm/v/%40lisse%2Foctane?label=)](https://www.npmjs.com/package/@lisse/octane) | Octane hook 与组件 |
 
 ## 特性
 
