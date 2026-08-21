@@ -1,6 +1,6 @@
 {
   "name": "@lisse/octane",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Octane hook and component for smooth-cornered (squircle) elements",
   "license": "MIT",
   "type": "module",
