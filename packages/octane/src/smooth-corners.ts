@@ -78,12 +78,33 @@ function childSuppliedStyle(children: OctaneNode): unknown {
   return ((child.props ?? {}) as { style?: unknown }).style;
 }
 
+// Two spellings because Octane's `style` prop is `string | CSSProperties`, so a
+// radius can arrive as a property key or as a declaration.
 const RADIUS_PROPERTY = /^border[A-Za-z]*Radius$/;
+const RADIUS_DECLARATION = /border(?:-[a-z]+)*-radius\s*:/i;
 
+// A radius the consumer set wins, and longhands count: the teardown clears the
+// shorthand, which erases the longhands with it.
 function styleHasBorderRadius(style: unknown): boolean {
-  if (!style || typeof style !== "object") return false;
+  if (!style) return false;
+  if (typeof style === "string") return RADIUS_DECLARATION.test(style);
+  if (typeof style !== "object") return false;
   const record = style as Record<string, unknown>;
   return Object.keys(record).some((key) => record[key] !== undefined && RADIUS_PROPERTY.test(key));
+}
+
+// The fallback goes in front of the consumer's own declarations, in whichever
+// form they supplied. Later declarations win, so theirs still do.
+function withFallbackRadius(userStyle: unknown, fallbackRadius: string): unknown {
+  if (typeof userStyle === "string") {
+    return RADIUS_DECLARATION.test(userStyle)
+      ? userStyle
+      : `border-radius: ${fallbackRadius}; ${userStyle}`;
+  }
+  return {
+    borderRadius: fallbackRadius,
+    ...(userStyle && typeof userStyle === "object" ? userStyle : {}),
+  };
 }
 
 const SMOOTH_CORNERS_SLOT = componentSlot("SmoothCorners");
@@ -127,21 +148,14 @@ export function SmoothCorners<E extends ElementType = "div">(
   if (fallbackRadiusRef.current === null) {
     fallbackRadiusRef.current = cornerOptionsToBorderRadius(options);
   }
+  // Frozen at first render: it only governs SSR markup and the first paint.
+  const fallbackRadius = fallbackRadiusRef.current;
 
   const userStyle = (rest as Record<string, unknown>).style;
+  // Slot merges the child's style last, so its radius reaches the DOM too.
   const childStyle = asChild ? childSuppliedStyle(children) : undefined;
-  const userSuppliedRadius =
-    typeof userStyle === "string" ||
-    typeof childStyle === "string" ||
-    styleHasBorderRadius(userStyle) ||
-    styleHasBorderRadius(childStyle);
-  const innerStyle =
-    typeof userStyle === "string"
-      ? userStyle
-      : {
-          borderRadius: fallbackRadiusRef.current,
-          ...(userStyle && typeof userStyle === "object" ? userStyle : {}),
-        };
+  const userSuppliedRadius = styleHasBorderRadius(userStyle) || styleHasBorderRadius(childStyle);
+  const innerStyle = withFallbackRadius(userStyle, fallbackRadius);
 
   const effectiveShadow = useBoxShadow ? undefined : shadow;
   const [extractedShadow, setExtractedShadow] = useState<
@@ -170,7 +184,7 @@ export function SmoothCorners<E extends ElementType = "div">(
     autoEffects,
     skipShadowHandle: useBoxShadow,
     onExtractedShadow: useBoxShadow ? onExtractedShadow : undefined,
-    fallbackBorderRadius: userSuppliedRadius ? undefined : (fallbackRadiusRef.current ?? undefined),
+    fallbackBorderRadius: userSuppliedRadius ? undefined : fallbackRadius,
   };
 
   useSmoothCorners(

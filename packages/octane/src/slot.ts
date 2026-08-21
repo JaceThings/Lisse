@@ -27,6 +27,68 @@ function classNames(value: unknown): string {
   return "";
 }
 
+// Octane hyphenates keys before `setProperty`, so `border-radius` and
+// `borderRadius` are one DOM property but two object entries — and its style
+// diff drops the property when either entry disappears.
+function camelizeStyleName(name: string): string {
+  if (name.startsWith("--")) return name;
+  return name.replace(/-([a-z])/g, (_match, char: string) => char.toUpperCase());
+}
+
+// A `;` inside quotes or parens belongs to a value (`url(data:…;base64,…)`).
+function parseStyleText(text: string): AnyProps {
+  const style: AnyProps = {};
+  let start = 0;
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  const take = (end: number): void => {
+    const declaration = text.slice(start, end);
+    start = end + 1;
+    const colon = declaration.indexOf(":");
+    if (colon <= 0) return;
+    const name = declaration.slice(0, colon).trim();
+    const value = declaration.slice(colon + 1).trim();
+    if (name !== "" && value !== "") style[camelizeStyleName(name)] = value;
+  };
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (escaped) escaped = false;
+    else if (char === "\\") escaped = true;
+    else if (quote !== "") {
+      if (char === quote) quote = "";
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "(") depth++;
+    else if (char === ")" && depth > 0) depth--;
+    else if (char === ";" && depth === 0) take(i);
+  }
+  take(text.length);
+  return style;
+}
+
+/** Either `style` form as a property record. */
+function asStyleObject(value: unknown): AnyProps {
+  if (typeof value === "string") return parseStyleText(value);
+  if (value !== null && typeof value === "object") return value as AnyProps;
+  return {};
+}
+
+// Octane's `style` is CSS text or an object, and the two sides can disagree.
+// The child wins per property, matching React's `{ ...parent, ...child }`.
+function mergeStyles(parentValue: unknown, childValue: unknown): unknown {
+  if (childValue === null || childValue === undefined) return parentValue;
+  if (parentValue === null || parentValue === undefined) return childValue;
+  if (typeof parentValue === "string" && typeof childValue === "string") {
+    return `${parentValue}; ${childValue}`;
+  }
+  if (typeof parentValue === "object" && typeof childValue === "object") {
+    return { ...parentValue, ...childValue };
+  }
+  // Parse the text side rather than serialize the object side: unitless numbers
+  // (`{ inset: 0 }`) need Octane's own applier to become `px`.
+  return { ...asStyleObject(parentValue), ...asStyleObject(childValue) };
+}
+
 function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
   const merged: AnyProps = { ...parent };
   for (const key of Object.keys(child)) {
@@ -52,16 +114,7 @@ function mergeProps(parent: AnyProps, child: AnyProps): AnyProps {
         .join(" ");
       delete merged[siblingKey];
     } else if (key === "style") {
-      if (
-        parentValue !== null &&
-        typeof parentValue === "object" &&
-        childValue !== null &&
-        typeof childValue === "object"
-      ) {
-        merged[key] = { ...(parentValue as object), ...(childValue as object) };
-      } else {
-        merged[key] = childValue;
-      }
+      merged[key] = mergeStyles(parentValue, childValue);
     } else {
       merged[key] = childValue;
     }
