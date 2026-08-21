@@ -63,6 +63,15 @@
         "src/**/*.{ts,svelte}"
       ]
     },
+    "packages/octane": {
+      "entry": [
+        "src/index.ts",
+        "__tests__/**/*.test.{ts,tsx}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ]
+    },
     "apps/website": {
       "entry": [],
       "project": []
