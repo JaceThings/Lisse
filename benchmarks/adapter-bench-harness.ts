@@ -1,4 +1,4 @@
-// Shared harness for the framework-adapter benches (react/vue/svelte): a
+// Shared harness for the framework-adapter benches (react/vue/svelte/octane): a
 // controllable ResizeObserver stub, a stubbed layout so syncs actually run, a
 // sync rAF polyfill, and the shared count/autoEffects/effects case grid.
 // `@vitest-environment happy-dom` and the beforeAll/afterAll wiring stay
