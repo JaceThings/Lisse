@@ -1,6 +1,6 @@
 {
   "name": "@lisse/extension",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "type": "module",
   "description": "Cross-browser WebExtension + userscript applying Lisse smooth corners to any site",
