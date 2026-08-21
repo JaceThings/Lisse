@@ -56,7 +56,9 @@ Choose the bump type for each affected package:
 
 ### Lockstep versioning
 
-The four published packages move together. `.changeset/config.json` groups `@lisse/core`, `@lisse/react`, `@lisse/vue`, and `@lisse/svelte` under `linked`, so when any one of them gets a bump, they all release at the same version. Pick the highest bump type that applies to any package in your change and Changesets will carry the rest along.
+The five published packages move together. `.changeset/config.json` groups `@lisse/core`, `@lisse/react`, `@lisse/vue`, `@lisse/svelte`, and `@lisse/octane` under `linked`, so when any one of them gets a bump, they all release at the same version. Pick the highest bump type that applies to any package in your change and Changesets will carry the rest along.
+
+`linked` only rewrites packages that are already part of the release, so a changeset naming a single package publishes that one alone and strands the others at the old version. Add a changeset for every published package in the group — a `patch` for the ones you didn't otherwise touch — so the versions stay in step.
 
 Skip the changeset only for PRs that don't affect published output (CI config, repo-level docs, tests, internal tooling).
 
