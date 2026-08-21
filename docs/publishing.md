@@ -1,6 +1,6 @@
 # Publishing
 
-How to ship a new version of the four `@lisse/*` packages on npm.
+How to ship a new version of the five `@lisse/*` packages on npm.
 
 ## TL;DR — the normal flow
 
@@ -30,11 +30,34 @@ No OTP, no CLI auth, no recovery codes burned.
 
 Captured here so future-you knows what's been configured:
 
-- **Trusted publisher** is configured on npmjs.com for each of `@lisse/core`, `@lisse/react`, `@lisse/vue`, `@lisse/svelte`. Publisher = GitHub Actions from `JaceThings/Lisse`, workflow file `release.yml`, no environment name.
+- **Trusted publisher** is configured on npmjs.com for each of `@lisse/core`, `@lisse/react`, `@lisse/vue`, `@lisse/svelte`. Publisher = GitHub Actions from `JaceThings/Lisse`, workflow file `release.yml`, no environment name. **`@lisse/octane` is not on that list yet** — a package has to exist on npm before npm will let you configure a trusted publisher for it. See [First publish of a brand-new package](#first-publish-of-a-brand-new-package).
 - **Release workflow** at `.github/workflows/release.yml` uses `changesets/action@v1`, has `id-token: write` permission, and sets `NPM_CONFIG_PROVENANCE: "true"`.
 - **`publishConfig.access: public`** is set on every package's `package.json` (scoped `@lisse/*` names publish private by default otherwise).
 - **`LICENSE` is copied into each package directory** so it ships in the tarball. The root `LICENSE` alone doesn't propagate to `@scope/pkg` tarballs.
 - **Root `build` script** is scoped to `./packages/*`. Defensive so a future playground workspace doesn't accidentally get pulled into release builds.
+
+## First publish of a brand-new package
+
+**This applies to `@lisse/octane`, and to any package added after it.**
+
+Trusted publishing is configured *per package* on npmjs.com, and npm only offers that setting on a package that already exists. A package that has never been published therefore has no trusted publisher — and `release.yml` passes no npm token at all (it authenticates purely with `id-token: write` + OIDC). So the first `changeset publish` for a new name fails to authenticate, and because `changeset publish` publishes package-by-package it can leave the release half-done: the existing four go out, the new one doesn't.
+
+Publish the first version by hand, once:
+
+1. Merge the "chore: version packages" PR as usual and let the release workflow publish the packages that already have a trusted publisher. Expect it to fail on the new one.
+2. Mint a **granular access token** on npmjs.com scoped to the new package name only, with **Read and write** permission and the shortest workable expiry.
+3. From a real terminal (not an agent or CI shell — see the `/dev/tty` quirk below):
+
+   ```bash
+   cd packages/octane
+   NPM_CONFIG_PROVENANCE=true NODE_AUTH_TOKEN=<granular-token> npm publish --access public
+   ```
+
+4. On npmjs.com, open the now-existing package → **Settings** → **Trusted publisher**, and add: GitHub Actions, repository `JaceThings/Lisse`, workflow file `release.yml`, no environment name — matching the other four.
+5. **Revoke the granular token.** It exists only to bootstrap step 4.
+6. Confirm the next release publishes the new package through OIDC with no token.
+
+Do not add an `NPM_TOKEN` secret to `release.yml` to work around this. That would replace OIDC for *every* package and drop the provenance guarantee.
 
 ## Pre-publish sanity checks
 
@@ -43,7 +66,7 @@ Before merging a "chore: version packages" PR:
 ```bash
 pnpm test          # must be all green
 pnpm typecheck     # must be clean
-pnpm build         # must succeed for all 4 packages
+pnpm build         # must succeed for all 5 packages
 ```
 
 CI will run these again in the release workflow, but catching failures locally saves a round-trip.

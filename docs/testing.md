@@ -199,10 +199,10 @@ releases only. Until that day, the credentials sit unused.
 
 ## Test count snapshot
 
-- 730 unit tests (core / adapters / Octane / extension)
+- 730 unit tests (core / adapters / extension)
 - 9 JS hot-path benches
 - ~6 browser-smoke cases × 3 browsers = ~18 browser assertions
-- 4 consumer-smoke imports
+- 5 consumer-smoke imports
 - 5 snapshot grids (one per curve family + one mixed)
 - 6 property tests × 500 random cases = 3,000 fast-check assertions per run
 - 8 reference-shape error tests

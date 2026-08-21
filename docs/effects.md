@@ -193,7 +193,7 @@ Explicit effect props take priority over auto-extracted values:
 
 ### Disabling auto-effects
 
-Pass `autoEffects={false}` (React), `:auto-effects="false"` (Vue), or `autoEffects: false` (Svelte). When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs.
+Pass `autoEffects={false}` (React and Octane), `:auto-effects="false"` (Vue), or `autoEffects: false` (Svelte). When disabled, CSS borders and shadows are left untouched and no automatic extraction occurs.
 
 ### What gets extracted
 
