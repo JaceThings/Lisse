@@ -14,6 +14,32 @@ function freshDiv(): HTMLElement {
   return el;
 }
 
+/**
+ * Fastest of three runs, so one scheduler hiccup on a shared CI runner doesn't
+ * decide the result.
+ */
+function fastest(run: () => void): number {
+  let best = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const start = performance.now();
+    run();
+    best = Math.min(best, performance.now() - start);
+  }
+  return best;
+}
+
+/**
+ * Doubling the input must not more than triple the time. A wall-clock ceiling
+ * measures the runner, not the parser: 50ms failed CI on a slow one while the
+ * quadratic blowups these guard against cost seconds.
+ */
+function scalesLinearly(build: (size: number) => string, parse: (input: string) => unknown): void {
+  const half = fastest(() => parse(build(1)));
+  const full = fastest(() => parse(build(2)));
+  if (full < 5) return;
+  expect(full).toBeLessThan(half * 3);
+}
+
 describe("parseColor", () => {
   it("parses rgb() to hex + opacity 1", () => {
     const result = parseColor("rgb(255, 0, 0)");
@@ -65,10 +91,9 @@ describe("parseColor", () => {
   it("rejects a ReDoS attack string in linear time", () => {
     // Adjacent `\s*` quantifiers used to make this O(n^2); a long run of
     // whitespace before a missing `)` would hang the matcher.
-    const attack = "rgb(9\t9\t9" + "\t".repeat(100_000);
-    const start = performance.now();
-    expect(parseColor(attack)).toBeUndefined();
-    expect(performance.now() - start).toBeLessThan(50);
+    const attack = (size: number) => "rgb(9\t9\t9" + "\t".repeat(size * 100_000);
+    expect(parseColor(attack(2))).toBeUndefined();
+    scalesLinearly(attack, parseColor);
   });
 });
 
@@ -257,10 +282,9 @@ describe("parseBoxShadow", () => {
 
   it("rejects a ReDoS attack string in linear time", () => {
     // Allowing `(` inside the colour-function argument run made this ~2s.
-    const attack = "color(".repeat(32_000);
-    const start = performance.now();
-    expect(parseBoxShadow(attack)).toEqual({});
-    expect(performance.now() - start).toBeLessThan(50);
+    const attack = (size: number) => "color(".repeat(size * 32_000);
+    expect(parseBoxShadow(attack(2))).toEqual({});
+    scalesLinearly(attack, parseBoxShadow);
   });
 
   it("returns all outer and all inset shadows from multiple shadows", () => {
