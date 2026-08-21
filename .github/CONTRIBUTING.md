@@ -21,7 +21,7 @@ Run these from the repo root:
 
 - `pnpm test`: run the Vitest suite
 - `pnpm build`: build every package under `packages/*`
-- `pnpm typecheck`: type-check every package with TypeScript
+- `pnpm typecheck`: type-check every package's `src` and `__tests__` with TypeScript
 - `pnpm bench`: run performance benchmarks (not wired up yet; coming soon)
 
 Run a script in a single package with `pnpm --filter @lisse/core <script>`.

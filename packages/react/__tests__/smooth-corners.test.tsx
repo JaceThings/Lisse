@@ -920,8 +920,8 @@ describe("<SmoothCorners /> - shadowStrategy='box-shadow'", () => {
 
 describe("<SmoothCorners /> - ref forwarding", () => {
   it("forwards the external ref to the inner element", () => {
-    const ref = { current: null as HTMLElement | null };
-    const Tester = forwardRef<HTMLElement>((_, fwd) => {
+    const ref = { current: null as HTMLDivElement | null };
+    const Tester = forwardRef<HTMLDivElement>((_, fwd) => {
       return (
         <SmoothCorners ref={fwd} autoEffects={false} corners={{ radius: 8 }} id="forwarded">
           x

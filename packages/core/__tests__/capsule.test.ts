@@ -6,18 +6,21 @@ import { generatePath } from "../src/generate-path.js";
 import { getPathParamsForCorner } from "../src/corner-params.js";
 import { drawBlendPath } from "../src/curves/blend.js";
 
+/** svgpath's bundled typings omit the `segments` field it exposes at runtime. */
+type WithSegments = { segments: (string | number)[][] };
+
 /** Absolute, 4-decimal-rounded segment list. */
 function segments(d: string): (string | number)[][] {
-  return svgpath(d).abs().round(4).segments as unknown as (string | number)[][];
+  const path = svgpath(d).abs().round(4) as unknown as WithSegments;
+  return path.segments;
 }
 
 /** Flatten a path to a dense polyline (arcs → cubics via svgpath.unarc). */
 function flatten(d: string, steps = 200): [number, number][] {
   const pts: [number, number][] = [];
   let cx = 0, cy = 0, sx = 0, sy = 0;
-  const segs = svgpath(d).unarc().abs().segments as unknown as number[][] &
-    (string | number)[][];
-  for (const s of segs) {
+  const path = svgpath(d).unarc().abs() as unknown as WithSegments;
+  for (const s of path.segments) {
     const cmd = s[0] as string;
     if (cmd === "M") {
       cx = s[1] as number; cy = s[2] as number; sx = cx; sy = cy;
