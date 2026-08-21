@@ -8,11 +8,16 @@ import {
   useState,
 } from "octane";
 import type { OctaneNode } from "octane";
-import { hasEffects, cornerOptionsToBorderRadius } from "@lisse/core";
+import {
+  acquireIsolation,
+  releaseIsolation,
+  hasEffects,
+  cornerOptionsToBorderRadius,
+} from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@lisse/core";
 import { componentSlot, subSlot } from "./manual.js";
 import { Slot } from "./slot.js";
-import { useSmoothCorners } from "./use-smooth-corners.js";
+import { useIsoLayoutEffect, useSmoothCorners } from "./use-smooth-corners.js";
 import type {
   ComponentPropsWithoutRef,
   ElementType,
@@ -186,6 +191,8 @@ export function SmoothCorners<E extends ElementType = "div">(
   };
   const hasExplicit = hasEffects(explicitEffects);
   const siblingShadow = useBoxShadow ? (shadow ?? extractedShadow) : undefined;
+  const shadowChain = siblingShadow === undefined ? "" : buildBoxShadowChain(siblingShadow);
+  const hasShadowSibling = shadowChain !== "";
   const needsWrapper = (autoEffects ?? true) || hasExplicit || siblingShadow !== undefined;
 
   const effectsOptions = {
@@ -196,6 +203,22 @@ export function SmoothCorners<E extends ElementType = "div">(
     onExtractedShadow: useBoxShadow ? onExtractedShadow : undefined,
     fallbackBorderRadius: userSuppliedRadius ? undefined : fallbackRadius,
   };
+
+  // Declared before useSmoothCorners: the acquire must land before the hook's
+  // teardown releases core's count, or the handover passes through zero.
+  useIsoLayoutEffect(
+    () => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper || !hasShadowSibling) return;
+      // Our own declaration is already committed; blank it so the count saves ""
+      // and doesn't restore ours once the sibling goes.
+      wrapper.style.isolation = "";
+      acquireIsolation(wrapper);
+      return () => releaseIsolation(wrapper);
+    },
+    [hasShadowSibling],
+    subSlot(SMOOTH_CORNERS_SLOT, "isolation")!,
+  );
 
   useSmoothCorners(
     internalRef,
@@ -211,22 +234,19 @@ export function SmoothCorners<E extends ElementType = "div">(
   if (!needsWrapper) return inner;
 
   let shadowSibling: OctaneNode = null;
-  if (useBoxShadow && siblingShadow !== undefined) {
-    const chain = buildBoxShadowChain(siblingShadow);
-    if (chain !== "") {
-      shadowSibling = createElement("div", {
-        "aria-hidden": true,
-        "data-slot": "smooth-corners-box-shadow",
-        style: {
-          position: "absolute",
-          inset: 0,
-          borderRadius: cornerOptionsToBorderRadius(options),
-          boxShadow: chain,
-          pointerEvents: "none",
-          zIndex: -1,
-        },
-      });
-    }
+  if (hasShadowSibling) {
+    shadowSibling = createElement("div", {
+      "aria-hidden": true,
+      "data-slot": "smooth-corners-box-shadow",
+      style: {
+        position: "absolute",
+        inset: 0,
+        borderRadius: cornerOptionsToBorderRadius(options),
+        boxShadow: shadowChain,
+        pointerEvents: "none",
+        zIndex: -1,
+      },
+    });
   }
 
   return createElement(
