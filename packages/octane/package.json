@@ -59,7 +59,7 @@
   "homepage": "https://github.com/JaceThings/Lisse#readme",
   "bugs": "https://github.com/JaceThings/Lisse/issues",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.22.2"
   },
   "publishConfig": {
     "access": "public"
