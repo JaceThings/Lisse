@@ -22,13 +22,12 @@ import type {
   MeasuredSize,
   OverlayOffset,
 } from "@lisse/core";
-import { splitSlot, subSlot } from "./manual.js";
+import { subSlot } from "./manual.js";
 
-export interface RefObject<T> {
+// `Octane.Ref<T>` is the ref PROP union, not what `useRef` returns.
+interface RefObject<T> {
   current: T;
 }
-
-type MutableRefObject<T> = { current: T };
 
 /** Use the synchronous client effect without warning during SSR. */
 const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
@@ -66,15 +65,15 @@ interface State {
 }
 
 interface SyncRefs {
-  optionsRef: MutableRefObject<SmoothCornerOptions>;
-  effectsPropRef: MutableRefObject<EffectsConfig | undefined>;
-  wrapperRefRef: MutableRefObject<RefObject<HTMLElement | null> | undefined>;
-  skipShadowHandleRef: MutableRefObject<boolean>;
-  onExtractedShadowRef: MutableRefObject<
+  optionsRef: RefObject<SmoothCornerOptions>;
+  effectsPropRef: RefObject<EffectsConfig | undefined>;
+  wrapperRefRef: RefObject<RefObject<HTMLElement | null> | undefined>;
+  skipShadowHandleRef: RefObject<boolean>;
+  onExtractedShadowRef: RefObject<
     ((shadow: ShadowConfig | ShadowConfig[] | undefined) => void) | undefined
   >;
-  syncKeyRef: MutableRefObject<string>;
-  fallbackBorderRadiusRef: MutableRefObject<string | undefined>;
+  syncKeyRef: RefObject<string>;
+  fallbackBorderRadiusRef: RefObject<string | undefined>;
 }
 
 function runSync(s: State, refs: SyncRefs, measured?: Measured | MeasuredSize): void {
@@ -177,11 +176,14 @@ export function useSmoothCorners(
   effectsOptions: UseEffectsOptions,
   slot: symbol,
 ): void;
-export function useSmoothCorners(...runtime: unknown[]): void {
-  const [userArgs, slot] = splitSlot(runtime);
-  const ref = userArgs[0] as RefObject<HTMLElement | null>;
-  const options = userArgs[1] as SmoothCornerOptions;
-  const effectsOptions = userArgs[2] as UseEffectsOptions | undefined;
+export function useSmoothCorners(
+  ref: RefObject<HTMLElement | null>,
+  options: SmoothCornerOptions,
+  effectsOptionsOrSlot?: UseEffectsOptions | symbol,
+  slotArg?: symbol,
+): void {
+  const slot = typeof effectsOptionsOrSlot === "symbol" ? effectsOptionsOrSlot : slotArg;
+  const effectsOptions = typeof effectsOptionsOrSlot === "symbol" ? undefined : effectsOptionsOrSlot;
   const { wrapperRef, effects, autoEffects, skipShadowHandle, onExtractedShadow, fallbackBorderRadius } =
     effectsOptions ?? {};
 

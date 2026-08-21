@@ -1,4 +1,4 @@
-export { useSmoothCorners, type RefObject, type UseEffectsOptions } from "./use-smooth-corners.js";
+export { useSmoothCorners, type UseEffectsOptions } from "./use-smooth-corners.js";
 export {
   SmoothCorners,
   type SmoothCornersProps,
