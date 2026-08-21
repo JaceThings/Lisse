@@ -1,12 +1,10 @@
 import { generatePath, parseBoxShadow, DEFAULT_SMOOTHING } from "@lisse/core";
 
-/** A single corner's resolved horizontal + vertical radius, in px. */
 export interface CornerRadius {
   h: number;
   v: number;
 }
 
-/** Four circular corner radii, in px. */
 export interface Radii {
   tl: number;
   tr: number;
@@ -16,31 +14,17 @@ export interface Radii {
 
 const EPS = 0.01;
 
-/** Min radius worth smoothing — below this the curve is imperceptible. */
 export const MIN_RADIUS = 3;
-/** Elements smaller than this in either axis are skipped. */
 export const MIN_SIZE = 8;
-/** Uniform solid borders in this px range get a stroked-SVG smooth border. */
 export const MIN_BORDER = 0.5;
 export const MAX_BORDER = 6;
-/** Beyond this, drop-shadow can't approximate the spread well enough. */
 export const MAX_SHADOW_SPREAD = 4;
 
-/**
- * Resolve one length token from a computed corner radius. Percentages resolve
- * against `basis` (the box axis the token measures along); everything else is
- * a px length. Returns NaN for unparseable tokens.
- */
 function resolveLen(token: string, basis: number): number {
   if (token.endsWith("%")) return (parseFloat(token) / 100) * basis;
   return parseFloat(token);
 }
 
-/**
- * Parse a computed `border-*-radius` (e.g. `"10px"`, `"50%"`, `"10px 20px"`)
- * into horizontal + vertical components. `w`/`h` are the box axes the two
- * tokens resolve against. Returns null when unparseable.
- */
 export function parseCornerRadius(raw: string, w: number, h: number): CornerRadius | null {
   if (!raw) return null;
   const tokens = raw.trim().split(/\s+/);
@@ -50,7 +34,6 @@ export function parseCornerRadius(raw: string, w: number, h: number): CornerRadi
   return { h: hv, v: vv };
 }
 
-/** A corner is elliptical when its two radii differ — Lisse can't render it. */
 export function isElliptical(c: CornerRadius): boolean {
   return Math.abs(c.h - c.v) > EPS;
 }
@@ -60,18 +43,10 @@ export interface PseudoBox {
   right: number;
   bottom: number;
   left: number;
-  /** Pseudo's own computed size; NaN when auto. */
   width: number;
   height: number;
 }
 
-/**
- * Whether an absolutely-positioned pseudo-element escapes the box — clip-path
- * clips pseudos with the element, so smoothing would amputate it. Catches
- * negative insets (underlines at `bottom: -9px`) and far-edge escapes via
- * positive offsets (underlines at `top: 38px` on a 32px-tall tab). NaN (auto)
- * values are ignored where the geometry can't be resolved.
- */
 export function pseudoEscapesBox(o: PseudoBox, box: { width: number; height: number }): boolean {
   if ([o.top, o.right, o.bottom, o.left].some((v) => !isNaN(v) && v < -EPS)) return true;
   if (!isNaN(o.height)) {
@@ -85,22 +60,13 @@ export function pseudoEscapesBox(o: PseudoBox, box: { width: number; height: num
   return false;
 }
 
-/**
- * Whether a computed `corner-shape` is the default round (keyword or its
- * superellipse(1) serialisation). Anything else — squircle included — means
- * the site chose its own corner geometry: overriding a native squircle with
- * our smoothing visibly fattens the corners (Figma smoothing at 0.6 extends
- * the curve further than superellipse(2)), and replicating it exactly would
- * be a no-op. Either way, ours has no business there.
- */
-export function isDefaultCornerShape(shorthand: string): boolean {
+export function isDefaultCorner(shorthand: string): boolean {
   return shorthand
     .trim()
     .split(/\s+/)
     .every((tok) => tok === "round" || tok === "superellipse(1)");
 }
 
-/** One side's resolved border longhands (computed values). */
 export interface BorderSide {
   width: number;
   style: string;
@@ -114,74 +80,50 @@ export interface BorderInput {
   left: BorderSide;
 }
 
-/**
- * Site-original computed background longhands, as comma-lists matching the
- * layer count. Our stroked border prepends one layer to each.
- */
 export interface BackgroundInput {
   image: string;
   origin: string;
   clip: string;
   repeat: string;
   size: string;
+  position: string;
 }
 
 export interface PlanInput {
-  /** Computed box size in px (float — never offsetWidth). */
   width: number;
   height: number;
   radii: Radii;
-  /** Any corner elliptical → whole element is skipped. */
   elliptical: boolean;
-  /** Per-side border longhands; used to detect a uniform solid border. */
   border: BorderInput;
   hasBorderImage: boolean;
-  /** Site-original background longhands the border layer prepends onto. */
   background: BackgroundInput;
-  /** No fill, image, or shadow, and children unclipped (overflow visible). */
   paintsNothing: boolean;
-  /** A visible outline (focus ring) paints outside the box → clip kills it. */
   hasOutline: boolean;
-  /** A ::before/::after escapes the box → clipping would amputate it. */
   pseudoOutside: boolean;
-  /** A visible child escapes the box (avatar stacks, badges) → same. */
   childOutside: boolean;
-  /** Raw computed `box-shadow`. */
   boxShadow: string;
-  /** Existing computed `filter` to preserve (drop-shadows prepend to it). */
   existingFilter: string;
   smoothing: number;
-  /**
-   * Border-box position in page coordinates and the devicePixelRatio — used
-   * to pixel-snap the redrawn border. Browsers snap native box decorations
-   * to device pixels at paint time; an SVG background gets no such snapping,
-   * so at fractional positions/sizes a 1px stroke straddles two device
-   * pixels at half coverage (visibly dim at dpr 1). Optional: without them
-   * the stroke is drawn unsnapped.
-   */
   pageLeft?: number;
   pageTop?: number;
   dpr?: number;
 }
 
-/**
- * Layered background longhands that redraw a uniform border as a stroked SVG.
- * The engine also sets `border-color: transparent` whenever this is present.
- */
 export interface BorderLayer {
   backgroundImage: string;
   backgroundOrigin: string;
   backgroundClip: string;
   backgroundRepeat: string;
   backgroundSize: string;
+  backgroundPosition: string;
+  keepBorderColor?: boolean;
 }
 
 export type Plan =
   | { action: "skip"; reason: string }
-  | { action: "apply"; clipPath: string; filter?: string; border?: BorderLayer };
+  | { action: "apply"; clipPath: string; filter?: string; border?: BorderLayer; boxShadow?: string };
 
 function hexToRgba(hex: string, opacity: number): string {
-  // Wide-gamut colors come through raw (alpha embedded) — valid CSS as-is.
   if (!hex.startsWith("#")) return hex;
   const n = parseInt(hex.slice(1), 16);
   const r = (n >> 16) & 255;
@@ -190,20 +132,16 @@ function hexToRgba(hex: string, opacity: number): string {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-/**
- * Convert outer box-shadows to an equivalent `drop-shadow()` filter chain.
- * drop-shadow has no spread, so spread is folded into the blur. Returns null
- * when there's nothing to convert, or "skip" when a spread is too large to
- * approximate faithfully.
- */
+export function hasInsetShadow(raw: string): boolean {
+  return (parseBoxShadow(raw).innerShadow?.length ?? 0) > 0;
+}
+
 export function boxShadowToFilter(raw: string): string | null | "skip" {
   const { shadow } = parseBoxShadow(raw);
   if (!shadow || shadow.length === 0) return null;
   const parts: string[] = [];
   for (const s of shadow) {
     if (Math.abs(s.spread) > MAX_SHADOW_SPREAD) return "skip";
-    // A spread-only ring (0 0 0 Npx — avatar "borders") has no drop-shadow
-    // equivalent; folding it into blur turns a crisp ring invisible.
     if (s.blur === 0 && s.spread !== 0) return "skip";
     const blur = Math.max(0, s.blur + s.spread);
     const color = hexToRgba(s.color, s.opacity);
@@ -212,11 +150,6 @@ export function boxShadowToFilter(raw: string): string | null | "skip" {
   return parts.join(" ");
 }
 
-/**
- * A uniform solid border, or null. All four sides must share the same width
- * (0.5–6px), the `solid` style, and the same colour — otherwise the clip would
- * render the border thin/uneven, so the caller skips the element instead.
- */
 export function uniformSolidBorder(b: BorderInput): { width: number; color: string } | null {
   const { top, right, bottom, left } = b;
   const w = top.width;
@@ -229,31 +162,18 @@ export function uniformSolidBorder(b: BorderInput): { width: number; color: stri
   return { width: w, color: top.color };
 }
 
-/** True when any side paints a visible border (computed width > 0). */
 function hasVisibleBorder(b: BorderInput): boolean {
   return [b.top, b.right, b.bottom, b.left].some((s) => s.width > EPS);
 }
 
-/** Where the border stroke lands inside the box, in CSS px. */
 export interface StrokeGeometry {
-  /** Inset of each edge's stroke band from the box edge. */
   left: number;
   top: number;
   right: number;
   bottom: number;
-  /** Snapped stroke width. */
   strokeWidth: number;
 }
 
-/**
- * Pixel-snap the border stroke. Browsers snap a native border's edges to the
- * nearest device-pixel line at paint time; our SVG background image is sampled
- * smoothly instead, so at fractional page positions a 1px stroke straddles two
- * device pixels (dim at dpr 1) and, if snapped the wrong way, lands a whole
- * device px off the native border it replaces (visibly "moved" when toggled).
- * So we snap each edge with the same rounding the browser uses, putting our
- * stroke on the native border's row rather than inside it.
- */
 export function snapStroke(
   width: number,
   height: number,
@@ -265,12 +185,7 @@ export function snapStroke(
   if (pageLeft === undefined || pageTop === undefined || !dpr) {
     return { left: 0, top: 0, right: 0, bottom: 0, strokeWidth: borderWidth };
   }
-  // Native behaviour: used border widths round to whole device px, min 1.
   const strokeWidth = Math.max(1, Math.round(borderWidth * dpr)) / dpr;
-  // Ties break inward (near half up, far half down) so an edge exactly between
-  // two device lines (e.g. a 40.5px-tall input) snaps onto one and stays crisp
-  // instead of straddling both. Clamp to ≥ 0: when the native edge rounds
-  // outside the border box we can't paint there, so we sit on the box edge.
   const near = (p: number) => Math.max(0, Math.floor(p * dpr + 0.5) / dpr - p);
   const far = (p: number) => Math.max(0, p - Math.ceil(p * dpr - 0.5) / dpr);
   const geom = {
@@ -280,7 +195,6 @@ export function snapStroke(
     bottom: far(pageTop + height),
     strokeWidth,
   };
-  // Degenerate box — draw unsnapped rather than inverted.
   if (width - geom.left - geom.right <= strokeWidth ||
       height - geom.top - geom.bottom <= strokeWidth) {
     return { left: 0, top: 0, right: 0, bottom: 0, strokeWidth: borderWidth };
@@ -288,30 +202,10 @@ export function snapStroke(
   return geom;
 }
 
-/**
- * Redraw a uniform border as a background layer: a stroked SVG of the smooth
- * path, drawn fully inside the box (centerline inset by half the stroke) so
- * no part of it depends on raster-boundary clipping. `d` is the centerline
- * path for the inner box; `x`/`y` translate it into place. Our layer is
- * prepended (painted on top) to the element's existing background layers,
- * keeping each longhand a matching comma-list so the pre-existing layers
- * retain their own values.
- */
-export function borderStrokeLayer(
-  d: string,
-  width: number,
-  height: number,
-  x: number,
-  y: number,
-  strokeWidth: number,
-  color: string,
-  bg: BackgroundInput,
-): BorderLayer {
+function svgLayer(width: number, height: number, body: string, bg: BackgroundInput): BorderLayer {
   const svg =
     `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' ` +
-    `viewBox='0 0 ${width} ${height}' preserveAspectRatio='none'>` +
-    `<g transform='translate(${x} ${y})'>` +
-    `<path d='${d}' fill='none' stroke='${color}' stroke-width='${strokeWidth}'/></g></svg>`;
+    `viewBox='0 0 ${width} ${height}' preserveAspectRatio='none'>${body}</svg>`;
   const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   const empty = bg.image === "none" || bg.image === "";
   const layer = (ours: string, existing: string) => (empty ? ours : `${ours}, ${existing}`);
@@ -321,13 +215,28 @@ export function borderStrokeLayer(
     backgroundClip: layer("border-box", bg.clip),
     backgroundRepeat: layer("no-repeat", bg.repeat),
     backgroundSize: layer("100% 100%", bg.size),
+    backgroundPosition: layer("0% 0%", bg.position),
   };
 }
 
-/**
- * Decide what to do with one element from its resolved computed values.
- * Correctness over coverage — when in doubt, skip.
- */
+function strokeGroup(d: string, x: number, y: number, strokeWidth: number, color: string): string {
+  return `<g transform='translate(${x} ${y})'><path d='${d}' fill='none' stroke='${color}' stroke-width='${strokeWidth}'/></g>`;
+}
+
+export function borderStrokeLayer(
+  d: string,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  strokeWidth: number,
+  color: string,
+  bg: BackgroundInput,
+  extra = "",
+): BorderLayer {
+  return svgLayer(width, height, extra + strokeGroup(d, x, y, strokeWidth, color), bg);
+}
+
 export function computeElementPlan(input: PlanInput): Plan {
   if (input.elliptical) return { action: "skip", reason: "elliptical" };
 
@@ -338,19 +247,13 @@ export function computeElementPlan(input: PlanInput): Plan {
     return { action: "skip", reason: "too-small" };
   }
   if (input.hasBorderImage) return { action: "skip", reason: "border-image" };
-  // On an element that paints nothing and doesn't clip its children,
-  // border-radius is visually inert — clipping would manufacture rounding the
-  // site never showed (X poll cards: a radius-16 wrapper with no fill or
-  // border, whose clip shaved the corners off the poll rows inside).
   if (input.paintsNothing && !hasVisibleBorder(input.border)) {
     return { action: "skip", reason: "paints-nothing" };
   }
-  // Focus rings are outlines; clipping them away is an accessibility bug.
   if (input.hasOutline) return { action: "skip", reason: "outline" };
   if (input.pseudoOutside) return { action: "skip", reason: "pseudo-outside" };
   if (input.childOutside) return { action: "skip", reason: "child-outside" };
 
-  // A visible border must be a clean uniform solid, else the corners degrade.
   let border: { width: number; color: string } | null = null;
   if (hasVisibleBorder(input.border)) {
     border = uniformSolidBorder(input.border);
@@ -378,24 +281,57 @@ export function computeElementPlan(input: PlanInput): Plan {
 
   const plan: Plan = { action: "apply", clipPath };
   if (filter) plan.filter = filter;
-  if (border) {
-    const g = snapStroke(
-      input.width, input.height, border.width,
-      input.pageLeft, input.pageTop, input.dpr,
-    );
-    const half = g.strokeWidth / 2;
-    const rc = (r: number) => ({ radius: Math.max(0, r - half), smoothing });
-    const dInner = generatePath(
-      input.width - g.left - g.right - g.strokeWidth,
-      input.height - g.top - g.bottom - g.strokeWidth,
-      { topLeft: rc(tl), topRight: rc(tr), bottomRight: rc(br), bottomLeft: rc(bl) },
-    );
-    plan.border = borderStrokeLayer(
-      dInner, input.width, input.height,
-      g.left + half, g.top + half, g.strokeWidth,
-      border.color, input.background,
-    );
+
+  const g = border
+    ? snapStroke(
+        input.width, input.height, border.width,
+        input.pageLeft, input.pageTop, input.dpr,
+      )
+    : { left: 0, top: 0, right: 0, bottom: 0, strokeWidth: 0 };
+  const insetAt = (inset: number) => {
+    const w = input.width - g.left - g.right - inset * 2;
+    const h = input.height - g.top - g.bottom - inset * 2;
+    if (w <= 0 || h <= 0) return null;
+    const rc = (r: number) => ({ radius: Math.max(0, r - inset), smoothing });
+    return {
+      d: generatePath(w, h, { topLeft: rc(tl), topRight: rc(tr), bottomRight: rc(br), bottomLeft: rc(bl) }),
+      x: g.left + inset,
+      y: g.top + inset,
+    };
+  };
+
+  const inners = parseBoxShadow(input.boxShadow).innerShadow ?? [];
+  let extra = "";
+  for (const s of inners) {
+    if (s.blur > EPS) return { action: "skip", reason: "inset-blur" };
+    const ring = Math.abs(s.offsetX) < EPS && Math.abs(s.offsetY) < EPS && s.spread > EPS;
+    const topHi = Math.abs(s.offsetX) < EPS && s.spread < EPS && s.offsetY > EPS && s.offsetY <= 2;
+    if (!ring && !topHi) return { action: "skip", reason: "inset-shadow" };
+    const band = ring ? s.spread : s.offsetY;
+    const inner = insetAt(g.strokeWidth + band / 2);
+    if (!inner) return { action: "skip", reason: "inset-shadow" };
+    const color = hexToRgba(s.color, s.opacity);
+    const group = strokeGroup(inner.d, inner.x, inner.y, band, color);
+    extra += topHi
+      ? `<defs><clipPath id="t"><rect width="${input.width}" height="${g.top + g.strokeWidth + maxR + band + 2}"/></clipPath></defs><g clip-path="url(#t)">${group}</g>`
+      : group;
   }
+
+  if (border) {
+    const half = g.strokeWidth / 2;
+    const inner = insetAt(half);
+    if (inner) {
+      plan.border = borderStrokeLayer(
+        inner.d, input.width, input.height,
+        inner.x, inner.y, g.strokeWidth,
+        border.color, input.background, extra,
+      );
+    }
+  } else if (extra) {
+    plan.border = svgLayer(input.width, input.height, extra, input.background);
+    plan.border.keepBorderColor = true;
+  }
+  if (extra) plan.boxShadow = "none";
   return plan;
 }
 

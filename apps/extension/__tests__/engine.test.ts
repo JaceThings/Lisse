@@ -118,3 +118,15 @@ describe("engine — the site's filter", () => {
     expect(el.style.filter).toBe("");
   });
 });
+
+describe("engine — the site's box-shadow", () => {
+  it("hides the site's shadow with `important`, since a site rule outranks a plain inline value", async () => {
+    const el = candidate();
+    el.style.boxShadow = "rgba(1, 4, 9, 0.24) 0px 1px 0px 0px inset";
+    engine();
+    await settle();
+
+    expect(el.style.boxShadow).toBe("none");
+    expect(el.style.getPropertyPriority("box-shadow")).toBe("important");
+  });
+});
