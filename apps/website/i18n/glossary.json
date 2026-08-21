@@ -10,7 +10,7 @@
     "border-radius / corner-shape": "CSS property names — code. Keep verbatim in every locale (enforced).",
     "G1 / G2": "Geometric-continuity notation. Keep verbatim (enforced).",
     "Figma / Sketch / Apple / iOS / Chrome / Safari / Firefox / W3C": "Product, company and org names. Keep verbatim (enforced).",
-    "React / Vue / Svelte / SVG / CSS / npm": "Framework names, acronyms, tooling. Keep verbatim (enforced).",
+    "React / Vue / Svelte / Octane / SVG / CSS / npm": "Framework names, acronyms, tooling. Keep verbatim (enforced).",
     "playground / binding / feature flag / design system": "Loanwords — keep the form real developers use in the target language (most keep these in English; ru prefers Песочница for playground and avoids the literal 'флаг функции').",
     "un galet lisse / cheveux lisses / une courbe lisse": "French phrases in the dictionary-style header definition. Keep the French verbatim (they illustrate the word's French origin)."
   },
