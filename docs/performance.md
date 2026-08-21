@@ -56,5 +56,5 @@ The JS hot path doesn't include browser paint, layout, or compositor work, which
 ## Bench locally
 
 ```sh
-pnpm bench           # full suite: core, three adapters, SSR (212 cases, ~8 min)
+pnpm bench           # full suite: core, three adapters, SSR (220 cases, ~8 min)
 ```

@@ -39,8 +39,8 @@ The suite exercises this grid:
 That's 16 cells times 3 hot paths = **48 cases per grid**. React and
 Svelte run the grid once each; the Vue file runs it twice, once through
 the `<SmoothCorners>` component and once through the `useSmoothCorners`
-composable — **192 adapter cases**. `core.bench.ts` adds 12 and
-`ssr.bench.ts` 8, for **212 cases** in total. Adapter and SSR cases
+composable — **192 adapter cases**. `core.bench.ts` adds 20 and
+`ssr.bench.ts` 8, for **220 cases** in total. Adapter and SSR cases
 sample for at least a second (`time: 1000`); the core cases take
 tinybench's 500 ms default. Every case also has tinybench's
 10-iteration floor.
@@ -146,8 +146,8 @@ vitest-bench prints tinybench stats per case. The columns you want are:
 ## Grid adjustments
 
 None. No dimension was reduced: 4 x 2 x 2 x 3 = 48 cases per adapter
-grid, 212 across the suite. Sampling alone therefore floors a full run at
-a little over three minutes (200 cases at ≥1 s, 12 at ≥0.5 s), before the
+grid, 220 across the suite. Sampling alone therefore floors a full run at
+a little over three minutes (200 cases at ≥1 s, 20 at ≥0.5 s), before the
 per-iteration mount cost of the larger counts.
 
 ## Results
