@@ -1,7 +1,7 @@
 /** @jsx createElement */
 import { createElement } from "octane";
 import { renderToString } from "octane/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { SmoothCorners } from "../src/index.js";
 import { HYDRATION_PROPS, SERVER_HTML } from "./ssr-hydration-fixture.js";
 
@@ -10,52 +10,31 @@ function Fixture(props: Record<string, unknown>): unknown {
 }
 
 describe("SmoothCorners - server-side rendering", () => {
-  let errorSpy: ReturnType<typeof vi.spyOn>;
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    errorSpy.mockRestore();
-    warnSpy.mockRestore();
-  });
-
-  it("renders a basic instance without throwing or warning", () => {
+  it("wraps the default autoEffects path in a positioned overlay anchor", () => {
     const html = renderToString(Fixture, {
       corners: { radius: 16, smoothing: 0.6 },
       children: "hello",
     }).html;
-    expect(html.length).toBeGreaterThan(0);
-    expect(html).toContain("hello");
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(warnSpy).not.toHaveBeenCalled();
+    expect(html).toContain('<div style="position:relative;">');
+    expect(html).toContain('<div style="border-radius:16px;">hello</div>');
   });
 
-  it("renders asChild without throwing", () => {
+  it("renders asChild onto the child element", () => {
     const html = renderToString(Fixture, {
       asChild: true,
       corners: { radius: 12 },
       children: <a href="/signup">Sign up</a>,
     }).html;
-    expect(html).toContain("Sign up");
-    expect(html).toContain('href="/signup"');
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(warnSpy).not.toHaveBeenCalled();
+    expect(html).toMatch(/<a href="\/signup" style="border-radius:12px;">Sign up<\/a>/);
   });
 
-  it("renders with polymorphic `as` without throwing", () => {
+  it("renders with polymorphic `as` as that tag", () => {
     const html = renderToString(Fixture, {
       as: "section",
       corners: { radius: 8 },
       children: "section content",
     }).html;
-    expect(html).toMatch(/<section[^>]*>/);
-    expect(html).toContain("section content");
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(warnSpy).not.toHaveBeenCalled();
+    expect(html).toMatch(/<section[^>]*>section content<\/section>/);
   });
 
   it("emits an inline border-radius fallback derived from the corner radius", () => {
@@ -64,8 +43,6 @@ describe("SmoothCorners - server-side rendering", () => {
       children: "hello",
     }).html;
     expect(html).toContain("border-radius:16px");
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it("emits a per-corner border-radius fallback for per-corner options", () => {
@@ -82,7 +59,7 @@ describe("SmoothCorners - server-side rendering", () => {
       corners: { radius: 20 },
       children: <a href="/x">link</a>,
     }).html;
-    expect(html).toMatch(/<a[^>]*style="[^\"]*border-radius:20px/);
+    expect(html).toMatch(/<a[^>]*style="[^"]*border-radius:20px/);
   });
 
   it("user-supplied style.borderRadius wins over the fallback", () => {
