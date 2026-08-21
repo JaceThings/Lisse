@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
 // Contract: the React wrapper feeds the same inputs into core as the
-// other adapters. Drift here (and not in vue/svelte) is a wrapper bug.
+// other adapters. Drift here (and not in vue/svelte/octane) is a wrapper bug.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

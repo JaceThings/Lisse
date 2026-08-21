@@ -234,9 +234,10 @@ element. Things worth knowing:
 | Pointing the wrapper option at the clipped element itself | Ignored — the parent is used instead, because a nested overlay could not paint an outer border. |
 
 The overlay follows the element whenever the element or the anchor resizes. In
-React it additionally re-checks on every commit, so a state change that only
-realigns the container is caught too; the Vue composable and the Svelte action
-re-check on a config change, not on an unrelated parent re-render.
+React and Octane it additionally re-checks on every commit, so a state change
+that only realigns the container is caught too; the Vue composable and the
+Svelte action re-check on a config change, not on an unrelated parent
+re-render.
 
 A move driven by none of those — pure CSS realignment with no size change and no
 update, e.g. a `:hover` rule flipping the container's `justify-content` — has
