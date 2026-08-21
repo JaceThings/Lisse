@@ -61,7 +61,7 @@ export function installHarness(): RuntimeHarness {
   nextRafId = 0;
   StubResizeObserver.instances = [];
 
-  (globalThis as { ResizeObserver: typeof StubResizeObserver }).ResizeObserver = StubResizeObserver;
+  globalThis.ResizeObserver = StubResizeObserver;
   globalThis.requestAnimationFrame = ((cb: FrameRequestCallback): number => {
     const id = ++nextRafId;
     rafQueue.push({ id, cb });
