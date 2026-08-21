@@ -1,12 +1,4 @@
-export function installNoopResizeObserver(): void {
-  if ("ResizeObserver" in globalThis) return;
-  (globalThis as { ResizeObserver: unknown }).ResizeObserver = class {
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
-  };
-}
-
+/** happy-dom measures 0, so an unstubbed element bails at `width <= 0`. Re-callable to resize. */
 export function stubLayout(el: HTMLElement, width = 200, height = 100): void {
   Object.defineProperty(el, "offsetWidth", { value: width, configurable: true });
   Object.defineProperty(el, "offsetHeight", { value: height, configurable: true });
