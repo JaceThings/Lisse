@@ -78,16 +78,26 @@ function childSuppliedStyle(children: OctaneNode): unknown {
   return ((child.props ?? {}) as { style?: unknown }).style;
 }
 
-// Two spellings because Octane's `style` prop is `string | CSSProperties`, so a
-// radius can arrive as a property key or as a declaration.
 const RADIUS_PROPERTY = /^border[A-Za-z]*Radius$/;
-const RADIUS_DECLARATION = /border(?:-[a-z]+)*-radius\s*:/i;
+
+// Octane's `style` prop is `string | CSSProperties`, so a radius can arrive as
+// a property key or as a declaration. Scanning the text beats a regex here:
+// `border(?:-[a-z]+)*-radius` backtracks polynomially on consumer input, and a
+// declaration list is trivial to walk.
+function radiusDeclaration(text: string): boolean {
+  for (const declaration of text.split(";")) {
+    const colon = declaration.indexOf(":");
+    if (colon < 0) continue;
+    if (declaration.slice(0, colon).trim().toLowerCase().endsWith("-radius")) return true;
+  }
+  return false;
+}
 
 // A radius the consumer set wins, and longhands count: the teardown clears the
 // shorthand, which erases the longhands with it.
 function styleHasBorderRadius(style: unknown): boolean {
   if (!style) return false;
-  if (typeof style === "string") return RADIUS_DECLARATION.test(style);
+  if (typeof style === "string") return radiusDeclaration(style);
   if (typeof style !== "object") return false;
   const record = style as Record<string, unknown>;
   return Object.keys(record).some((key) => record[key] !== undefined && RADIUS_PROPERTY.test(key));
@@ -97,7 +107,7 @@ function styleHasBorderRadius(style: unknown): boolean {
 // form they supplied. Later declarations win, so theirs still do.
 function withFallbackRadius(userStyle: unknown, fallbackRadius: string): unknown {
   if (typeof userStyle === "string") {
-    return RADIUS_DECLARATION.test(userStyle)
+    return radiusDeclaration(userStyle)
       ? userStyle
       : `border-radius: ${fallbackRadius}; ${userStyle}`;
   }
