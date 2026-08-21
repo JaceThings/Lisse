@@ -17,8 +17,8 @@
       "schedule": ["before 6am on monday"]
     },
     {
-      "description": "Group framework peer-deps (react/vue/svelte) separately so a wider review can happen if any of them ships a breaking change.",
-      "matchPackageNames": ["react", "react-dom", "vue", "svelte"],
+      "description": "Group framework peer-deps (react/vue/svelte/octane) separately so a wider review can happen if any of them ships a breaking change. Octane most of all: it is the only pre-1.0 peer, so a 0.1.x bump can carry breaking changes that semver hides.",
+      "matchPackageNames": ["react", "react-dom", "vue", "svelte", "octane"],
       "groupName": "framework peers"
     },
     {

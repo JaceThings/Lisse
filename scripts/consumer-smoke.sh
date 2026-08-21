@@ -9,7 +9,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR_DIR="$ROOT_DIR/tests/consumer-smoke/vendor"
 FIXTURE_DIR="$ROOT_DIR/tests/consumer-smoke"
 
-PACKAGES=("core" "react" "vue" "svelte")
+PACKAGES=("core" "react" "vue" "svelte" "octane")
 
 echo "[consumer-smoke] cleaning previous artifacts"
 rm -rf "$VENDOR_DIR"

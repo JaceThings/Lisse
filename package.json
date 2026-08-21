@@ -51,6 +51,14 @@
       "ignore": [
         "svelte"
       ]
+    },
+    {
+      "name": "@lisse/octane (incl. core, ESM, brotli, excluding peer dep)",
+      "path": "packages/octane/dist/index.js",
+      "limit": "13 KB",
+      "ignore": [
+        "octane"
+      ]
     }
   ],
   "pnpm": {

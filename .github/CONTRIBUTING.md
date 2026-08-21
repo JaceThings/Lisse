@@ -58,6 +58,8 @@ Choose the bump type for each affected package:
 
 The four published packages move together. `.changeset/config.json` groups `@lisse/core`, `@lisse/react`, `@lisse/vue`, and `@lisse/svelte` under `linked`, so when any one of them gets a bump, they all release at the same version. Pick the highest bump type that applies to any package in your change and Changesets will carry the rest along.
 
+`@lisse/octane` is deliberately outside that group. It tracks a pre-1.0 peer, so it can need a breaking release whenever Octane ships one, and those bumps shouldn't drag the four stable packages' version along. It versions on its own, starting at `0.1.0`.
+
 Skip the changeset only for PRs that don't affect published output (CI config, repo-level docs, tests, internal tooling).
 
 ## Pull request process

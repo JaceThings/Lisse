@@ -165,7 +165,7 @@ function compareVersions(a: string, b: string): number {
 }
 
 /** Stable package ordering preferred in the root changelog. */
-const PACKAGE_ORDER = ["@lisse/react", "@lisse/vue", "@lisse/svelte", "@lisse/core"];
+const PACKAGE_ORDER = ["@lisse/react", "@lisse/vue", "@lisse/svelte", "@lisse/octane", "@lisse/core"];
 
 function comparePackages(a: string, b: string): number {
   const ia = PACKAGE_ORDER.indexOf(a);

@@ -1,0 +1,70 @@
+{
+  "name": "@lisse/octane",
+  "version": "0.0.0",
+  "description": "Octane hook and component for smooth-cornered (squircle) elements",
+  "license": "MIT",
+  "type": "module",
+  "octane": {
+    "hookSlots": {
+      "manual": [
+        "src",
+        "dist"
+      ]
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lisse/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "octane": "^0.1.38"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaceThings/Lisse",
+    "directory": "packages/octane"
+  },
+  "keywords": [
+    "squircle",
+    "smooth-corners",
+    "octane",
+    "hook",
+    "component",
+    "border-radius",
+    "clip-path"
+  ],
+  "homepage": "https://github.com/JaceThings/Lisse#readme",
+  "bugs": "https://github.com/JaceThings/Lisse/issues",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "octane": "^0.1.38"
+  }
+}

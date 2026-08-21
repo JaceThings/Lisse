@@ -39,6 +39,7 @@ body:
         - "@lisse/react"
         - "@lisse/vue"
         - "@lisse/svelte"
+        - "@lisse/octane"
     validations:
       required: true
   - type: input
@@ -61,8 +62,8 @@ body:
     id: framework-version
     attributes:
       label: Framework version
-      description: For React, Vue, or Svelte bindings, the framework version in use.
-      placeholder: "e.g. React 19.0.0, Vue 3.5.0, Svelte 5.0.0"
+      description: For the React, Vue, Svelte, or Octane bindings, the framework version in use.
+      placeholder: "e.g. React 19.0.0, Vue 3.5.0, Svelte 5.0.0, Octane 0.1.38"
     validations:
       required: false
   - type: checkboxes

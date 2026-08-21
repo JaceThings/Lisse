@@ -17,9 +17,9 @@ layer should answer "did it change". They are not the same.
 | Reference shape | `packages/core/__tests__/reference-shape.test.ts` | "Does the cubic Bézier approximation match the analytic curve?" For superellipse and clothoid. |
 | Golden snapshots | `packages/core/__tests__/snapshots.test.ts` | "Did the exact `d` string change?" 40 curated cases, one block per curve type. |
 | Runtime harness | `packages/*/​__tests__/runtime-harness.test.{ts,tsx}` | "Does ResizeObserver + rAF batching, prop updates, and cleanup work correctly per adapter?" |
-| Adapter contract | `packages/*/​__tests__/contract.test.{ts,tsx}` | "Do React / Vue / Svelte feed the same props into core?" Shared fixture, 26 cases × 3 adapters. |
+| Adapter contract | `packages/*/​__tests__/contract.test.{ts,tsx}` | "Do the adapters feed the same props into core?" Shared fixture, 27 cases per adapter. |
 | Browser smoke | `tests/browser-smoke/*.test.tsx` | "Does Lisse hold up on real browsers at 500-element scale?" Main / tagged-release only. |
-| Consumer smoke | `tests/consumer-smoke/*.{mjs,cjs}` | "Does the *packed* tarball install and import cleanly?" |
+| Consumer smoke | `tests/consumer-smoke/*.{mjs,cjs}` | "Does the *packed* tarball install and import cleanly?" (including Octane) |
 | Perf | `benchmarks/*.bench.ts` | "Did the JS hot path regress?" Local `pnpm bench` (tinybench wall-clock). |
 | Size | `package.json#size-limit` | "Did the bundle size regress?" Per-package brotli-budgeted. |
 | Dead code | `knip.json` | "Are there unused exports / files / deps?" |
@@ -27,7 +27,7 @@ layer should answer "did it change". They are not the same.
 ## Running tests
 
 ```bash
-pnpm test                # all projects (core / react / vue / svelte)
+pnpm test                # all projects (core / react / vue / svelte / octane / octane-ssr)
 pnpm test --project=core # one project
 pnpm coverage            # with coverage report (writes coverage/lcov.info)
 pnpm bench               # JS hot-path benchmarks (tinybench wall-clock)
@@ -70,10 +70,19 @@ for a fully worked example.
 
 ## The contract-test model
 
-Three adapter packages all consume `@lisse/core`. The contract: each
+The adapter packages all consume `@lisse/core`. The contract: each
 wrapper feeds the same props, defaults, dimensions, and effects into
 core. There is no independent oracle — these are contract tests, not
 parity tests in the strict sense.
+
+The Octane adapter mirrors the React adapter coverage: shared contract
+matrices, the ResizeObserver/rAF harness, commit-time re-clipping, overlay
+anchoring, cleanup, `asChild`, event composition, shadow strategies, and
+native ref-array composition. Its `ssr.test.tsx` project runs against
+`octane/server`; the hydration test consumes the exact server HTML fixture
+validated by that project. The tests use ordinary JSX syntax with Octane's
+classic `createElement` factory because the current Octane package publishes
+JSX types but not a runtime `jsx-dev-runtime` module.
 
 The matrices live in `packages/core/__fixtures__/contract.ts`:
 
@@ -90,7 +99,7 @@ adapter (and not in the others) is the bug signal.
 
 1. Add an entry to `PROP_MATRIX` or `EFFECTS_MATRIX` with a unique
    `name`. Use `name = "<curve>_<axis>_<value>_<size>"` for greppability.
-2. Run `pnpm test`. All three adapters run the case automatically.
+2. Run `pnpm test`. All adapter projects run the case automatically.
 
 ## Snapshot workflow
 
@@ -190,10 +199,10 @@ releases only. Until that day, the credentials sit unused.
 
 ## Test count snapshot
 
-- 411 unit tests (core / react / vue / svelte combined)
+- 730 unit tests (core / adapters / extension)
 - 9 JS hot-path benches
 - ~6 browser-smoke cases × 3 browsers = ~18 browser assertions
-- 4 consumer-smoke imports
+- 5 consumer-smoke imports
 - 5 snapshot grids (one per curve family + one mixed)
 - 6 property tests × 500 random cases = 3,000 fast-check assertions per run
 - 8 reference-shape error tests

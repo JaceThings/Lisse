@@ -18,6 +18,9 @@
 | `useSmoothCorners(ref, options, effects?)` | `react` | React hook for applying smooth corners |
 | `SmoothCorners` | `react` | React component with built-in effects |
 | `Slot`, `SlotPropsFor` | `react` | Polymorphic slot helper used by `asChild` |
+| `useSmoothCorners(ref, options, effects?)` | `octane` | Octane hook for applying smooth corners |
+| `SmoothCorners` | `octane` | Octane component with built-in effects |
+| `Slot`, `SlotPropsFor` | `octane` | Polymorphic slot helper used by `asChild` |
 | `useSmoothCorners(target, options, effects?)` | `vue` | Vue composable for applying smooth corners |
 | `SmoothCorners` | `vue` | Vue component with built-in effects |
 | `smoothCorners(node, input)` | `svelte` | Svelte action for applying smooth corners |
@@ -28,3 +31,4 @@ See individual package READMEs for framework-specific details:
 - [`@lisse/react`](../packages/react/README.md)
 - [`@lisse/vue`](../packages/vue/README.md)
 - [`@lisse/svelte`](../packages/svelte/README.md)
+- [`@lisse/octane`](../packages/octane/README.md)

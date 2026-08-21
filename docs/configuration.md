@@ -8,7 +8,7 @@ Each framework binding offers two ways to apply smooth corners.
 |---|---|---|
 | **What it does** | Renders its own element with smooth corners applied | Applies smooth corners to an existing element you already have |
 | **When to use** | Building new UI from scratch, or when you want a drop-in replacement for a `<div>` | You already have an element and want to add smooth corners without changing your DOM structure |
-| **Effects** | Handled automatically (wrapper div is created for you) | You manage the wrapper element yourself (React/Vue) or ensure the parent has `position: relative` (Svelte) |
+| **Effects** | Handled automatically (wrapper div is created for you) | You manage the wrapper element yourself (React/Vue/Octane) or ensure the parent has `position: relative` (Svelte) |
 
 If you're starting fresh, the component is simpler. If you're adding smooth corners to existing elements, use the hook/composable/action.
 
@@ -82,6 +82,38 @@ import { SmoothCorners } from "@lisse/vue";
 </div>
 ```
 
+## Octane
+
+Octane sources are `.tsrx`, where a component body is a JSX code block — `@{ … }` — instead of a `return`. Statements come first, the rendered element last.
+
+```tsrx
+import { useRef } from "octane";
+import { useSmoothCorners } from "@lisse/octane";
+
+export function Card() @{
+  const el = useRef<HTMLDivElement | null>(null);
+  useSmoothCorners(el, { radius: 20, smoothing: 0.6 });
+
+  <div ref={el} style={{ background: "#fff", padding: 24 }}>Hello, squircle</div>
+}
+```
+
+Component form:
+
+```tsrx
+import { SmoothCorners } from "@lisse/octane";
+
+export function Card() @{
+  <SmoothCorners corners={{ radius: 20, smoothing: 0.6 }} style={{ background: "#fff", padding: 24 }}>
+    <h2>Hello, squircle</h2>
+  </SmoothCorners>
+}
+```
+
+The package root exports `useSmoothCorners`, `SmoothCorners`, and `Slot`. `SmoothCorners` takes the same props as the React component: `corners`, `innerBorder`, `middleBorder`, `outerBorder`, `shadow`, `innerShadow`, `autoEffects`, `shadowStrategy`, `as`, and `asChild`.
+
+Two Octane-specific notes. Octane's intrinsic `style` prop is `string | CSSProperties`, so `style="background: #fff"` is as valid as the object form. And you never pass hook slots yourself — the compiler assigns them, the same way it does for Octane's own hooks.
+
 ## Vanilla / `@lisse/core`
 
 ```ts
@@ -94,7 +126,9 @@ const clipPath = generateClipPath(200, 200, { radius: 40 });
 element.style.clipPath = clipPath;
 ```
 
-## Polymorphic React `as` and `asChild`
+## Polymorphic `as` and `asChild` (React and Octane)
+
+Both the React and Octane `SmoothCorners` accept `as` and `asChild`. The example below is React; the Octane equivalent is the same props inside a `.tsrx` `@{ … }` body.
 
 ```tsx
 // Render any HTML element (attributes are typed against `as`).

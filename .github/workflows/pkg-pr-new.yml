@@ -29,5 +29,5 @@ jobs:
       # Requires the pkg.pr.new GitHub App to be installed on the repo:
       # https://github.com/apps/pkg-pr-new — until installed, the step is
       # marked continue-on-error so it doesn't block PR merges.
-      - run: pnpm dlx pkg-pr-new publish './packages/core' './packages/react' './packages/vue' './packages/svelte'
+      - run: pnpm dlx pkg-pr-new publish './packages/core' './packages/react' './packages/vue' './packages/svelte' './packages/octane'
         continue-on-error: true
