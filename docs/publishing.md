@@ -46,16 +46,33 @@ Publish the first version by hand, once:
 
 1. Merge the "chore: version packages" PR as usual and let the release workflow publish the packages that already have a trusted publisher. Expect it to fail on the new one.
 2. Mint a **granular access token** on npmjs.com scoped to the new package name only, with **Read and write** permission and the shortest workable expiry.
-3. From a real terminal (not an agent or CI shell — see the `/dev/tty` quirk below):
+3. Pack with **pnpm**, check the manifest, then publish that exact tarball. `npm publish` is wrong here: this is a pnpm workspace with no npm `workspaces` field, so npm ships `"@lisse/core": "workspace:*"` literally — an uninstallable package, and npm publishes are immutable. `pnpm pack` rewrites the protocol to the real version and injects the root `LICENSE` for any package missing its own.
 
    ```bash
    cd packages/octane
-   NPM_CONFIG_PROVENANCE=true NODE_AUTH_TOKEN=<granular-token> npm publish --access public
+   pnpm pack --pack-destination /tmp
+   tar -xzOf /tmp/lisse-octane-<version>.tgz package/package.json | grep -A2 '"dependencies"'
    ```
+
+   That must show a real version, never `workspace:`. `npm pack --dry-run` will not catch this: it prints the file list and never the dependency block.
+
+   Then publish the inspected tarball from a real terminal (not an agent or CI shell — see the `/dev/tty` quirk below). `NODE_AUTH_TOKEN` alone does nothing locally; it only works in CI because `setup-node` writes an `.npmrc` that reads it. Use a throwaway config instead of editing `~/.npmrc`:
+
+   ```bash
+   TOKENFILE="$(mktemp)"
+   printf '//registry.npmjs.org/:_authToken=%s\n' "<granular-token>" > "$TOKENFILE"
+   npm publish --userconfig "$TOKENFILE" --access public /tmp/lisse-octane-<version>.tgz
+   rm -f "$TOKENFILE"
+   ```
+
+   No provenance flag: the attestation is generated from a CI provider's OIDC token, and there is no issuer on a laptop. The first version goes out unattested and every release after it gets provenance.
 
 4. On npmjs.com, open the now-existing package → **Settings** → **Trusted publisher**, and add: GitHub Actions, repository `JaceThings/Lisse`, workflow file `release.yml`, no environment name — matching the other four.
 5. **Revoke the granular token.** It exists only to bootstrap step 4.
 6. Confirm the next release publishes the new package through OIDC with no token.
+7. Tag it. Changesets pushes tags for the packages it publishes, so the one it failed on has none: `git tag @lisse/octane@<version> <version-packages-sha> && git push origin @lisse/octane@<version>`, pointing at the same commit as its siblings' tags.
+
+Every package should carry its own `LICENSE` rather than leaning on pnpm's root injection, so an `npm pack` — or any other tool that skips pnpm — still ships one.
 
 Do not add an `NPM_TOKEN` secret to `release.yml` to work around this. That would replace OIDC for *every* package and drop the provenance guarantee.
 
