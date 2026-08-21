@@ -9,7 +9,11 @@ export default defineConfig({
   sourcemap: true,
   minify: true,
   external: ["octane"],
-  banner: { js: '"use client";' },
+  // No `"use client"` banner, unlike the React adapter: Octane's compiler
+  // ignores that directive, so it would be dead bytes in every consumer bundle.
+  //
+  // npm ignores a root .npmignore when "files" lists the whole dist directory,
+  // so the per-directory one keeps CJS sourcemaps out of the tarball.
   onSuccess: async () => {
     writeFileSync("dist/.npmignore", "*.cjs.map\n");
   },
