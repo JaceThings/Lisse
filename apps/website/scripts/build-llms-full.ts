@@ -18,6 +18,7 @@ const sources = [
   { title: "@lisse/react", path: "packages/react/README.md" },
   { title: "@lisse/vue", path: "packages/vue/README.md" },
   { title: "@lisse/svelte", path: "packages/svelte/README.md" },
+  { title: "@lisse/octane", path: "packages/octane/README.md" },
 ];
 
 const header = `# Lisse — full documentation
