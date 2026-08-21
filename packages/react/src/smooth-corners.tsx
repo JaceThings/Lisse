@@ -14,10 +14,15 @@ import {
   type ComponentPropsWithRef,
   type ForwardedRef,
 } from "react";
-import { useSmoothCorners } from "./use-smooth-corners.js";
+import { useSmoothCorners, useIsoLayoutEffect } from "./use-smooth-corners.js";
 import { Slot } from "./slot.js";
 import { composeRefs } from "./compose-refs.js";
-import { hasEffects, cornerOptionsToBorderRadius } from "@lisse/core";
+import {
+  acquireIsolation,
+  releaseIsolation,
+  hasEffects,
+  cornerOptionsToBorderRadius,
+} from "@lisse/core";
 import type { SmoothCornerOptions, BorderConfig, ShadowConfig } from "@lisse/core";
 
 /**
@@ -217,6 +222,8 @@ function SmoothCornersImpl<E extends ElementType = "div">(
   };
   const hasExplicit = hasEffects(explicitEffects);
   const siblingShadow = useBoxShadow ? (shadow ?? extractedShadow) : undefined;
+  const shadowChain = siblingShadow === undefined ? "" : buildBoxShadowChain(siblingShadow);
+  const hasShadowSibling = shadowChain !== "";
   // Wrapper is required when any effect renders OR when the box-shadow
   // sibling div needs its relative positioning context.
   const needsWrapper =
@@ -235,6 +242,18 @@ function SmoothCornersImpl<E extends ElementType = "div">(
     fallbackBorderRadius: userSuppliedRadius ? undefined : (fallbackRadiusRef.current ?? undefined),
   };
 
+  // Declared before useSmoothCorners: the acquire must land before the hook's
+  // teardown releases core's count, or the handover passes through zero.
+  useIsoLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper || !hasShadowSibling) return;
+    // Our own declaration is already committed; blank it so the count saves ""
+    // and doesn't restore ours once the sibling goes.
+    wrapper.style.isolation = "";
+    acquireIsolation(wrapper);
+    return () => releaseIsolation(wrapper);
+  }, [hasShadowSibling]);
+
   useSmoothCorners(internalRef, options, effectsOptions);
 
   const inner = asChild
@@ -247,23 +266,20 @@ function SmoothCornersImpl<E extends ElementType = "div">(
   // clipped element (z-index:-1) carries the chain. Must be a sibling —
   // clip-path on the consumer's element would otherwise crop the halo.
   let shadowSibling: ReactNode = null;
-  if (useBoxShadow && siblingShadow !== undefined) {
-    const chain = buildBoxShadowChain(siblingShadow);
-    if (chain !== "") {
-      const style: CSSProperties = {
-        position: "absolute",
-        inset: 0,
-        borderRadius: cornerOptionsToBorderRadius(options),
-        boxShadow: chain,
-        pointerEvents: "none",
-        zIndex: -1,
-      };
-      shadowSibling = createElement("div", {
-        "aria-hidden": true,
-        "data-slot": "smooth-corners-box-shadow",
-        style,
-      });
-    }
+  if (hasShadowSibling) {
+    const style: CSSProperties = {
+      position: "absolute",
+      inset: 0,
+      borderRadius: cornerOptionsToBorderRadius(options),
+      boxShadow: shadowChain,
+      pointerEvents: "none",
+      zIndex: -1,
+    };
+    shadowSibling = createElement("div", {
+      "aria-hidden": true,
+      "data-slot": "smooth-corners-box-shadow",
+      style,
+    });
   }
 
   return createElement(

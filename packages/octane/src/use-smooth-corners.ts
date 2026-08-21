@@ -30,7 +30,7 @@ interface RefObject<T> {
 }
 
 /** Use the synchronous client effect without warning during SSR. */
-const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+export const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 function syncEffects(
   options: SmoothCornerOptions,

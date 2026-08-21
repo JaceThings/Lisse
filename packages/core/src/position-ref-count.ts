@@ -40,9 +40,11 @@ const isolationCounts = new WeakMap<HTMLElement, number>();
 const savedIsolation = new WeakMap<HTMLElement, string>();
 
 /**
- * Stacking context for the `z-index:-1` drop-shadow SVG. Ref-counted because a
- * whole grid routinely shares one anchor: saving per handle meant the second
- * captured the first's `isolate` and restored it on teardown.
+ * Stacking context for a `z-index:-1` sibling — core's drop-shadow SVG, or an
+ * adapter's CSS box-shadow div. Ref-counted because a whole grid routinely
+ * shares one anchor (saving per handle meant the second captured the first's
+ * `isolate` and restored it on teardown), and because both owners hold it at
+ * once while a `shadowStrategy` flip hands over.
  */
 export function acquireIsolation(anchor: HTMLElement): void {
   const count = isolationCounts.get(anchor) ?? 0;

@@ -712,6 +712,66 @@ describe("<SmoothCorners /> - shadowStrategy='box-shadow'", () => {
     expect(inner.style.clipPath).toBe(generateClipPath(WIDTH, HEIGHT, { radius: 8 }));
   });
 
+  it("keeps isolation on the wrapper across a strategy flip and releases it on unmount", () => {
+    const corners = { radius: 8 };
+    function Tester(props: { strategy: "svg" | "box-shadow" }): unknown {
+      return (
+        <SmoothCorners
+          autoEffects={false}
+          corners={corners}
+          shadowStrategy={props.strategy}
+          shadow={{ offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 }}
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => root.render(<Tester strategy="svg" />));
+    const inner = getInner(container);
+    const wrapper = inner.parentElement as HTMLElement;
+    land(inner);
+    expect(inner.style.clipPath).toBe(generateClipPath(WIDTH, HEIGHT, corners));
+    expect(wrapper.style.isolation).toBe("isolate");
+
+    act(() => root.render(<Tester strategy="box-shadow" />));
+    expect(wrapper.querySelector("[data-slot='smooth-corners-box-shadow']")).not.toBeNull();
+    expect(inner.style.clipPath).toBe(generateClipPath(WIDTH, HEIGHT, corners));
+    // The sibling is still mounted, so the stacking context it needs must
+    // survive core releasing the drop-shadow handle's own count.
+    expect(wrapper.style.isolation).toBe("isolate");
+
+    act(() => root.unmount());
+    expect(wrapper.style.isolation).toBe("");
+  });
+
+  it("stops isolating the still-mounted wrapper once the box-shadow sibling goes", () => {
+    const shadow = { offsetX: 0, offsetY: 4, blur: 8, spread: 0, color: "#000", opacity: 0.5 };
+    function Tester(props: { withShadow: boolean }): unknown {
+      return (
+        <SmoothCorners
+          corners={{ radius: 8 }}
+          shadowStrategy="box-shadow"
+          shadow={props.withShadow ? shadow : undefined}
+        >
+          x
+        </SmoothCorners>
+      );
+    }
+
+    act(() => root.render(<Tester withShadow />));
+    const inner = getInner(container);
+    const wrapper = inner.parentElement as HTMLElement;
+    land(inner);
+    expect(inner.getAttribute("data-state")).toBe("ready");
+    expect(wrapper.style.isolation).toBe("isolate");
+
+    act(() => root.render(<Tester withShadow={false} />));
+    expect(wrapper.isConnected).toBe(true);
+    expect(wrapper.querySelector("[data-slot='smooth-corners-box-shadow']")).toBeNull();
+    expect(wrapper.style.isolation).toBe("");
+  });
+
   it("flipping strategy box-shadow→svg reattaches the SVG drop-shadow handle", () => {
     const corners = { radius: 8 };
     function Tester(props: { strategy: "svg" | "box-shadow" }): unknown {

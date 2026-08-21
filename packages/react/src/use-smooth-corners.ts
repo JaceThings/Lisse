@@ -23,7 +23,7 @@ import type {
  * synchronously after layout (no flash of un-clipped corners or un-stripped
  * borders) without triggering React's SSR warning.
  */
-const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+export const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 function syncEffects(
   options: SmoothCornerOptions,
