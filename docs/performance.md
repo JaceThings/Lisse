@@ -34,7 +34,7 @@ A grid of equal-height cards reflowing is the cached column. A masonry layout, o
 
 ## Computed-style budget
 
-Layout reads cost more than the path maths, so they are counted. A squircled element costs **2 `getComputedStyle` reads to mount** — one for auto-extraction of its CSS border and shadow, one for its first resize flush — and **1 read per resize flush** after that. With `autoEffects: false` there is nothing to extract, so Vue and Svelte mount at 1 read; React stays at 2, because its every-commit sync has no extracted size to reuse and measures for itself so the clip-path lands before the first paint.
+Layout reads cost more than the path maths, so they are counted. A squircled element costs **2 `getComputedStyle` reads to mount** — one for auto-extraction of its CSS border and shadow, one for its first resize flush — and **1 read per resize flush** after that. With `autoEffects: false` there is nothing to extract, so Vue and Svelte mount at 1 read; React and Octane stay at 2, because their every-commit sync has no extracted size to reuse and measures for itself so the clip-path lands before the first paint.
 
 A `ResizeObserver` notification reporting a box the last flush already measured is dropped without a read, so an element that only receives the observer's guaranteed initial observation never gets measured twice for the same size.
 

@@ -7,9 +7,9 @@
 //
 // This file is the ONE source of truth for the matrices — adapters
 // only import; they never define their own cases. Adapter components
-// have slightly different effect-prop shapes (React/Vue spread the
-// effects fields as top-level props; Svelte nests them under `effects`)
-// so each test file does the small translation.
+// have slightly different effect-prop shapes (React/Vue/Octane spread
+// the effects fields as top-level props; Svelte nests them under
+// `effects`) so each test file does the small translation.
 
 import type {
   CornerConfig,

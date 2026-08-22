@@ -1,11 +1,14 @@
-// Browser smoke: React's per-element `getComputedStyle` budget at mount and at
+// Browser smoke: Octane's per-element `getComputedStyle` budget at mount and at
 // idle. `./computed-style-counter.ts` carries the instrument and the reasoning
-// behind the budget; `./computed-style-budget-octane.test.ts` pins the same
-// numbers for the Octane adapter, whose every-commit sync has React's shape.
+// behind the budget.
+//
+// Octane's adapter has React's shape rather than Vue's or Svelte's — a mount
+// layout effect plus a sync that reruns on every commit — so it carries React's
+// risk of measuring for itself on a commit that already had a size to reuse.
+// The numbers here are the React file's numbers; a divergence is a wrapper bug.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createRoot, type Root } from "react-dom/client";
-import { StrictMode, createElement } from "react";
-import { SmoothCorners } from "@lisse/react";
+import { act, createElement, createRoot, type Root } from "octane";
+import { SmoothCorners } from "@lisse/octane";
 import { MOUNT_BUDGET, delay, installCounter, settle } from "./computed-style-counter.js";
 
 let container: HTMLDivElement;
@@ -19,27 +22,28 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  root.unmount();
+  act(() => root.unmount());
   container.remove();
 });
 
 /**
- * The reporter's shape: one bordered card (auto-extracted CSS border, so it
+ * The React file's shape: one bordered card (auto-extracted CSS border, so it
  * mounts an SVG overlay) wrapping a row of small effect-free dots.
  * `autoEffects: false` on the dots removes their extraction read.
  */
-function Page({ dots, autoEffects = true }: { dots: number; autoEffects?: boolean }): React.ReactNode {
+function Page(props: { dots: number; autoEffects?: boolean }): unknown {
+  const { dots, autoEffects = true } = props;
   const items = [];
   for (let i = 0; i < dots; i++) {
     items.push(
       createElement(SmoothCorners, {
-        key: i,
+        key: String(i),
         as: "div",
         "data-dot": String(i),
         corners: { radius: 6, smoothing: 0.6 },
         autoEffects,
         style: { width: "12px", height: "12px", background: "#888" },
-      } as React.ComponentProps<typeof SmoothCorners>),
+      }),
     );
   }
   return createElement(
@@ -59,23 +63,34 @@ function Page({ dots, autoEffects = true }: { dots: number; autoEffects?: boolea
           border: "1px solid rgb(0, 0, 0)",
           background: "#fff",
         },
-      } as React.ComponentProps<typeof SmoothCorners>,
+      },
       items,
     ),
   );
 }
 
-describe("Browser smoke — computed-style budget", () => {
+/**
+ * Every squircle on the page, asserted to have actually clipped. Without this
+ * a sync that bailed early would take no reads at all and sail through the
+ * budget — the metric would be measuring an absence.
+ */
+function clippedSquircles(expectedCount: number): HTMLElement[] {
+  const squircles = [...container.querySelectorAll<HTMLElement>("[data-slot='smooth-corners']")];
+  expect(squircles).toHaveLength(expectedCount);
+  expect(
+    squircles.filter((el) => el.dataset.state !== "ready" || !el.style.clipPath.startsWith("path(")),
+  ).toEqual([]);
+  return squircles;
+}
+
+describe("Browser smoke — computed-style budget (octane)", () => {
   it("mounts within the per-element read budget", async () => {
     const counter = installCounter();
     try {
       root.render(createElement(Page, { dots: 4 }));
       await settle();
 
-      const squircles = [...container.querySelectorAll<HTMLElement>("[data-slot='smooth-corners']")];
-      expect(squircles).toHaveLength(5);
-
-      const perElement = squircles.map((el) => ({
+      const perElement = clippedSquircles(5).map((el) => ({
         label: el.dataset.card ? "card" : `dot-${el.dataset.dot}`,
         reads: counter.count(el),
       }));
@@ -93,7 +108,7 @@ describe("Browser smoke — computed-style budget", () => {
       root.render(createElement(Page, { dots: 4, autoEffects: false }));
       await settle();
 
-      const dots = [...container.querySelectorAll<HTMLElement>("[data-dot]")];
+      const dots = clippedSquircles(5).filter((el) => el.dataset.dot !== undefined);
       expect(dots).toHaveLength(4);
       // Still 2, but a different pair: with no extraction to thread a size out
       // of, the every-commit sync measures for itself so the clip-path lands
@@ -109,27 +124,12 @@ describe("Browser smoke — computed-style budget", () => {
     try {
       root.render(createElement(Page, { dots: 4 }));
       await settle();
+      clippedSquircles(5);
       counter.reset();
       await delay(500);
 
       const ranked = counter.ranked();
       expect(ranked.map((r) => `${r.el.tagName}=${r.reads}`).join(" ")).toBe("");
-    } finally {
-      counter.restore();
-    }
-  }, 30_000);
-
-  it("keeps the budget under StrictMode's double render", async () => {
-    const counter = installCounter();
-    try {
-      root.render(createElement(StrictMode, null, createElement(Page, { dots: 4 })));
-      await settle();
-
-      const squircles = [...container.querySelectorAll<HTMLElement>("[data-slot='smooth-corners']")];
-      const worst = Math.max(...squircles.map((el) => counter.count(el)));
-      // StrictMode mounts, unmounts, and remounts every effect, so each element
-      // legitimately runs the mount path twice.
-      expect(worst).toBeLessThanOrEqual(MOUNT_BUDGET * 2);
     } finally {
       counter.restore();
     }

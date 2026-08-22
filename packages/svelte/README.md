@@ -30,7 +30,7 @@ Peer dependency: `svelte >= 3.0.0` (works with Svelte 3, 4, and 5).
 </div>
 ```
 
-> **Why an action instead of a component?** Svelte actions are the idiomatic way to attach behaviour to existing elements. Unlike React or Vue, there is no wrapper `<div>`. The action attaches directly to your element and inserts the SVG overlay into its parent, giving you full control over your DOM structure.
+> **Why an action instead of a component?** Svelte actions are the idiomatic way to attach behaviour to existing elements. Unlike React, Vue, or Octane, there is no wrapper `<div>`. The action attaches directly to your element and inserts the SVG overlay into its parent, giving you full control over your DOM structure.
 
 ## Using it as an attachment (Svelte 5.32+)
 
