@@ -18,7 +18,7 @@ layer should answer "did it change". They are not the same.
 | Golden snapshots | `packages/core/__tests__/snapshots.test.ts` | "Did the exact `d` string change?" 40 curated cases, one block per curve type. |
 | Runtime harness | `packages/*/​__tests__/runtime-harness.test.{ts,tsx}` | "Does ResizeObserver + rAF batching, prop updates, and cleanup work correctly per adapter?" |
 | Adapter contract | `packages/*/​__tests__/contract.test.{ts,tsx}` | "Do the adapters feed the same props into core?" Shared fixture, 27 cases per adapter. |
-| Browser smoke | `tests/browser-smoke/*.test.tsx` | "Does Lisse hold up on real browsers at 500-element scale?" Main / tagged-release only. |
+| Browser smoke | `tests/browser-smoke/*.test.{ts,tsx}` | "Does Lisse hold up on real browsers at 500-element scale?" Main / tagged-release only. |
 | Consumer smoke | `tests/consumer-smoke/*.{mjs,cjs}` | "Does the *packed* tarball install and import cleanly?" (including Octane) |
 | Perf | `benchmarks/*.bench.ts` | "Did the JS hot path regress?" Local `pnpm bench` (tinybench wall-clock). |
 | Size | `package.json#size-limit` | "Did the bundle size regress?" Per-package brotli-budgeted. |
@@ -235,7 +235,7 @@ releases only. Until that day, the credentials sit unused.
 
 - 730 unit tests (core / adapters / extension)
 - 9 JS hot-path benches
-- ~6 browser-smoke cases × 3 browsers = ~18 browser assertions
+- 27 browser-smoke cases × 3 browsers, 2 of them chromium-only = 77 browser assertions
 - 5 consumer-smoke imports
 - 5 snapshot grids (one per curve family + one mixed)
 - 6 property tests × 500 random cases = 3,000 fast-check assertions per run

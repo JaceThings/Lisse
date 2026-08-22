@@ -19,6 +19,10 @@ import react from "@vitejs/plugin-react";
  */
 export default defineConfig({
   plugins: [react()],
+  // The adapters are aliased to source, so `octane` first appears mid-run as a
+  // transitive import and Vite reloads the page to prebundle it — which vitest
+  // reports as an unexpected reload and can duplicate or fail a test.
+  optimizeDeps: { include: ["octane"] },
   test: {
     include: ["**/*.test.{ts,tsx}"],
     browser: {
@@ -34,6 +38,7 @@ export default defineConfig({
     alias: {
       "@lisse/core": fileURLToPath(new URL("../../packages/core/src/index.ts", import.meta.url)),
       "@lisse/react": fileURLToPath(new URL("../../packages/react/src/index.ts", import.meta.url)),
+      "@lisse/octane": fileURLToPath(new URL("../../packages/octane/src/index.ts", import.meta.url)),
     },
   },
 });
