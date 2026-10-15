@@ -19,7 +19,10 @@ streams the page in, so corners are smoothed as elements arrive rather than a
 few seconds after load. A time-sliced `requestAnimationFrame` loop applies the
 work before paint, so elements never flash square. Animated state changes
 (hover, focus) that transition a radius, size, or colour are re-processed when
-their `transitionend`/`animationend` fires.
+their `transitionend`/`animationend` fires. The observer ignores the
+extension's own inline writes, and any `box-shadow` transition those writes
+would start is cancelled before paint, so sites that transition `box-shadow`
+don't flicker.
 
 ## Build
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { createEngine } from "../src/engine.js";
 
 /** A few frames, so re-queued work lands too. */
@@ -128,5 +128,49 @@ describe("engine — the site's box-shadow", () => {
 
     expect(el.style.boxShadow).toBe("none");
     expect(el.style.getPropertyPriority("box-shadow")).toBe("important");
+  });
+
+  it("does not re-plan on its own style writes", async () => {
+    const el = candidate();
+    el.style.boxShadow = "rgba(1, 4, 9, 0.24) 0px 1px 0px 0px inset";
+    engine();
+    await settle();
+
+    const before = el.getAttribute("style");
+    let count = 0;
+    const mo = new MutationObserver((records) => { count += records.length; });
+    mo.observe(el, { attributes: true, attributeFilter: ["style"] });
+    await settle(6);
+    mo.disconnect();
+
+    expect(count).toBe(0);
+    expect(el.getAttribute("style")).toBe(before);
+    expect(el.style.getPropertyPriority("box-shadow")).toBe("important");
+  });
+
+  // happy-dom 20 holds observer callbacks in a WeakRef, so GC can drop the engine's observer.
+  it("still re-plans when the site changes the element's own style", { retry: 2 }, async () => {
+    const el = candidate();
+    el.style.boxShadow = "rgba(1, 4, 9, 0.24) 0px 1px 0px 0px inset";
+    engine();
+    await settle();
+
+    const before = el.style.clipPath;
+    el.style.borderRadius = "8px";
+    await settle();
+    expect(el.style.clipPath).not.toBe(before);
+  });
+
+  it("cancels only box-shadow transitions it caused", async () => {
+    const el = candidate();
+    const shadowT = { transitionProperty: "box-shadow", cancel: vi.fn() };
+    const colorT = { transitionProperty: "color", cancel: vi.fn() };
+    el.getAnimations = () => [shadowT, colorT] as unknown as Animation[];
+    el.style.boxShadow = "rgba(1, 4, 9, 0.24) 0px 1px 0px 0px inset";
+    engine();
+    await settle();
+
+    expect(shadowT.cancel).toHaveBeenCalled();
+    expect(colorT.cancel).not.toHaveBeenCalled();
   });
 });

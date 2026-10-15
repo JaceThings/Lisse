@@ -53,6 +53,7 @@ interface Applied extends OriginalStyles {
   lastBorderColor: string;
   lastBgImage: string;
   lastBoxShadow: string | null;
+  lastStyleAttr: string | null;
   unobserve: () => void;
 }
 
@@ -135,6 +136,10 @@ function writeOwnedShadow(el: HTMLElement, value: string) {
 function releaseOwnedShadow(el: HTMLElement, orig: string) {
   el.style.removeProperty("box-shadow");
   if (orig) el.style.boxShadow = orig;
+}
+
+function cancelShadowTransitions(el: HTMLElement) {
+  for (const a of el.getAnimations?.() ?? []) if ((a as CSSTransition).transitionProperty === "box-shadow") a.cancel();
 }
 
 function readBg(s: CSSStyleDeclaration): BackgroundInput {
@@ -280,6 +285,7 @@ export function createEngine(initial: EngineSettings) {
         record.lastBoxShadow === boxShadow) {
       // flush() released the site shadow so we could read :focus; put ours back.
       if (record.lastBoxShadow !== null) writeOwnedShadow(el, record.lastBoxShadow);
+      record.lastStyleAttr = el.getAttribute("style");
       return;
     }
 
@@ -302,6 +308,7 @@ export function createEngine(initial: EngineSettings) {
       lastBorderColor: borderColor,
       lastBgImage: bgImage,
       lastBoxShadow: boxShadow,
+      lastStyleAttr: el.getAttribute("style"),
     };
     if (record) Object.assign(record, last);
     else {
@@ -365,10 +372,15 @@ export function createEngine(initial: EngineSettings) {
       return;
     }
     const deadline = performance.now() + FRAME_BUDGET_MS;
+    const released: HTMLElement[] = [];
     for (const el of queue) {
       const rec = applied.get(el);
-      if (rec && rec.lastBoxShadow !== null) releaseOwnedShadow(el, rec.boxShadow);
+      if (rec && rec.lastBoxShadow !== null) {
+        releaseOwnedShadow(el, rec.boxShadow);
+        released.push(el);
+      }
     }
+    for (const el of released) cancelShadowTransitions(el);
     const ops: Array<{ el: HTMLElement; result: PlanResult | null }> = [];
     let n = 0;
     for (const el of queue) {
@@ -377,6 +389,7 @@ export function createEngine(initial: EngineSettings) {
       if (++n % CHUNK === 0 && performance.now() >= deadline) break;
     }
     for (const { el, result } of ops) writePlan(el, result);
+    for (const el of released) cancelShadowTransitions(el);
     if (queue.size > 0) scheduleFlush();
   }
 
@@ -409,6 +422,7 @@ export function createEngine(initial: EngineSettings) {
     for (const rec of records) {
       if (rec.type === "attributes") {
         const el = host(rec.target);
+        if (el && rec.attributeName === "style" && el.getAttribute("style") === applied.get(el)?.lastStyleAttr) continue;
         if (el && !skip(el)) {
           enqueue(el);
           enqueueAppliedAncestors(el);
