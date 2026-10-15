@@ -1,5 +1,12 @@
 # @lisse/octane
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [efe17c1]
+  - @lisse/core@0.7.3
+
 ## 0.1.0
 
 ### Minor Changes
