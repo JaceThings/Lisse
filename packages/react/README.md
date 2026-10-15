@@ -433,7 +433,7 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 
 | CSS feature | What happens |
 |---|---|
-| Per-side borders | Only the top border is read. All four sides are stripped; differing sides are lost. |
+| Per-side borders | Only extracted when all four sides match. A non-uniform border is left as CSS (and clipped by the squircle). |
 | `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
 | `inset`, `outset` border styles | Not replicated. Rendered as solid. |
 | Multiple `box-shadow` layers | All shadow layers are extracted and rendered. Each outer shadow becomes a `shadow` entry and each inset shadow becomes an `innerShadow` entry. |

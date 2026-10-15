@@ -28,9 +28,11 @@ Three border positions, each using a different SVG technique:
 
 When an array of shadows is provided, the first shadow in the array renders on top (closest to the element). Each shadow gets its own SVG filter element. Shadows are rendered in reverse order in the SVG DOM so that SVG's "later paints on top" rule matches CSS's "first listed is topmost" convention.
 
-## Auto-effects: content-box compensation
+## Auto-effects: border compensation
 
-When `autoEffects` strips a CSS border from an element using `box-sizing: content-box`, removing the border would cause layout shift — the content area would expand to fill the space the border occupied. To prevent this, the library automatically increases padding by the border width on each side. The original padding values are saved and restored on cleanup.
+When `autoEffects` strips a CSS border, removing it would cause layout shift: on `content-box` the element shrinks by the border width, and on `border-box` the content area grows outward into the space the border occupied. To prevent this, the library increases padding by the border width on each side, whatever the `box-sizing`. The original padding values are saved and restored on cleanup.
+
+Only a border whose four sides share the same style, width, and color is extracted. A non-uniform border (one-sided, mixed widths or colors) is left as CSS, since the overlay draws one uniform ring.
 
 ## Resize handling
 

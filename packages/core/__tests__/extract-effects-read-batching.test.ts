@@ -143,4 +143,25 @@ describe("extractAndStripEffects — batched reads", () => {
     expect(parseFloat(window.getComputedStyle(el).borderTopWidth)).toBe(0);
     expect(getLayoutSize(el)).toEqual(size);
   });
+
+  it("reports a border-box border box that survives the strip", () => {
+    el.style.boxSizing = "border-box";
+    el.style.width = "100px";
+    el.style.height = "50px";
+    el.style.padding = "10px";
+    el.style.border = "4px solid rgb(255, 0, 0)";
+
+    const { events, restore } = instrument(el);
+    let size: { width: number; height: number };
+    try {
+      size = extractAndStripEffects(el).size;
+    } finally {
+      restore();
+    }
+
+    expect(events.filter((e) => e === "read")).toHaveLength(1);
+    expect(size).toEqual({ width: 100, height: 50 });
+    expect(el.style.paddingLeft).toBe("14px");
+    expect(getLayoutSize(el)).toEqual(size);
+  });
 });

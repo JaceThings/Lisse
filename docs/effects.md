@@ -247,7 +247,7 @@ nothing to observe and stays put until the next resize or update.
 
 | CSS feature | What happens |
 |---|---|
-| Per-side borders | Only the top border is read. All four sides are stripped. |
+| Per-side borders | Only extracted when all four sides match. A non-uniform border is left as CSS. |
 | `inset`, `outset` border styles | Rendered as solid. |
 | `border-image` | Not detected. Use gradient borders via the API instead. |
 | `outline` | Not read or stripped. |
@@ -260,5 +260,5 @@ nothing to observe and stays put until the next resize or update.
 - **Wrapper div (React/Vue)**: the `<SmoothCorners>` component injects a wrapper `<div>` with `position: relative` for SVG overlay positioning. Use the hook/composable/action approach for full layout control — it adds no wrapper, and outer effects work there too (see below).
 - **`border-image`**: not detected because CSS `border-image` syntax is complex (angle units, colour spaces, slice semantics). Use gradient borders via the explicit `BorderConfig.color` API instead.
 - **`!important` rules**: cannot be overridden because the library strips effects via inline styles, and `!important` stylesheet rules take precedence over inline styles. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **Per-side borders**: only the top border is read during auto-extraction because `getComputedStyle` returns per-side values (`borderTopWidth`, `borderTopColor`, etc.) and the SVG overlay renders a single uniform border around the entire squircle. If you need different colours per side, use explicit effect props.
+- **Per-side borders**: auto-extraction only takes a border whose four sides share the same style, width, and color, because the SVG overlay renders a single uniform border around the entire squircle. A one-sided or otherwise non-uniform border is left as CSS, where the squircle clip cuts it. If you need a squircle-following border, use explicit effect props.
 - **One-time extraction (mount-time snapshot)**: CSS effects are read once on mount because continuously polling `getComputedStyle` would hurt performance, and a `MutationObserver` on the host element can't see ancestor class changes or CSS variable updates that affect computed style. **Re-mount the element to re-extract** after a theme switch or token change. An imperative `refresh()` API for in-place re-extraction is planned for v0.4. Until then, use explicit effect props for dynamic values.

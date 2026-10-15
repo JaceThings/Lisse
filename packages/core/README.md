@@ -204,7 +204,7 @@ const { effects, savedStyles, size } = extractAndStripEffects(element);
 // CSS border and box-shadow are now stripped from the element
 ```
 
-`size` comes from the single computed-style declaration the extraction already reads, snapshotted before the first style write, so a caller that clips straight afterwards needs no `getComputedStyle` of its own. It stays correct across the strip because the strip preserves the border box: with `box-sizing: border-box` removing the border does not change the computed width or height, and with `content-box` the padding compensation adds back exactly the border widths that were removed.
+`size` comes from the single computed-style declaration the extraction already reads, snapshotted before the first style write, so a caller that clips straight afterwards needs no `getComputedStyle` of its own. It stays correct across the strip because the strip preserves the border box: the padding compensation adds back exactly the border width that was removed, under either `box-sizing`.
 
 **Returns:** `ExtractedEffects` with the shape `{ effects: EffectsConfig; savedStyles: { border: string; boxShadow: string }; size: MeasuredSize }`.
 
@@ -233,7 +233,7 @@ const color = parseColor("rgba(255, 0, 0, 0.5)");
 
 ### `parseBorder(el, cs?)`
 
-Read the computed border from an element and convert it to a `BorderConfig`. Returns `undefined` if the border is invisible (none/hidden, width 0, or transparent). Pass a declaration you already hold as `cs` to avoid a second `getComputedStyle` call.
+Read the computed border from an element and convert it to a `BorderConfig`. Returns `undefined` if the border is invisible (none/hidden, width 0, or transparent) or if its four sides differ in style, width, or color. Pass a declaration you already hold as `cs` to avoid a second `getComputedStyle` call.
 
 ```ts
 import { parseBorder } from "@lisse/core";
@@ -579,7 +579,7 @@ restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
 
 | CSS feature | What happens | Why |
 |---|---|---|
-| Per-side borders | Only the top border is read. All four sides are stripped; differing sides are lost. | The SVG overlay renders a uniform border along a single squircle path; per-side variation is not possible. |
+| Per-side borders | Only extracted when all four sides match. A non-uniform border is left as CSS (and clipped by the squircle). | The SVG overlay renders a uniform border along a single squircle path; per-side variation is not possible. |
 | `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |  |
 | `inset`, `outset` border styles | Not replicated. Rendered as solid. |  |
 | `border-image` | Not detected. Use the gradient border API (`GradientConfig`) instead. | `border-image` syntax is too complex to reliably parse from `getComputedStyle`. |
@@ -594,7 +594,7 @@ restoreStyles(el, savedStyles); // CSS border and box-shadow are restored
 - **CSS transitions**: stripped properties (`border`, `box-shadow`) are replaced with SVG equivalents that are not animatable via CSS transitions. Use `autoEffects: false` and drive explicit effect props from an animation system instead.
 - **`groove` / `ridge` approximation**: the dark shade is computed as `RGB * 2/3` (matching Firefox). The shading is uniform around the squircle (no per-side light direction as CSS does on rectangles), which may differ slightly from browser CSS rendering.
 - **`!important` rules**: inline style stripping can't override `!important` stylesheet rules. The CSS property stays visible (clipped) alongside the SVG replacement, producing doubled visuals. Move the rule to a non-`!important` selector, or use `autoEffects: false`.
-- **Content-box border compensation**: when `extractAndStripEffects` removes a border from an element using `box-sizing: content-box`, the content area would expand by the border width (since content-box sizing excludes borders from the content dimensions). To prevent this layout shift, padding is automatically increased by the border width on each side. The original padding values are saved and restored when `restoreStyles` is called.
+- **Border compensation**: when `extractAndStripEffects` removes a border, the content would move by the border width (on `content-box` the element shrinks; on `border-box` the content area grows outward). To prevent this layout shift, padding is automatically increased by the border width on each side, under either `box-sizing`. The original padding values are saved and restored when `restoreStyles` is called.
 
 ## Examples
 

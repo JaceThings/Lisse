@@ -442,7 +442,7 @@ When disabled, CSS borders and shadows are left untouched and no automatic extra
 
 | CSS feature | What happens |
 |---|---|
-| Per-side borders | Only the top border is read. `getComputedStyle` returns per-side values but a squircle path has no distinct sides, so all four sides are stripped and only the top edge values are used. |
+| Per-side borders | Only extracted when all four sides match. A squircle path has no distinct sides, so a non-uniform border is left as CSS (and clipped by the squircle). |
 | `dashed`, `dotted`, `double`, `groove`, `ridge` | Supported. Extracted from CSS and rendered as SVG equivalents. |
 | `inset`, `outset` border styles | Not replicated; rendered as solid. These styles rely on rectangular per-side shading that has no meaningful squircle equivalent. |
 | Multiple `box-shadow` layers | All shadow layers are extracted and rendered. Each outer shadow becomes a `shadow` entry and each inset shadow becomes an `innerShadow` entry. |

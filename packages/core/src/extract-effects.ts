@@ -61,13 +61,18 @@ function resolvePaint(raw: string): { color: string; opacity: number } | undefin
 /** The computed-style fields `parseBorder` reads. */
 export type BorderStyleSource = Pick<
   CSSStyleDeclaration,
-  "borderTopStyle" | "borderTopWidth" | "borderTopColor"
+  | "borderTopStyle" | "borderTopWidth" | "borderTopColor"
+  | "borderRightStyle" | "borderRightWidth" | "borderRightColor"
+  | "borderBottomStyle" | "borderBottomWidth" | "borderBottomColor"
+  | "borderLeftStyle" | "borderLeftWidth" | "borderLeftColor"
 >;
 
 /**
  * Read the computed border from an element as a BorderConfig.
  * Returns undefined when the border is effectively invisible (none/hidden,
- * width 0, or transparent).
+ * width 0, or transparent), or when the four sides differ in style, width or
+ * color — the overlay draws one uniform ring, so a non-uniform border is left
+ * to CSS.
  *
  * Pass a pre-read `cs` to reuse an existing `getComputedStyle` result (its
  * values must be snapshotted before any layout-dirtying write — computed
@@ -79,6 +84,15 @@ export function parseBorder(
 ): BorderConfig | undefined {
   const style = cs.borderTopStyle;
   if (style === "none" || style === "hidden") return undefined;
+
+  // Computed colors are normalized, so comparing the strings is exact.
+  for (const side of ["Right", "Bottom", "Left"] as const) {
+    if (
+      cs[`border${side}Style`] !== style ||
+      cs[`border${side}Width`] !== cs.borderTopWidth ||
+      cs[`border${side}Color`] !== cs.borderTopColor
+    ) return undefined;
+  }
 
   const width = parseFloat(cs.borderTopWidth);
   if (width <= 0 || isNaN(width)) return undefined;
@@ -181,13 +195,17 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
     borderTopStyle: cs.borderTopStyle,
     borderTopWidth: cs.borderTopWidth,
     borderTopColor: cs.borderTopColor,
+    borderRightStyle: cs.borderRightStyle,
+    borderRightWidth: cs.borderRightWidth,
+    borderRightColor: cs.borderRightColor,
+    borderBottomStyle: cs.borderBottomStyle,
+    borderBottomWidth: cs.borderBottomWidth,
+    borderBottomColor: cs.borderBottomColor,
+    borderLeftStyle: cs.borderLeftStyle,
+    borderLeftWidth: cs.borderLeftWidth,
+    borderLeftColor: cs.borderLeftColor,
   };
   const boxShadow = cs.boxShadow;
-  const boxSizing = cs.boxSizing;
-  const borderTopW = parseFloat(cs.borderTopWidth) || 0;
-  const borderRightW = parseFloat(cs.borderRightWidth) || 0;
-  const borderBottomW = parseFloat(cs.borderBottomWidth) || 0;
-  const borderLeftW = parseFloat(cs.borderLeftWidth) || 0;
   const paddingTop = parseFloat(cs.paddingTop) || 0;
   const paddingRight = parseFloat(cs.paddingRight) || 0;
   const paddingBottom = parseFloat(cs.paddingBottom) || 0;
@@ -195,9 +213,8 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
 
   // The border box, derived from that same declaration so it costs no extra
   // read, letting the caller's first sync render without measuring. It survives
-  // the strip below: on `border-box` the computed width/height are the border
-  // box and dropping the border doesn't move them, and on `content-box` the
-  // padding compensation adds back exactly the border widths it removes.
+  // the strip below because the padding compensation adds back exactly the
+  // border width it removes, under either box-sizing.
   const size = getLayoutSize(el, cs);
 
   const innerBorder = parseBorder(el, borderStyleSource);
@@ -209,18 +226,16 @@ export function extractAndStripEffects(el: HTMLElement): ExtractedEffects {
   if (innerBorder) el.style.border = "0";
   if (shadow || innerShadow) el.style.boxShadow = "none";
 
-  // Compensate content-box padding so stripping the border doesn't shift
-  // layout. Keyed on `innerBorder` so we only shift when the border was
-  // actually parsed and stripped.
-  if (
-    innerBorder &&
-    boxSizing === "content-box" &&
-    (borderTopW > 0 || borderRightW > 0 || borderBottomW > 0 || borderLeftW > 0)
-  ) {
-    el.style.paddingTop = (paddingTop + borderTopW) + "px";
-    el.style.paddingRight = (paddingRight + borderRightW) + "px";
-    el.style.paddingBottom = (paddingBottom + borderBottomW) + "px";
-    el.style.paddingLeft = (paddingLeft + borderLeftW) + "px";
+  // Move the stripped border into padding so the content box keeps its place:
+  // on `content-box` the border box would shrink, and on `border-box` the
+  // content box would grow outward. Keyed on `innerBorder` so we only shift
+  // when the border was actually parsed and stripped — which also means all
+  // four sides share its width.
+  if (innerBorder) {
+    el.style.paddingTop = (paddingTop + innerBorder.width) + "px";
+    el.style.paddingRight = (paddingRight + innerBorder.width) + "px";
+    el.style.paddingBottom = (paddingBottom + innerBorder.width) + "px";
+    el.style.paddingLeft = (paddingLeft + innerBorder.width) + "px";
   }
 
   const effects: EffectsConfig = {};

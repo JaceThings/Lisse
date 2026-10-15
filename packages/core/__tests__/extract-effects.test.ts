@@ -130,10 +130,11 @@ describe("parseBorder", () => {
 
   // jsdom drops `oklch(…)` declarations outright, so the computed style is
   // supplied directly — the same shape `getComputedStyle` returns in a browser.
-  const cs = (borderTopColor: string) => ({
-    borderTopStyle: "solid",
-    borderTopWidth: "2px",
-    borderTopColor,
+  const cs = (color: string) => ({
+    borderTopStyle: "solid", borderTopWidth: "2px", borderTopColor: color,
+    borderRightStyle: "solid", borderRightWidth: "2px", borderRightColor: color,
+    borderBottomStyle: "solid", borderBottomWidth: "2px", borderBottomColor: color,
+    borderLeftStyle: "solid", borderLeftWidth: "2px", borderLeftColor: color,
   });
 
   it("keeps a wide-gamut border color raw instead of dropping the border", () => {
@@ -196,6 +197,41 @@ describe("parseBorder", () => {
     el.style.border = "2px solid rgb(255, 0, 0)";
     const result = parseBorder(el);
     expect(result!.style).toBeUndefined();
+  });
+
+  it("parses a uniform border set side by side", () => {
+    for (const side of ["Top", "Right", "Bottom", "Left"] as const) {
+      el.style[`border${side}`] = "2px solid rgb(255, 0, 0)";
+    }
+    expect(parseBorder(el)).toEqual({ width: 2, color: "#ff0000", opacity: 1 });
+  });
+
+  it("returns undefined for a top-only border", () => {
+    el.style.borderTop = "2px solid rgb(255, 0, 0)";
+    expect(parseBorder(el)).toBeUndefined();
+  });
+
+  it("returns undefined for a bottom-only border", () => {
+    el.style.borderBottom = "2px solid rgb(255, 0, 0)";
+    expect(parseBorder(el)).toBeUndefined();
+  });
+
+  it("returns undefined when side widths differ", () => {
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.borderLeftWidth = "4px";
+    expect(parseBorder(el)).toBeUndefined();
+  });
+
+  it("returns undefined when side colors differ", () => {
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.borderRightColor = "rgb(0, 0, 255)";
+    expect(parseBorder(el)).toBeUndefined();
+  });
+
+  it("returns undefined when side styles differ", () => {
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.borderBottomStyle = "dashed";
+    expect(parseBorder(el)).toBeUndefined();
   });
 
   it("treats unsupported styles (inset, outset) as solid", () => {
@@ -422,6 +458,31 @@ describe("extractAndStripEffects", () => {
     expect(el.style.boxShadow).toBe(before);
   });
 
+  it("leaves a top-only border as CSS", () => {
+    el.style.borderTop = "2px solid rgb(255, 0, 0)";
+    el.style.padding = "5px";
+    const before = el.style.borderTop;
+
+    const result = extractAndStripEffects(el);
+
+    expect(result.effects.innerBorder).toBeUndefined();
+    expect(el.style.borderTop).toBe(before);
+    expect(el.style.paddingTop).toBe("5px");
+  });
+
+  it("leaves a mixed-width border as CSS", () => {
+    el.style.border = "2px solid rgb(255, 0, 0)";
+    el.style.borderLeftWidth = "4px";
+    el.style.padding = "5px";
+
+    const result = extractAndStripEffects(el);
+
+    expect(result.effects.innerBorder).toBeUndefined();
+    expect(el.style.borderTopWidth).toBe("2px");
+    expect(el.style.borderLeftWidth).toBe("4px");
+    expect(el.style.paddingLeft).toBe("5px");
+  });
+
   it("does not compensate padding when the border could not be parsed", () => {
     el.style.boxSizing = "content-box";
     el.style.border = "2px solid currentcolor";
@@ -505,17 +566,19 @@ describe("extractAndStripEffects -- content-box compensation", () => {
     expect(el.style.paddingLeft).toBe("2px");
   });
 
-  it("does NOT adjust padding for border-box elements", () => {
+  it("increases padding by border width for border-box elements", () => {
+    // Without it the border box holds its size but the content box grows
+    // outward, shifting content toward the edge by the border width.
     el.style.boxSizing = "border-box";
-    el.style.border = "2px solid rgb(255, 0, 0)";
-    el.style.padding = "0px";
+    el.style.border = "4px solid rgb(255, 0, 0)";
+    el.style.padding = "10px";
 
     extractAndStripEffects(el);
 
-    expect(el.style.paddingTop).toBe("0px");
-    expect(el.style.paddingRight).toBe("0px");
-    expect(el.style.paddingBottom).toBe("0px");
-    expect(el.style.paddingLeft).toBe("0px");
+    expect(el.style.paddingTop).toBe("14px");
+    expect(el.style.paddingRight).toBe("14px");
+    expect(el.style.paddingBottom).toBe("14px");
+    expect(el.style.paddingLeft).toBe("14px");
   });
 
   it("adds border width to existing padding for content-box", () => {
