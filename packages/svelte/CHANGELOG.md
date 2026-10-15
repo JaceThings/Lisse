@@ -1,5 +1,12 @@
 # @lisse/svelte
 
+## 0.7.3
+
+### Patch Changes
+
+- Updated dependencies [efe17c1]
+  - @lisse/core@0.7.3
+
 ## 0.7.2
 
 ### Patch Changes
